@@ -120,8 +120,12 @@ struct Map;
 
 fn display_game(
     mut commands: Commands,
+    window: Single<Entity, With<Window>>,
     game_assets: Res<Assets>
 ) {
+    commands.entity(*window)
+        .observe(on_camera_drag);
+
     commands.spawn((
         Sprite::from_image(game_assets.map.clone()),
         Map,
@@ -159,6 +163,20 @@ fn display_game(
 */
 }
 
+fn on_camera_drag(
+    drag: Trigger<Pointer<Drag>>,
+    c_query: Single<(&Camera, &GlobalTransform, &mut Transform)>
+) -> Result
+{
+    let (camera, global_transform, mut transform) = c_query.into_inner();
+
+    let mut viewport = camera.world_to_viewport(global_transform, transform.translation)?;
+    viewport += drag.delta * -1.0; // inverted feels more natural
+    transform.translation = camera.viewport_to_world_2d(global_transform, viewport)?.extend(0.0);
+
+    Ok(())
+}
+
 fn recolor_on<E: Clone + Reflect>(color: Color) -> impl Fn(Trigger<E>, Query<&mut Sprite>) {
     move |ev, mut sprites| {
         let Ok(mut sprite) = sprites.get_mut(ev.target()) else {
@@ -169,7 +187,7 @@ fn recolor_on<E: Clone + Reflect>(color: Color) -> impl Fn(Trigger<E>, Query<&mu
 }
 
 fn on_piece_drag(
-    drag: Trigger<Pointer<Drag>>,
+    mut drag: Trigger<Pointer<Drag>>,
     mut transforms: Query<&mut Transform, Without<Camera>>,
     tp_query: Query<(&Transform, &Projection), With<Camera>>
 ) -> Result
@@ -190,6 +208,9 @@ fn on_piece_drag(
     drag_delta = camera_transform.rotation * drag_delta;
 
     transform.translation += drag_delta;
+
+    // prevent the event from bubbling up to the world
+    drag.propagate(false);
 
     Ok(())
 }
@@ -258,7 +279,7 @@ fn control_input(
                 pan_delta.x = -pan_delta.x;
             }
 
-            *prev_pos = Some(cur_pos);
+//            *prev_pos = Some(cur_pos);
         }
     }
     else {
