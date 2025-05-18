@@ -54,7 +54,7 @@ struct SplashScreenTimer(Timer);
 
 fn display_title(mut commands: Commands) {
     commands.spawn((
-        Camera2d::default(),
+        Camera2d,
         Projection::from(OrthographicProjection::default_2d())
     ));
 
@@ -202,7 +202,7 @@ fn on_piece_drag(
 
     let mut transform = transforms.get_mut(drag.target())?; 
     let (camera_transform, camera_projection) = tp_query.single()?;
-    let Projection::Orthographic(camera_projection) = &*camera_projection else {
+    let Projection::Orthographic(camera_projection) = camera_projection else {
         panic!("Projection is not orthographic!");
     };
 
