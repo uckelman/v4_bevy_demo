@@ -3,6 +3,7 @@ use bevy::{
     image::ImageSamplerDescriptor,
     input::mouse::{MouseScrollUnit, MouseWheel},
 };
+use rand::Rng;
 
 fn main() {
     App::new()
@@ -117,12 +118,80 @@ fn game_plugin(app: &mut App) {
 #[derive(Component)]
 struct Map;
 
-fn display_game(mut commands: Commands, game_assets: Res<Assets>) {
+fn display_game(
+    mut commands: Commands,
+    game_assets: Res<Assets>
+) {
     commands.spawn((
         Sprite::from_image(game_assets.map.clone()),
         Map,
         StateScoped(GameState::Game)
     ));
+
+    let mut rng = rand::rng();
+
+    for z in 1..100 {
+        let x = rng.random_range(-500.0..=500.0);
+        let y = rng.random_range(-500.0..=500.0);
+
+        commands.spawn((
+            Sprite::from_color(Color::BLACK, Vec2::splat(50.0)),
+            Transform::from_xyz(x, y, z as f32),
+            Pickable::default()
+        ))
+        .observe(recolor_on::<Pointer<Over>>(Color::srgb(0.0, 1.0, 0.0)))
+        .observe(recolor_on::<Pointer<Out>>(Color::BLACK))
+        .observe(recolor_on::<Pointer<Pressed>>(Color::srgb(0.0, 0.0, 1.0)))
+        .observe(recolor_on::<Pointer<Released>>(Color::BLACK))
+        .observe(on_piece_drag);
+    }
+
+/*
+    let Handle::Strong(sh) = game_assets.folder else {
+        return;
+    };
+    
+//    for handle in game_assets.folder.iter() {
+//        let id = handle.id().typed_unchecked::<Image>();
+//        let Some(img) = 
+//        eprintln!();
+//    }
+*/
+}
+
+fn recolor_on<E: Clone + Reflect>(color: Color) -> impl Fn(Trigger<E>, Query<&mut Sprite>) {
+    move |ev, mut sprites| {
+        let Ok(mut sprite) = sprites.get_mut(ev.target()) else {
+            return;
+        };
+        sprite.color = color;
+    }
+}
+
+fn on_piece_drag(
+    drag: Trigger<Pointer<Drag>>,
+    mut transforms: Query<&mut Transform, Without<Camera>>,
+    tp_query: Query<(&Transform, &Projection), With<Camera>>
+) -> Result
+{
+    let mut transform = transforms.get_mut(drag.target())?; 
+    let (camera_transform, camera_projection) = tp_query.single()?;
+    let Projection::Orthographic(camera_projection) = &*camera_projection else {
+        panic!("Projection is not orthographic!");
+    };
+
+    let mut drag_delta = drag.delta.extend(0.0);
+    drag_delta.y = -drag_delta.y;
+
+    // apply current scale to the drag
+    drag_delta *= camera_projection.scale;
+
+    // apply current rotation to the drag
+    drag_delta = camera_transform.rotation * drag_delta;
+
+    transform.translation += drag_delta;
+
+    Ok(())
 }
 
 fn control_input(
@@ -217,13 +286,15 @@ fn control_input(
     }
 
     if pan_delta != Vec2::ZERO {
+        let mut pan_delta = pan_delta.extend(0.0);
+
         // apply current scale to the pan
-        pan_delta = (projection.scale * pan_delta.extend(0.0)).truncate();
+        pan_delta *= projection.scale;
 
         // apply current rotation to the pan
-        pan_delta = (transform.rotation * pan_delta.extend(0.0)).truncate();
+        pan_delta = transform.rotation * pan_delta;
 
-        transform.translation += pan_delta.extend(0.0);
+        transform.translation += pan_delta;
     }
 
     // rotate
