@@ -168,6 +168,10 @@ fn on_camera_drag(
     c_query: Single<(&Camera, &GlobalTransform, &mut Transform)>
 ) -> Result
 {
+    if drag.button != PointerButton::Primary {
+        return Ok(());
+    }
+
     let (camera, global_transform, mut transform) = c_query.into_inner();
 
     let mut viewport = camera.world_to_viewport(global_transform, transform.translation)?;
@@ -192,6 +196,10 @@ fn on_piece_drag(
     tp_query: Query<(&Transform, &Projection), With<Camera>>
 ) -> Result
 {
+    if drag.button != PointerButton::Primary {
+        return Ok(());
+    }
+
     let mut transform = transforms.get_mut(drag.target())?; 
     let (camera_transform, camera_projection) = tp_query.single()?;
     let Projection::Orthographic(camera_projection) = &*camera_projection else {
