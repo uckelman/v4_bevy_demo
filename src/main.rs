@@ -1,18 +1,26 @@
 use bevy::prelude::*;
 use bevy::{
+    image::ImageSamplerDescriptor,
     input::mouse::{MouseScrollUnit, MouseWheel},
-    window::PrimaryWindow
 };
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "V4 Bevy Demo".into(),
+        .add_plugins(DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "V4 Bevy Demo".into(),
+                    ..default()
+                }),
                 ..default()
-            }),
-            ..default()
-        }))
+            })
+            .set(ImagePlugin {
+                default_sampler: ImageSamplerDescriptor {
+                    anisotropy_clamp: 16,
+                    ..ImageSamplerDescriptor::linear()
+                }
+            })
+        )
         .init_state::<GameState>()
         .enable_state_scoped_entities::<GameState>()
         .add_plugins((
@@ -122,37 +130,42 @@ fn control_input(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     mut mouse_wheel_events: EventReader<MouseWheel>,
     mut cursor_motion_events: EventReader<CursorMoved>,
-    w_query: Query<&Window, With<PrimaryWindow>>,
-    mut ctp_query: Query<(&Camera, &mut Transform, &mut Projection)>,
+    mut tp_query: Query<(&mut Transform, &mut Projection)>,
     mut prev_pos: Local<Option<Vec2>>,
     time: Res<Time>
 ) -> Result {
 
-    let (camera, mut transform, mut projection) = ctp_query.single_mut()?;
+    let (mut transform, mut projection) = tp_query.single_mut()?;
 
-    let projection = projection.as_mut();
     let Projection::Orthographic(ref mut projection) = *projection else {
         panic!("Projection is not orthographic!");
-    }; 
+    };
 
-    // zoom 
+    // zoom
 
     let wheel_scale_step = 0.1;
     let key_scale_step = 0.1;
 
-    let mut ds: f32 = mouse_wheel_events
+    let mut ds = 0.0;
+
+    ds += mouse_wheel_events
         .read()
         .map(|e| match e.unit {
             MouseScrollUnit::Line => e.y * wheel_scale_step,
             MouseScrollUnit::Pixel => e.y
         })
-        .sum();
+        .sum::<f32>();
 
-    if keyboard_input.pressed(KeyCode::Equal) { // actaully Plus
-        ds += key_scale_step / (1.0 / (60.0 * time.delta().as_secs_f32()));
+    if keyboard_input.pressed(KeyCode::Equal) { // actually Plus
+        ds += key_scale_step / (1.0 / (60.0 * time.delta_secs()));
     }
-    else if keyboard_input.pressed(KeyCode::Minus) {
-        ds -= key_scale_step / (1.0 / (60.0 * time.delta().as_secs_f32()));
+
+    if keyboard_input.pressed(KeyCode::Minus) {
+        ds -= key_scale_step / (1.0 / (60.0 * time.delta_secs()));
+    }
+
+    if keyboard_input.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) && keyboard_input.pressed(KeyCode::Digit0) {
+        projection.scale = 1.0;
     }
 
     if ds != 0.0 {
@@ -163,55 +176,23 @@ fn control_input(
 
     let mut pan_delta = Vec2::ZERO;
 
-    if mouse_button_input.pressed(MouseButton::Left) &&
+    if mouse_button_input.just_released(MouseButton::Left) {
+        *prev_pos = None;
+    }
+    else if mouse_button_input.pressed(MouseButton::Left) &&
         !mouse_button_input.just_pressed(MouseButton::Left) {
 
-        if let Some(mut cur_pos) = cursor_motion_events.read().last() {
-            let mut cur_pos = cur_pos.position;
-            cur_pos.x *= -1.0;
-
+        if let Some(cm_event) = cursor_motion_events.read().last() {
+            let cur_pos = cm_event.position;
             if let Some(prev_pos) = *prev_pos {
-                let delta_device_pixels = cur_pos - prev_pos;
-                let proj_area_size = projection.area.size();
-                let window = w_query.single()?;
-                let window_size = window.size();
-                let viewport_size = camera.logical_viewport_size()
-                    .unwrap_or(window_size);
-                pan_delta = delta_device_pixels * proj_area_size / viewport_size;
+                pan_delta = cur_pos - prev_pos;
+                pan_delta.x = -pan_delta.x;
             }
 
             *prev_pos = Some(cur_pos);
         }
-        else {
-            *prev_pos = None;
-        }
-/*
-        let window = w_query.single()?;
-
-        // Use position instead of MouseMotion,
-        // otherwise we don't get acceleration movement
-        if let Some(mut cur_pos) = window.cursor_position() {
-            cur_pos.x *= -1.0;
-
-            if let Some(prev_pos) = *prev_pos {
-                let delta_device_pixels = cur_pos - prev_pos;
-                let proj_area_size = projection.area.size();
-                let window_size = window.size();
-                let viewport_size = camera.logical_viewport_size()
-                    .unwrap_or(window_size);
-                pan_delta = delta_device_pixels * proj_area_size / viewport_size;
-            }
-
-            *prev_pos = Some(cur_pos);
-        }
-        else {
-            *prev_pos = None;
-        }
-*/
     }
     else {
-        *prev_pos = None;
-
         let key_pan_step = 5.0;
 
         if keyboard_input.pressed(KeyCode::KeyA) {
@@ -234,20 +215,20 @@ fn control_input(
             pan_delta *= key_pan_step / (1.0 / (60.0 * time.delta_secs()));
         }
     }
-  
+
     if pan_delta != Vec2::ZERO {
+        // apply current scale to the pan
+        pan_delta = (projection.scale * pan_delta.extend(0.0)).truncate();
+
+        // apply current rotation to the pan
+        pan_delta = (transform.rotation * pan_delta.extend(0.0)).truncate();
+
         transform.translation += pan_delta.extend(0.0);
-/*
-        let theta = transform.rotation.to_axis_angle().1;
-        transform.rotate_local_z(-theta);
-        transform.translation += pan_delta.extend(0.0);
-        transform.rotate_local_z(theta);
-*/
     }
 
     // rotate
 
-    let rotate_step = (1.0_f32).to_radians();
+    let rotate_step = 1.0f32.to_radians();
 
     let mut dt = 0.0;
 
