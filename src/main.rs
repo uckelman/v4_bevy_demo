@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::{
+    asset::LoadedFolder,
     image::ImageSamplerDescriptor,
     input::mouse::{MouseScrollUnit, MouseWheel},
 };
@@ -36,11 +37,6 @@ enum GameState {
     #[default]
     Splash,
     Game
-}
-
-#[derive(Resource)]
-struct Assets {
-    map: Handle<Image>
 }
 
 fn splash_plugin(app: &mut App) {
@@ -91,20 +87,50 @@ fn display_title(mut commands: Commands) {
     );
 }
 
-fn switch_to_game(
-    mut next: ResMut<NextState<GameState>>,
-    mut timer: ResMut<SplashScreenTimer>,
-    time: Res<Time>
-) {
-    if timer.0.tick(time.delta()).just_finished() {
-        next.set(GameState::Game);
+#[derive(Resource)]
+struct SpriteHandles(Handle<LoadedFolder>);
+
+fn load_assets(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>
+)
+{
+    commands.insert_resource(SpriteHandles(asset_server.load_folder(".")));
+}
+
+fn assets_loaded(
+    mut asset_events: EventReader<AssetEvent<LoadedFolder>>,
+    sprite_handles: Res<SpriteHandles>
+) -> bool
+{
+    asset_events.read()
+        .any(|e| e.is_loaded_with_dependencies(&sprite_handles.0))
+}
+
+fn assets_loaded_x(
+    mut asset_events: EventReader<AssetEvent<Image>>,
+)
+{
+    for e in asset_events.read() {
+        eprint!(".");
     }
 }
 
-fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.insert_resource(Assets {
-        map: asset_server.load("map.png")
-    });
+fn switch_to_game(
+    mut next: ResMut<NextState<GameState>>,
+    asset_events: EventReader<AssetEvent<LoadedFolder>>,
+    asset_events_x: EventReader<AssetEvent<Image>>,
+    sprite_handles: Res<SpriteHandles>,
+    mut timer: ResMut<SplashScreenTimer>,
+    time: Res<Time>
+) {
+    assets_loaded_x(asset_events_x);
+
+    if timer.0.tick(time.delta()).finished()
+        && assets_loaded(asset_events, sprite_handles)
+    {
+        next.set(GameState::Game);
+    }
 }
 
 fn game_plugin(app: &mut App) {
@@ -115,52 +141,73 @@ fn game_plugin(app: &mut App) {
         );
 }
 
+#[derive(Resource)]
+struct Surface {
+    max_z: f32
+}
+
 #[derive(Component)]
 struct Map;
 
 fn display_game(
     mut commands: Commands,
     window: Single<Entity, With<Window>>,
-    game_assets: Res<Assets>
-) {
+    sprite_handles: Res<SpriteHandles>,
+    loaded_folders: Res<Assets<LoadedFolder>>,
+) -> Result
+{
+    let Some(loaded_folder) = loaded_folders.get(&sprite_handles.0) else {
+        return Ok(());
+    };
+
     commands.entity(*window)
         .observe(on_camera_drag);
 
-    commands.spawn((
-        Sprite::from_image(game_assets.map.clone()),
-        Map,
-        StateScoped(GameState::Game)
-    ));
+    let mut surface = Surface { max_z: 0.0 };
 
     let mut rng = rand::rng();
 
-    for z in 1..100 {
-        let x = rng.random_range(-500.0..=500.0);
-        let y = rng.random_range(-500.0..=500.0);
+    for handle in loaded_folder.handles.iter() {
+        let handle = handle.clone().try_typed::<Image>()?;
 
-        commands.spawn((
-            Sprite::from_color(Color::BLACK, Vec2::splat(50.0)),
-            Transform::from_xyz(x, y, z as f32),
-            Pickable::default()
-        ))
-        .observe(recolor_on::<Pointer<Over>>(Color::srgb(0.0, 1.0, 0.0)))
-        .observe(recolor_on::<Pointer<Out>>(Color::BLACK))
-        .observe(recolor_on::<Pointer<Pressed>>(Color::srgb(0.0, 0.0, 1.0)))
-        .observe(recolor_on::<Pointer<Released>>(Color::BLACK))
-        .observe(on_piece_drag);
+        surface.max_z = surface.max_z.next_up();
+
+        let Some(path) = handle.path() else {
+            continue;
+        };
+
+        if path.to_string() == "map.png" {
+            commands.spawn((
+                Sprite::from_image(handle),
+                Transform::from_xyz(0.0, 0.0, 0.0),
+                Map,
+                StateScoped(GameState::Game)
+            ));
+        }
+        else {
+            let x = rng.random_range(-500.0..=500.0);
+            let y = rng.random_range(-500.0..=500.0);
+
+            commands.spawn((
+                Sprite::from_image(handle),
+                Transform::from_xyz(x, y, surface.max_z),
+                Pickable::default(),
+                StateScoped(GameState::Game)
+            ))
+/*
+            .observe(recolor_on::<Pointer<Over>>(Color::srgb(0.0, 1.0, 0.0)))
+            .observe(recolor_on::<Pointer<Out>>(Color::BLACK))
+            .observe(recolor_on::<Pointer<Pressed>>(Color::srgb(0.0, 0.0, 1.0)))
+            .observe(recolor_on::<Pointer<Released>>(Color::BLACK))
+*/
+            .observe(on_piece_pressed)
+            .observe(on_piece_drag);
+        }
     }
 
-/*
-    let Handle::Strong(sh) = game_assets.folder else {
-        return;
-    };
-    
-//    for handle in game_assets.folder.iter() {
-//        let id = handle.id().typed_unchecked::<Image>();
-//        let Some(img) = 
-//        eprintln!();
-//    }
-*/
+    commands.insert_resource(surface);
+
+    Ok(())
 }
 
 fn on_camera_drag(
@@ -181,6 +228,17 @@ fn on_camera_drag(
     Ok(())
 }
 
+/*
+fn on_camera_scroll(
+    scroll: Trigger<Pointer<Scroll>>,
+    proj: Single<&mut Projection, With<Camera>>)
+{
+    if let Projection::Orthographic(ref mut proj) = *proj.into_inner() {
+        proj.scale *= 1. - (scroll.y / 5.);
+    }
+}
+*/
+
 fn recolor_on<E: Clone + Reflect>(color: Color) -> impl Fn(Trigger<E>, Query<&mut Sprite>) {
     move |ev, mut sprites| {
         let Ok(mut sprite) = sprites.get_mut(ev.target()) else {
@@ -188,6 +246,27 @@ fn recolor_on<E: Clone + Reflect>(color: Color) -> impl Fn(Trigger<E>, Query<&mu
         };
         sprite.color = color;
     }
+}
+
+fn on_piece_pressed(
+    mut press: Trigger<Pointer<Pressed>>,
+    mut transforms: Query<&mut Transform>,
+    mut surface: ResMut<Surface>
+) -> Result
+{
+    if press.button != PointerButton::Primary {
+        return Ok(());
+    }
+
+    let mut transform = transforms.get_mut(press.target())?; 
+    
+    surface.max_z = surface.max_z.next_up();
+    transform.translation.z = surface.max_z;
+
+    // prevent the event from bubbling up to the world
+    press.propagate(false);
+
+    Ok(())
 }
 
 fn on_piece_drag(
@@ -321,7 +400,7 @@ fn control_input(
     }
 
     if dt != 0.0 {
-        dt /= 1.0 / (60.0 * time.delta().as_secs_f32());
+        dt /= 1.0 / (60.0 * time.delta_secs());
         transform.rotate_local_z(dt);
     }
 
