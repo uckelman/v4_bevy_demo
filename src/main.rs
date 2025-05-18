@@ -49,6 +49,9 @@ fn splash_plugin(app: &mut App) {
         .add_systems(Update, switch_to_game.run_if(in_state(GameState::Splash)));
 }
 
+#[derive(Resource)]
+struct SplashScreenTimer(Timer);
+
 fn display_title(mut commands: Commands) {
     commands.spawn((
         Camera2d::default(),
@@ -87,9 +90,6 @@ fn display_title(mut commands: Commands) {
         SplashScreenTimer(Timer::from_seconds(2.0, TimerMode::Once))
     );
 }
-
-#[derive(Resource)]
-struct SplashScreenTimer(Timer);
 
 fn switch_to_game(
     mut next: ResMut<NextState<GameState>>,
@@ -219,9 +219,7 @@ fn control_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     mut mouse_wheel_events: EventReader<MouseWheel>,
-    mut cursor_motion_events: EventReader<CursorMoved>,
     mut tp_query: Query<(&mut Transform, &mut Projection)>,
-    mut prev_pos: Local<Option<Vec2>>,
     time: Res<Time>
 ) -> Result {
 
@@ -266,44 +264,26 @@ fn control_input(
 
     let mut pan_delta = Vec2::ZERO;
 
-    if mouse_button_input.just_released(MouseButton::Left) {
-        *prev_pos = None;
+    let key_pan_step = 5.0;
+
+    if keyboard_input.pressed(KeyCode::KeyA) {
+        pan_delta.x -= 1.0;
     }
-    else if mouse_button_input.pressed(MouseButton::Left) &&
-        !mouse_button_input.just_pressed(MouseButton::Left) {
 
-        if let Some(cm_event) = cursor_motion_events.read().last() {
-            let cur_pos = cm_event.position;
-            if let Some(prev_pos) = *prev_pos {
-                pan_delta = cur_pos - prev_pos;
-                pan_delta.x = -pan_delta.x;
-            }
-
-//            *prev_pos = Some(cur_pos);
-        }
+    if keyboard_input.pressed(KeyCode::KeyD) {
+        pan_delta.x += 1.0;
     }
-    else {
-        let key_pan_step = 5.0;
 
-        if keyboard_input.pressed(KeyCode::KeyA) {
-            pan_delta.x -= 1.0;
-        }
+    if keyboard_input.pressed(KeyCode::KeyW) {
+        pan_delta.y += 1.0;
+    }
 
-        if keyboard_input.pressed(KeyCode::KeyD) {
-            pan_delta.x += 1.0;
-        }
+    if keyboard_input.pressed(KeyCode::KeyS) {
+        pan_delta.y -= 1.0;
+    }
 
-        if keyboard_input.pressed(KeyCode::KeyW) {
-            pan_delta.y += 1.0;
-        }
-
-        if keyboard_input.pressed(KeyCode::KeyS) {
-            pan_delta.y -= 1.0;
-        }
-
-        if pan_delta != Vec2::ZERO {
-            pan_delta *= key_pan_step / (1.0 / (60.0 * time.delta_secs()));
-        }
+    if pan_delta != Vec2::ZERO {
+        pan_delta *= key_pan_step / (1.0 / (60.0 * time.delta_secs()));
     }
 
     if pan_delta != Vec2::ZERO {
