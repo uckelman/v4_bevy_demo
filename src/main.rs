@@ -40,8 +40,14 @@ enum GameState {
 
 fn splash_plugin(app: &mut App) {
     app
-        .add_systems(OnEnter(GameState::Splash), (display_title, load_assets))
-        .add_systems(Update, switch_to_game.run_if(in_state(GameState::Splash)));
+        .add_systems(
+            OnEnter(GameState::Splash),
+            (display_title, load_assets)
+        )
+        .add_systems(
+            Update,
+            switch_to_game.run_if(in_state(GameState::Splash))
+        );
 }
 
 #[derive(Resource)]
