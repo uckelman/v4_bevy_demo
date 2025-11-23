@@ -24,7 +24,6 @@ fn main() {
             })
         )
         .init_state::<GameState>()
-        .enable_state_scoped_entities::<GameState>()
         .add_plugins((
             splash_plugin,
             game_plugin
@@ -79,7 +78,7 @@ fn display_title(mut commands: Commands) {
                 },
             )
         ],
-        StateScoped(GameState::Splash),
+        DespawnOnExit(GameState::Splash),
     ));
 
     commands.insert_resource(
@@ -99,7 +98,7 @@ fn load_assets(
 }
 
 fn assets_loaded(
-    mut asset_events: EventReader<AssetEvent<LoadedFolder>>,
+    mut asset_events: MessageReader<AssetEvent<LoadedFolder>>,
     sprite_handles: Res<SpriteHandles>
 ) -> bool
 {
@@ -108,7 +107,7 @@ fn assets_loaded(
 }
 
 fn assets_loaded_x(
-    mut asset_events: EventReader<AssetEvent<Image>>,
+    mut asset_events: MessageReader<AssetEvent<Image>>,
 )
 {
     for e in asset_events.read() {
@@ -118,15 +117,15 @@ fn assets_loaded_x(
 
 fn switch_to_game(
     mut next: ResMut<NextState<GameState>>,
-    asset_events: EventReader<AssetEvent<LoadedFolder>>,
-    asset_events_x: EventReader<AssetEvent<Image>>,
+    asset_events: MessageReader<AssetEvent<LoadedFolder>>,
+    asset_events_x: MessageReader<AssetEvent<Image>>,
     sprite_handles: Res<SpriteHandles>,
     mut timer: ResMut<SplashScreenTimer>,
     time: Res<Time>
 ) {
     assets_loaded_x(asset_events_x);
 
-    if timer.0.tick(time.delta()).finished()
+    if timer.0.tick(time.delta()).is_finished()
         && assets_loaded(asset_events, sprite_handles)
     {
         next.set(GameState::Game);
@@ -181,7 +180,7 @@ fn display_game(
                 Sprite::from_image(handle),
                 Transform::from_xyz(0.0, 0.0, 0.0),
                 Map,
-                StateScoped(GameState::Game)
+                DespawnOnExit(GameState::Game)
             ));
         }
         else {
@@ -192,7 +191,7 @@ fn display_game(
                 Sprite::from_image(handle),
                 Transform::from_xyz(x, y, surface.max_z),
                 Pickable::default(),
-                StateScoped(GameState::Game)
+                DespawnOnExit(GameState::Game)
             ))
 /*
             .observe(recolor_on::<Pointer<Over>>(Color::srgb(0.0, 1.0, 0.0)))
@@ -211,7 +210,7 @@ fn display_game(
 }
 
 fn on_camera_drag(
-    drag: Trigger<Pointer<Drag>>,
+    drag: On<Pointer<Drag>>,
     c_query: Single<(&Camera, &GlobalTransform, &mut Transform)>
 ) -> Result
 {
@@ -239,9 +238,9 @@ fn on_camera_scroll(
 }
 */
 
-fn recolor_on<E: Clone + Reflect>(color: Color) -> impl Fn(Trigger<E>, Query<&mut Sprite>) {
+fn recolor_on<E: Clone + EntityEvent + Reflect>(color: Color) -> impl Fn(On<E>, Query<&mut Sprite>) {
     move |ev, mut sprites| {
-        let Ok(mut sprite) = sprites.get_mut(ev.target()) else {
+        let Ok(mut sprite) = sprites.get_mut(ev.event().event_target()) else {
             return;
         };
         sprite.color = color;
@@ -249,7 +248,7 @@ fn recolor_on<E: Clone + Reflect>(color: Color) -> impl Fn(Trigger<E>, Query<&mu
 }
 
 fn on_piece_pressed(
-    mut press: Trigger<Pointer<Pressed>>,
+    mut press: On<Pointer<Press>>,
     mut transforms: Query<&mut Transform>,
     mut surface: ResMut<Surface>
 ) -> Result
@@ -258,8 +257,8 @@ fn on_piece_pressed(
         return Ok(());
     }
 
-    let mut transform = transforms.get_mut(press.target())?; 
-    
+    let mut transform = transforms.get_mut(press.event().event_target())?;
+
     surface.max_z = surface.max_z.next_up();
     transform.translation.z = surface.max_z;
 
@@ -270,7 +269,7 @@ fn on_piece_pressed(
 }
 
 fn on_piece_drag(
-    mut drag: Trigger<Pointer<Drag>>,
+    mut drag: On<Pointer<Drag>>,
     mut transforms: Query<&mut Transform, Without<Camera>>,
     tp_query: Query<(&Transform, &Projection), With<Camera>>
 ) -> Result
@@ -279,7 +278,7 @@ fn on_piece_drag(
         return Ok(());
     }
 
-    let mut transform = transforms.get_mut(drag.target())?; 
+    let mut transform = transforms.get_mut(drag.event().event_target())?;
     let (camera_transform, camera_projection) = tp_query.single()?;
     let Projection::Orthographic(camera_projection) = camera_projection else {
         panic!("Projection is not orthographic!");
@@ -305,7 +304,7 @@ fn on_piece_drag(
 fn control_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
-    mut mouse_wheel_events: EventReader<MouseWheel>,
+    mut mouse_wheel_events: MessageReader<MouseWheel>,
     mut tp_query: Query<(&mut Transform, &mut Projection)>,
     time: Res<Time>
 ) -> Result {
