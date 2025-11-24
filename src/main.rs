@@ -77,7 +77,7 @@ fn display_title(mut commands: Commands) {
                 },
             ),
             (
-                Text::new("May 2025"),
+                Text::new("November 2025"),
                 TextFont {
                     font_size: 100.0,
                     ..default()
