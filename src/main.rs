@@ -103,7 +103,7 @@ fn load_assets(
     commands.insert_resource(SpriteHandles(asset_server.load_folder(".")));
 }
 
-fn assets_loaded(
+fn is_folder_loaded(
     mut asset_events: MessageReader<AssetEvent<LoadedFolder>>,
     sprite_handles: Res<SpriteHandles>
 ) -> bool
@@ -112,7 +112,7 @@ fn assets_loaded(
         .any(|e| e.is_loaded_with_dependencies(&sprite_handles.0))
 }
 
-fn assets_loaded_x(
+fn log_images_loaded(
     mut asset_events: MessageReader<AssetEvent<Image>>,
 )
 {
@@ -123,16 +123,16 @@ fn assets_loaded_x(
 
 fn switch_to_game(
     mut next: ResMut<NextState<GameState>>,
-    asset_events: MessageReader<AssetEvent<LoadedFolder>>,
-    asset_events_x: MessageReader<AssetEvent<Image>>,
+    asset_events_folder: MessageReader<AssetEvent<LoadedFolder>>,
+    asset_events_image: MessageReader<AssetEvent<Image>>,
     sprite_handles: Res<SpriteHandles>,
     mut timer: ResMut<SplashScreenTimer>,
     time: Res<Time>
 ) {
-    assets_loaded_x(asset_events_x);
+    log_images_loaded(asset_events_image);
 
     if timer.0.tick(time.delta()).is_finished()
-        && assets_loaded(asset_events, sprite_handles)
+        && is_folder_loaded(asset_events_folder, sprite_handles)
     {
         next.set(GameState::Game);
     }
