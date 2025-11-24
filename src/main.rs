@@ -151,8 +151,26 @@ struct Surface {
     max_z: f32
 }
 
-#[derive(Component)]
+#[derive(Component, Default)]
 struct Map;
+
+#[derive(Bundle, Default)]
+struct MapBundle {
+    marker: Map,
+    sprite: Sprite,
+    transform: Transform
+}
+
+#[derive(Component, Default)]
+struct Piece;
+
+#[derive(Bundle, Default)]
+struct PieceBundle {
+    marker: Piece,
+    sprite: Sprite,
+    transform: Transform,
+    pickable: Pickable
+}
 
 fn display_game(
     mut commands: Commands,
@@ -183,9 +201,11 @@ fn display_game(
 
         if path.to_string() == "map.png" {
             commands.spawn((
-                Sprite::from_image(handle),
-                Transform::from_xyz(0.0, 0.0, 0.0),
-                Map,
+                MapBundle {
+                    sprite: Sprite::from_image(handle),
+                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                    ..Default::default()
+                },
                 DespawnOnExit(GameState::Game)
             ));
         }
@@ -194,9 +214,11 @@ fn display_game(
             let y = rng.random_range(-500.0..=500.0);
 
             commands.spawn((
-                Sprite::from_image(handle),
-                Transform::from_xyz(x, y, surface.max_z),
-                Pickable::default(),
+                PieceBundle {
+                    sprite: Sprite::from_image(handle),
+                    transform: Transform::from_xyz(x, y, surface.max_z),
+                    ..Default::default()
+                },
                 DespawnOnExit(GameState::Game)
             ))
 /*
