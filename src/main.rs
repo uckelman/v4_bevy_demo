@@ -387,13 +387,13 @@ fn on_piece_drag(
 
 fn pan_view(
     transform: &mut Transform,
-    projection: &mut Projection,
-    mut pan_delta: Vec2
+    projection: &Projection,
+    pan_delta: Vec2
 )
 {
     let mut pan_delta = pan_delta.extend(0.0);
 
-    let mut projection = projection.as_ortho_mut();
+    let projection = projection.as_ortho();
 
     // apply current scale to the pan
     pan_delta *= projection.scale;
@@ -405,23 +405,23 @@ fn pan_view(
 }
 
 fn handle_pan(
-    mut query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    mut query: Query<(&mut Transform, &Projection), With<Camera>>,
     time: Res<Time>,
     mut pan_delta: Vec2
 ) -> Result
 {
-    let (mut transform, mut projection) = query.single_mut()?;
+    let (mut transform, projection) = query.single_mut()?;
 
     let key_pan_step = 5.0;
     pan_delta *= key_pan_step / (1.0 / (60.0 * time.delta_secs()));
 
-    pan_view(&mut transform, &mut projection, pan_delta);
+    pan_view(&mut transform, projection, pan_delta);
 
     Ok(())
 }
 
 fn handle_pan_left(
-    query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    query: Query<(&mut Transform, &Projection), With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
@@ -430,7 +430,7 @@ fn handle_pan_left(
 }
 
 fn handle_pan_right(
-    query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    query: Query<(&mut Transform, &Projection), With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
@@ -439,7 +439,7 @@ fn handle_pan_right(
 }
 
 fn handle_pan_up(
-    query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    query: Query<(&mut Transform, &Projection), With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
@@ -448,7 +448,7 @@ fn handle_pan_up(
 }
 
 fn handle_pan_down(
-    query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    query: Query<(&mut Transform, &Projection), With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
@@ -484,7 +484,7 @@ fn handle_rotate(
 }
 
 fn handle_rotate_ccw(
-    mut query: Query<&mut Transform, With<Camera>>,
+    query: Query<&mut Transform, With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
@@ -493,7 +493,7 @@ fn handle_rotate_ccw(
 }
 
 fn handle_rotate_cw(
-    mut query: Query<&mut Transform, With<Camera>>,
+    query: Query<&mut Transform, With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
@@ -506,7 +506,7 @@ fn zoom_view_set(
     s: f32
 )
 {
-    let mut projection = projection.as_ortho_mut();
+    let projection = projection.as_ortho_mut();
     projection.scale = s;
 }
 
@@ -522,11 +522,11 @@ fn handle_zoom_reset(
 
 fn zoom_view(
     projection: &mut Projection,
-    mut ds: f32
+    ds: f32
 )
 {
     if ds != 0.0 {
-        let mut projection = projection.as_ortho_mut();
+        let projection = projection.as_ortho_mut();
         projection.scale *= (-ds).exp();
     }
 }
@@ -570,8 +570,7 @@ fn handle_zoom_out(
 
 fn handle_zoom_scroll(
     mouse_scroll: Res<AccumulatedMouseScroll>,
-    mut query: Query<&mut Projection, With<Camera>>,
-    time: Res<Time>
+    mut query: Query<&mut Projection, With<Camera>>
 ) -> Result
 {
     trace!("handle_mouse_scroll");
