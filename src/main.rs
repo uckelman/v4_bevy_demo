@@ -8,6 +8,7 @@ use bevy::{
     }
 };
 use rand::Rng;
+use std::hash::Hash;
 
 fn main() {
     App::new()
@@ -158,6 +159,106 @@ fn load_input_settings(mut commands: Commands) {
     commands.insert_resource(KeyRotateStep(1.0f32.to_radians()));
     commands.insert_resource(KeyScaleStep(0.1));
     commands.insert_resource(WheelScaleStep(0.1));
+
+    commands.insert_resource(PanLeftKey(KeyCode::KeyA));
+    commands.insert_resource(PanRightKey(KeyCode::KeyD));
+    commands.insert_resource(PanUpKey(KeyCode::KeyW));
+    commands.insert_resource(PanDownKey(KeyCode::KeyS));
+
+    commands.insert_resource(ZoomInKey(KeyCode::Equal));
+    commands.insert_resource(ZoomOutKey(KeyCode::Minus));
+
+    commands.insert_resource(RotateCCWKey(KeyCode::KeyZ));
+    commands.insert_resource(RotateCWKey(KeyCode::KeyX));
+}
+
+
+// TODO: make KeyConfig derivable?
+
+trait KeyConfig {
+    fn code(&self) -> KeyCode;
+}
+
+#[derive(Resource)]
+struct PanLeftKey(KeyCode);
+
+#[derive(Resource)]
+struct PanRightKey(KeyCode);
+
+#[derive(Resource)]
+struct PanUpKey(KeyCode);
+
+#[derive(Resource)]
+struct PanDownKey(KeyCode);
+
+#[derive(Resource)]
+struct ZoomInKey(KeyCode);
+
+#[derive(Resource)]
+struct ZoomOutKey(KeyCode);
+
+#[derive(Resource)]
+struct RotateCCWKey(KeyCode);
+
+#[derive(Resource)]
+struct RotateCWKey(KeyCode);
+
+impl KeyConfig for PanLeftKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for PanRightKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for PanUpKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for PanDownKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for ZoomInKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for ZoomOutKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for RotateCCWKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for RotateCWKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+fn cfg_input_pressed<T>(
+    key: Res<T>,
+    inputs: Res<ButtonInput<KeyCode>>
+) -> bool
+where
+    T: Resource + KeyConfig
+{
+    inputs.pressed(key.code())
 }
 
 fn game_plugin(app: &mut App) {
@@ -169,14 +270,15 @@ fn game_plugin(app: &mut App) {
         .add_systems(
             Update,
             (
-                handle_pan_left.run_if(input_pressed(KeyCode::KeyA)),
-                handle_pan_right.run_if(input_pressed(KeyCode::KeyD)),
-                handle_pan_up.run_if(input_pressed(KeyCode::KeyW)),
-                handle_pan_down.run_if(input_pressed(KeyCode::KeyS)),
+                handle_pan_left.run_if(cfg_input_pressed::<PanLeftKey>),
+                handle_pan_right.run_if(cfg_input_pressed::<PanRightKey>),
+                handle_pan_up.run_if(cfg_input_pressed::<PanUpKey>),
+                handle_pan_down.run_if(cfg_input_pressed::<PanDownKey>),
 
-                handle_rotate_ccw.run_if(input_pressed(KeyCode::KeyZ)),
-                handle_rotate_cw.run_if(input_pressed(KeyCode::KeyX)),
+                handle_rotate_ccw.run_if(cfg_input_pressed::<RotateCCWKey>),
+                handle_rotate_cw.run_if(cfg_input_pressed::<RotateCWKey>),
 
+// TODO: switch to configurable input
                 handle_zoom_reset.run_if(
                     input_pressed(KeyCode::Digit0).and(
                         input_pressed(KeyCode::ControlLeft).or(
@@ -184,8 +286,8 @@ fn game_plugin(app: &mut App) {
                         )
                     )
                 ),
-                handle_zoom_in.run_if(input_pressed(KeyCode::Equal)),
-                handle_zoom_out.run_if(input_pressed(KeyCode::Minus)),
+                handle_zoom_in.run_if(cfg_input_pressed::<ZoomInKey>),
+                handle_zoom_out.run_if(cfg_input_pressed::<ZoomOutKey>),
                 handle_zoom_scroll.run_if(
                     resource_changed::<AccumulatedMouseScroll>.and(
                         not(resource_equals(AccumulatedMouseScroll::default()))
