@@ -269,23 +269,23 @@ fn display_game(
 }
 
 trait AsOrthographicProjection {
-    fn as_ortho(&self) -> &OrthographicProjection;
+    fn as_ortho(&self) -> Result<&OrthographicProjection, BevyError>;
 
-    fn as_ortho_mut(&mut self) -> &mut OrthographicProjection;
+    fn as_ortho_mut(&mut self) -> Result<&mut OrthographicProjection, BevyError>;
 }
 
 impl AsOrthographicProjection for Projection {
-    fn as_ortho(&self) -> &OrthographicProjection {
+    fn as_ortho(&self) -> Result<&OrthographicProjection, BevyError> {
         match *self {
-            Projection::Orthographic(ref p) => p,
-            _ => panic!("Projection is not orthographic!")
+            Projection::Orthographic(ref p) => Ok(p),
+            _ => Err("Projection is not orthographic!".into())
         }
     }
 
-    fn as_ortho_mut(&mut self) -> &mut OrthographicProjection {
+    fn as_ortho_mut(&mut self) -> Result<&mut OrthographicProjection, BevyError> {
         match *self {
-            Projection::Orthographic(ref mut p) => p,
-            _ => panic!("Projection is not orthographic!")
+            Projection::Orthographic(ref mut p) => Ok(p),
+            _ => Err("Projection is not orthographic!".into())
         }
     }
 }
@@ -366,7 +366,7 @@ fn on_piece_drag(
     let mut transform = p_query.get_mut(drag.event().event_target())?;
     let (camera_transform, camera_projection) = tp_query.single()?;
 
-    let camera_projection = camera_projection.as_ortho();
+    let camera_projection = camera_projection.as_ortho()?;
 
     let mut drag_delta = drag.delta.extend(0.0);
     drag_delta.y = -drag_delta.y;
@@ -387,13 +387,11 @@ fn on_piece_drag(
 
 fn pan_view(
     transform: &mut Transform,
-    projection: &Projection,
+    projection: &OrthographicProjection,
     pan_delta: Vec2
 )
 {
     let mut pan_delta = pan_delta.extend(0.0);
-
-    let projection = projection.as_ortho();
 
     // apply current scale to the pan
     pan_delta *= projection.scale;
@@ -415,7 +413,7 @@ fn handle_pan(
     let key_pan_step = 5.0;
     pan_delta *= key_pan_step / (1.0 / (60.0 * time.delta_secs()));
 
-    pan_view(&mut transform, projection, pan_delta);
+    pan_view(&mut transform, projection.as_ortho()?, pan_delta);
 
     Ok(())
 }
@@ -502,11 +500,10 @@ fn handle_rotate_cw(
 }
 
 fn zoom_view_set(
-    projection: &mut Projection,
+    projection: &mut OrthographicProjection,
     s: f32
 )
 {
-    let projection = projection.as_ortho_mut();
     projection.scale = s;
 }
 
@@ -516,17 +513,16 @@ fn handle_zoom_reset(
 {
     trace!("handle_zoom_reset");
     let mut projection = query.single_mut()?;
-    zoom_view_set(&mut projection, 1.0);
+    zoom_view_set(projection.as_ortho_mut()?, 1.0);
     Ok(())
 }
 
 fn zoom_view(
-    projection: &mut Projection,
+    projection: &mut OrthographicProjection,
     ds: f32
 )
 {
     if ds != 0.0 {
-        let projection = projection.as_ortho_mut();
         projection.scale *= (-ds).exp();
     }
 }
@@ -544,7 +540,7 @@ fn handle_zoom(
     ds *= key_scale_step / (1.0 / (60.0 * time.delta_secs()));
 
     if ds != 0.0 {
-        zoom_view(&mut projection, ds);
+        zoom_view(projection.as_ortho_mut()?, ds);
     }
 
     Ok(())
@@ -584,7 +580,7 @@ fn handle_zoom_scroll(
 
     if ds != 0.0 {
         let mut projection = query.single_mut()?;
-        zoom_view(&mut projection, ds);
+        zoom_view(projection.as_ortho_mut()?, ds);
     }
 
     Ok(())
