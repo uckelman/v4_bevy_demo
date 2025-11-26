@@ -149,55 +149,31 @@ fn game_plugin(app: &mut App) {
         )
         .add_systems(
             Update,
-            handle_pan.run_if(
-                in_state(GameState::Game).and(
-                    input_pressed(KeyCode::KeyA).or(
-                        input_pressed(KeyCode::KeyD).or(
-                            input_pressed(KeyCode::KeyW).or(
-                                input_pressed(KeyCode::KeyS)
-                            )
+            (
+                handle_pan_left.run_if(input_pressed(KeyCode::KeyA)),
+                handle_pan_right.run_if(input_pressed(KeyCode::KeyD)),
+                handle_pan_up.run_if(input_pressed(KeyCode::KeyW)),
+                handle_pan_down.run_if(input_pressed(KeyCode::KeyS)),
+
+                handle_rotate_ccw.run_if(input_pressed(KeyCode::KeyZ)),
+                handle_rotate_cw.run_if(input_pressed(KeyCode::KeyX)),
+
+                handle_zoom_reset.run_if(
+                    input_pressed(KeyCode::Digit0).and(
+                        input_pressed(KeyCode::ControlLeft).or(
+                            input_pressed(KeyCode::ControlRight)
                         )
                     )
-                )
-            )
-        )
-        .add_systems(
-            Update,
-            handle_rotate.run_if(
-                in_state(GameState::Game).and(
-                    input_pressed(KeyCode::KeyZ).or(
-                        input_pressed(KeyCode::KeyX)
-                    )
-                )
-            )
-        )
-        .add_systems(
-            Update,
-            reset_zoom.run_if(
-                in_state(GameState::Game).and(
-                    input_pressed(KeyCode::Digit0)
-                )
-            )
-        )
-        .add_systems(
-            Update,
-            handle_zoom.run_if(
-                in_state(GameState::Game).and(
-                    input_pressed(KeyCode::Equal).or(
-                        input_pressed(KeyCode::Minus)
-                    )
-                )
-            )
-        )
-        .add_systems(
-            Update,
-            handle_mouse_scroll.run_if(
-                in_state(GameState::Game).and(
+                ),
+                handle_zoom_in.run_if(input_pressed(KeyCode::Equal)),
+                handle_zoom_out.run_if(input_pressed(KeyCode::Minus)),
+                handle_zoom_scroll.run_if(
                     resource_changed::<AccumulatedMouseScroll>.and(
                         not(resource_equals(AccumulatedMouseScroll::default()))
                     )
                 )
             )
+            .run_if(in_state(GameState::Game))
         );
 }
 
@@ -292,12 +268,34 @@ fn display_game(
     Ok(())
 }
 
+trait AsOrthographicProjection {
+    fn as_ortho(&self) -> &OrthographicProjection;
+
+    fn as_ortho_mut(&mut self) -> &mut OrthographicProjection;
+}
+
+impl AsOrthographicProjection for Projection {
+    fn as_ortho(&self) -> &OrthographicProjection {
+        match *self {
+            Projection::Orthographic(ref p) => p,
+            _ => panic!("Projection is not orthographic!")
+        }
+    }
+
+    fn as_ortho_mut(&mut self) -> &mut OrthographicProjection {
+        match *self {
+            Projection::Orthographic(ref mut p) => p,
+            _ => panic!("Projection is not orthographic!")
+        }
+    }
+}
+
 fn on_camera_drag(
     drag: On<Pointer<Drag>>,
     query: Single<(&Camera, &GlobalTransform, &mut Transform)>
 ) -> Result
 {
-    eprintln!("on_camera_drag");
+    trace!("on_camera_drag");
 
     if drag.button != PointerButton::Primary {
         return Ok(());
@@ -359,7 +357,7 @@ fn on_piece_drag(
     tp_query: Query<(&Transform, &Projection), With<Camera>>
 ) -> Result
 {
-    eprintln!("on_piece_drag");
+    trace!("on_piece_drag");
 
     if drag.button != PointerButton::Primary {
         return Ok(());
@@ -367,9 +365,8 @@ fn on_piece_drag(
 
     let mut transform = p_query.get_mut(drag.event().event_target())?;
     let (camera_transform, camera_projection) = tp_query.single()?;
-    let Projection::Orthographic(camera_projection) = camera_projection else {
-        panic!("Projection is not orthographic!");
-    };
+
+    let camera_projection = camera_projection.as_ortho();
 
     let mut drag_delta = drag.delta.extend(0.0);
     drag_delta.y = -drag_delta.y;
@@ -388,151 +385,196 @@ fn on_piece_drag(
     Ok(())
 }
 
+fn pan_view(
+    transform: &mut Transform,
+    projection: &mut Projection,
+    mut pan_delta: Vec2
+)
+{
+    let mut pan_delta = pan_delta.extend(0.0);
+
+    let mut projection = projection.as_ortho_mut();
+
+    // apply current scale to the pan
+    pan_delta *= projection.scale;
+
+    // apply current rotation to the pan
+    pan_delta = transform.rotation * pan_delta;
+
+    transform.translation += pan_delta;
+}
+
 fn handle_pan(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut tp_query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    mut query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    time: Res<Time>,
+    mut pan_delta: Vec2
+) -> Result
+{
+    let (mut transform, mut projection) = query.single_mut()?;
+
+    let key_pan_step = 5.0;
+    pan_delta *= key_pan_step / (1.0 / (60.0 * time.delta_secs()));
+
+    pan_view(&mut transform, &mut projection, pan_delta);
+
+    Ok(())
+}
+
+fn handle_pan_left(
+    query: Query<(&mut Transform, &mut Projection), With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
-    eprintln!("handle_pan {:?}", time);
+    trace!("handle_pan_left");
+    handle_pan(query, time, Vec2::NEG_X)
+}
 
-    let mut pan_delta = Vec2::ZERO;
+fn handle_pan_right(
+    query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    time: Res<Time>
+) -> Result
+{
+    trace!("handle_pan_right");
+    handle_pan(query, time, Vec2::X)
+}
 
-    if keyboard_input.pressed(KeyCode::KeyA) {
-        pan_delta.x -= 1.0;
-    }
+fn handle_pan_up(
+    query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    time: Res<Time>
+) -> Result
+{
+    trace!("handle_pan_up");
+    handle_pan(query, time, Vec2::Y)
+}
 
-    if keyboard_input.pressed(KeyCode::KeyD) {
-        pan_delta.x += 1.0;
-    }
+fn handle_pan_down(
+    query: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    time: Res<Time>
+) -> Result
+{
+    trace!("handle_pan_down");
+    handle_pan(query, time, Vec2::NEG_Y)
+}
 
-    if keyboard_input.pressed(KeyCode::KeyW) {
-        pan_delta.y += 1.0;
-    }
+fn rotate_view(
+    transform: &mut Transform,
+    dt: f32
+)
+{
+    transform.rotate_local_z(dt);
+}
 
-    if keyboard_input.pressed(KeyCode::KeyS) {
-        pan_delta.y -= 1.0;
-    }
+fn handle_rotate(
+    mut query: Query<&mut Transform, With<Camera>>,
+    time: Res<Time>,
+    mut dt: f32
+) -> Result
+{
+    let mut transform = query.single_mut()?;
 
-    if pan_delta != Vec2::ZERO {
-        let key_pan_step = 5.0;
-        pan_delta *= key_pan_step / (1.0 / (60.0 * time.delta_secs()));
+    let rotate_step = 1.0f32.to_radians();
+    dt *= rotate_step;
 
-        let (mut transform, mut projection) = tp_query.single_mut()?;
-
-        let Projection::Orthographic(ref mut projection) = *projection else {
-            panic!("Projection is not orthographic!");
-        };
-
-        let mut pan_delta = pan_delta.extend(0.0);
-
-        // apply current scale to the pan
-        pan_delta *= projection.scale;
-
-        // apply current rotation to the pan
-        pan_delta = transform.rotation * pan_delta;
-
-        transform.translation += pan_delta;
+    if dt != 0.0 {
+        dt /= 1.0 / (60.0 * time.delta_secs());
+        rotate_view(&mut transform, dt);
     }
 
     Ok(())
 }
 
-fn handle_rotate(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
+fn handle_rotate_ccw(
     mut query: Query<&mut Transform, With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
-    eprintln!("handle_rotate {:?}", time);
-
-    let rotate_step = 1.0f32.to_radians();
-
-    let mut dt = 0.0;
-
-    if keyboard_input.pressed(KeyCode::KeyZ) {
-        dt -= rotate_step; // ccw
-    }
-
-    if keyboard_input.pressed(KeyCode::KeyX) {
-        dt += rotate_step; // cw
-    }
-
-    if dt != 0.0 {
-        let mut transform = query.single_mut()?;
-
-        dt /= 1.0 / (60.0 * time.delta_secs());
-        transform.rotate_local_z(dt);
-    }
-
-    Ok(())
+    trace!("handle_rotate_ccw");
+    handle_rotate(query, time, -1.0)
 }
 
-fn reset_zoom(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Projection, With<Camera>>
-) -> Result
-{
-    eprintln!("reset_zoom");
-
-    let ctrl = [KeyCode::ControlLeft, KeyCode::ControlRight];
-    if keyboard_input.any_pressed(ctrl) &&
-        keyboard_input.pressed(KeyCode::Digit0)
-    {
-        let mut projection = query.single_mut()?;
-
-        let Projection::Orthographic(ref mut projection) = *projection else {
-            panic!("Projection is not orthographic!");
-        };
-
-        projection.scale = 1.0;
-    }
-
-    Ok(())
-}
-
-fn handle_zoom(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Projection, With<Camera>>,
+fn handle_rotate_cw(
+    mut query: Query<&mut Transform, With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
-    eprintln!("handle_zoom");
+    trace!("handle_rotate_cw");
+    handle_rotate(query, time, 1.0)
+}
 
+fn zoom_view_set(
+    projection: &mut Projection,
+    s: f32
+)
+{
+    let mut projection = projection.as_ortho_mut();
+    projection.scale = s;
+}
+
+fn handle_zoom_reset(
+    mut query: Query<&mut Projection, With<Camera>>
+) -> Result
+{
+    trace!("handle_zoom_reset");
     let mut projection = query.single_mut()?;
+    zoom_view_set(&mut projection, 1.0);
+    Ok(())
+}
 
-    let Projection::Orthographic(ref mut projection) = *projection else {
-        panic!("Projection is not orthographic!");
-    };
+fn zoom_view(
+    projection: &mut Projection,
+    mut ds: f32
+)
+{
+    if ds != 0.0 {
+        let mut projection = projection.as_ortho_mut();
+        projection.scale *= (-ds).exp();
+    }
+}
 
-    // zoom
+fn handle_zoom(
+    mut query: Query<&mut Projection, With<Camera>>,
+    time: Res<Time>,
+    mut ds: f32
+) -> Result
+{
+    let mut projection = query.single_mut()?;
 
     let key_scale_step = 0.1;
 
-    let mut ds = 0.0;
-
-    if keyboard_input.pressed(KeyCode::Equal) { // actually Plus
-        ds += key_scale_step / (1.0 / (60.0 * time.delta_secs()));
-    }
-
-    if keyboard_input.pressed(KeyCode::Minus) {
-        ds -= key_scale_step / (1.0 / (60.0 * time.delta_secs()));
-    }
+    ds *= key_scale_step / (1.0 / (60.0 * time.delta_secs()));
 
     if ds != 0.0 {
-        projection.scale *= (-ds).exp();
+        zoom_view(&mut projection, ds);
     }
 
     Ok(())
 }
 
-fn handle_mouse_scroll(
+fn handle_zoom_in(
+    query: Query<&mut Projection, With<Camera>>,
+    time: Res<Time>
+) -> Result
+{
+    trace!("handle_zoom_in");
+    handle_zoom(query, time, 1.0)
+}
+
+fn handle_zoom_out(
+    query: Query<&mut Projection, With<Camera>>,
+    time: Res<Time>
+) -> Result
+{
+    trace!("handle_zoom_out");
+    handle_zoom(query, time, -1.0)
+}
+
+fn handle_zoom_scroll(
     mouse_scroll: Res<AccumulatedMouseScroll>,
     mut query: Query<&mut Projection, With<Camera>>,
     time: Res<Time>
 ) -> Result
 {
-    eprintln!("handle_mouse_scroll {:?}", time);
+    trace!("handle_mouse_scroll");
 
     let wheel_scale_step = 0.1;
 
@@ -543,12 +585,7 @@ fn handle_mouse_scroll(
 
     if ds != 0.0 {
         let mut projection = query.single_mut()?;
-
-        let Projection::Orthographic(ref mut projection) = *projection else {
-            panic!("Projection is not orthographic!");
-        };
-
-        projection.scale *= (-ds).exp();
+        zoom_view(&mut projection, ds);
     }
 
     Ok(())
