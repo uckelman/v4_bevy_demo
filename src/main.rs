@@ -45,7 +45,7 @@ fn splash_plugin(app: &mut App) {
     app
         .add_systems(
             OnEnter(GameState::Splash),
-            (display_title, load_assets)
+            (display_title, load_assets, load_input_settings)
         )
         .add_systems(
             Update,
@@ -139,6 +139,25 @@ fn switch_to_game(
     {
         next.set(GameState::Game);
     }
+}
+
+#[derive(Resource)]
+struct KeyPanStep(f32);
+
+#[derive(Resource)]
+struct KeyRotateStep(f32);
+
+#[derive(Resource)]
+struct KeyScaleStep(f32);
+
+#[derive(Resource)]
+struct WheelScaleStep(f32);
+
+fn load_input_settings(mut commands: Commands) {
+    commands.insert_resource(KeyPanStep(5.0));
+    commands.insert_resource(KeyRotateStep(1.0f32.to_radians()));
+    commands.insert_resource(KeyScaleStep(0.1));
+    commands.insert_resource(WheelScaleStep(0.1));
 }
 
 fn game_plugin(app: &mut App) {
@@ -404,14 +423,14 @@ fn pan_view(
 
 fn handle_pan(
     mut query: Query<(&mut Transform, &Projection), With<Camera>>,
+    step: Res<KeyPanStep>,
     time: Res<Time>,
     mut pan_delta: Vec2
 ) -> Result
 {
     let (mut transform, projection) = query.single_mut()?;
 
-    let key_pan_step = 5.0;
-    pan_delta *= key_pan_step / (1.0 / (60.0 * time.delta_secs()));
+    pan_delta *= step.0 / (1.0 / (60.0 * time.delta_secs()));
 
     pan_view(&mut transform, projection.as_ortho()?, pan_delta);
 
@@ -420,38 +439,42 @@ fn handle_pan(
 
 fn handle_pan_left(
     query: Query<(&mut Transform, &Projection), With<Camera>>,
+    step: Res<KeyPanStep>,
     time: Res<Time>
 ) -> Result
 {
     trace!("handle_pan_left");
-    handle_pan(query, time, Vec2::NEG_X)
+    handle_pan(query, step, time, Vec2::NEG_X)
 }
 
 fn handle_pan_right(
     query: Query<(&mut Transform, &Projection), With<Camera>>,
+    step: Res<KeyPanStep>,
     time: Res<Time>
 ) -> Result
 {
     trace!("handle_pan_right");
-    handle_pan(query, time, Vec2::X)
+    handle_pan(query, step, time, Vec2::X)
 }
 
 fn handle_pan_up(
     query: Query<(&mut Transform, &Projection), With<Camera>>,
+    step: Res<KeyPanStep>,
     time: Res<Time>
 ) -> Result
 {
     trace!("handle_pan_up");
-    handle_pan(query, time, Vec2::Y)
+    handle_pan(query, step, time, Vec2::Y)
 }
 
 fn handle_pan_down(
     query: Query<(&mut Transform, &Projection), With<Camera>>,
+    step: Res<KeyPanStep>,
     time: Res<Time>
 ) -> Result
 {
     trace!("handle_pan_down");
-    handle_pan(query, time, Vec2::NEG_Y)
+    handle_pan(query, step, time, Vec2::NEG_Y)
 }
 
 fn rotate_view(
@@ -464,16 +487,14 @@ fn rotate_view(
 
 fn handle_rotate(
     mut query: Query<&mut Transform, With<Camera>>,
+    step: Res<KeyRotateStep>,
     time: Res<Time>,
     mut dt: f32
 ) -> Result
 {
-    let mut transform = query.single_mut()?;
-
-    let rotate_step = 1.0f32.to_radians();
-    dt *= rotate_step;
-
     if dt != 0.0 {
+        let mut transform = query.single_mut()?;
+        dt *= step.0;
         dt /= 1.0 / (60.0 * time.delta_secs());
         rotate_view(&mut transform, dt);
     }
@@ -483,20 +504,22 @@ fn handle_rotate(
 
 fn handle_rotate_ccw(
     query: Query<&mut Transform, With<Camera>>,
+    step: Res<KeyRotateStep>,
     time: Res<Time>
 ) -> Result
 {
     trace!("handle_rotate_ccw");
-    handle_rotate(query, time, -1.0)
+    handle_rotate(query, step, time, -1.0)
 }
 
 fn handle_rotate_cw(
     query: Query<&mut Transform, With<Camera>>,
+    step: Res<KeyRotateStep>,
     time: Res<Time>
 ) -> Result
 {
     trace!("handle_rotate_cw");
-    handle_rotate(query, time, 1.0)
+    handle_rotate(query, step, time, 1.0)
 }
 
 fn zoom_view_set(
@@ -529,15 +552,14 @@ fn zoom_view(
 
 fn handle_zoom(
     mut query: Query<&mut Projection, With<Camera>>,
+    step: Res<KeyScaleStep>,
     time: Res<Time>,
     mut ds: f32
 ) -> Result
 {
     let mut projection = query.single_mut()?;
 
-    let key_scale_step = 0.1;
-
-    ds *= key_scale_step / (1.0 / (60.0 * time.delta_secs()));
+    ds *= step.0 / (1.0 / (60.0 * time.delta_secs()));
 
     if ds != 0.0 {
         zoom_view(projection.as_ortho_mut()?, ds);
@@ -548,33 +570,34 @@ fn handle_zoom(
 
 fn handle_zoom_in(
     query: Query<&mut Projection, With<Camera>>,
+    step: Res<KeyScaleStep>,
     time: Res<Time>
 ) -> Result
 {
     trace!("handle_zoom_in");
-    handle_zoom(query, time, 1.0)
+    handle_zoom(query, step, time, 1.0)
 }
 
 fn handle_zoom_out(
     query: Query<&mut Projection, With<Camera>>,
+    step: Res<KeyScaleStep>,
     time: Res<Time>
 ) -> Result
 {
     trace!("handle_zoom_out");
-    handle_zoom(query, time, -1.0)
+    handle_zoom(query, step, time, -1.0)
 }
 
 fn handle_zoom_scroll(
     mouse_scroll: Res<AccumulatedMouseScroll>,
-    mut query: Query<&mut Projection, With<Camera>>
+    mut query: Query<&mut Projection, With<Camera>>,
+    step: Res<WheelScaleStep>
 ) -> Result
 {
     trace!("handle_mouse_scroll");
 
-    let wheel_scale_step = 0.1;
-
     let ds = match mouse_scroll.unit {
-        MouseScrollUnit::Line => mouse_scroll.delta.y * wheel_scale_step,
+        MouseScrollUnit::Line => mouse_scroll.delta.y * step.0,
         MouseScrollUnit::Pixel => mouse_scroll.delta.y
     };
 
