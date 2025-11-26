@@ -255,8 +255,8 @@ fn display_game(
 /*
             .observe(recolor_on::<Pointer<Over>>(Color::srgb(0.0, 1.0, 0.0)))
             .observe(recolor_on::<Pointer<Out>>(Color::BLACK))
-            .observe(recolor_on::<Pointer<Pressed>>(Color::srgb(0.0, 0.0, 1.0)))
-            .observe(recolor_on::<Pointer<Released>>(Color::BLACK))
+            .observe(recolor_on::<Pointer<Press>>(Color::srgb(0.0, 0.0, 1.0)))
+            .observe(recolor_on::<Pointer<Release>>(Color::BLACK))
 */
             .observe(on_piece_pressed)
             .observe(on_piece_drag);
