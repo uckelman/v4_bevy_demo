@@ -4,11 +4,37 @@ use bevy::{
     image::ImageSamplerDescriptor,
     input::{
         common_conditions::input_pressed,
-        mouse::{AccumulatedMouseScroll, MouseScrollUnit}
+        mouse::AccumulatedMouseScroll
     }
 };
 use rand::Rng;
-use std::hash::Hash;
+
+mod assets;
+mod config;
+mod view_adjust;
+mod state;
+mod title;
+mod util;
+
+use crate::assets::{
+   SpriteHandles, load_assets, is_folder_loaded, log_images_loaded
+};
+use crate::config::{
+    KeyConfig,
+    KeyPanStep, KeyRotateStep, KeyScaleStep,
+    PanLeftKey, PanRightKey, PanUpKey, PanDownKey,
+    RotateCCWKey, RotateCWKey,
+    ZoomInKey, ZoomOutKey,
+    WheelScaleStep
+};
+use crate::view_adjust::{
+    handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
+    handle_rotate_ccw, handle_rotate_cw,
+    handle_zoom_reset, handle_zoom_in, handle_zoom_out, handle_zoom_scroll
+};
+use crate::state::GameState;
+use crate::title::{SplashScreenTimer, display_title};
+use crate::util::AsOrthographicProjection;
 
 fn main() {
     App::new()
@@ -35,13 +61,6 @@ fn main() {
         .run();
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, States, Default)]
-enum GameState {
-    #[default]
-    Splash,
-    Game
-}
-
 fn splash_plugin(app: &mut App) {
     app
         .add_systems(
@@ -52,77 +71,6 @@ fn splash_plugin(app: &mut App) {
             Update,
             switch_to_game.run_if(in_state(GameState::Splash))
         );
-}
-
-#[derive(Resource)]
-struct SplashScreenTimer(Timer);
-
-fn display_title(mut commands: Commands) {
-    commands.spawn((
-        Camera2d,
-        Projection::from(OrthographicProjection::default_2d())
-    ));
-
-    commands.spawn((
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            flex_direction: FlexDirection::Column,
-            ..default()
-        },
-        children![
-            (
-                Text::new("V4 Bevy Demo"),
-                TextFont {
-                    font_size: 130.0,
-                    ..default()
-                },
-            ),
-            (
-                Text::new("November 2025"),
-                TextFont {
-                    font_size: 100.0,
-                    ..default()
-                },
-            )
-        ],
-        DespawnOnExit(GameState::Splash),
-    ));
-
-    commands.insert_resource(
-        SplashScreenTimer(Timer::from_seconds(2.0, TimerMode::Once))
-    );
-}
-
-#[derive(Resource)]
-struct SpriteHandles(Handle<LoadedFolder>);
-
-fn load_assets(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>
-)
-{
-    commands.insert_resource(SpriteHandles(asset_server.load_folder(".")));
-}
-
-fn is_folder_loaded(
-    mut asset_events: MessageReader<AssetEvent<LoadedFolder>>,
-    sprite_handles: Res<SpriteHandles>
-) -> bool
-{
-    asset_events.read()
-        .any(|e| e.is_loaded_with_dependencies(&sprite_handles.0))
-}
-
-fn log_images_loaded(
-    mut asset_events: MessageReader<AssetEvent<Image>>,
-)
-{
-    for e in asset_events.read() {
-        eprint!(".");
-    }
 }
 
 fn switch_to_game(
@@ -142,18 +90,6 @@ fn switch_to_game(
     }
 }
 
-#[derive(Resource)]
-struct KeyPanStep(f32);
-
-#[derive(Resource)]
-struct KeyRotateStep(f32);
-
-#[derive(Resource)]
-struct KeyScaleStep(f32);
-
-#[derive(Resource)]
-struct WheelScaleStep(f32);
-
 fn load_input_settings(mut commands: Commands) {
     commands.insert_resource(KeyPanStep(5.0));
     commands.insert_resource(KeyRotateStep(1.0f32.to_radians()));
@@ -170,85 +106,6 @@ fn load_input_settings(mut commands: Commands) {
 
     commands.insert_resource(RotateCCWKey(KeyCode::KeyZ));
     commands.insert_resource(RotateCWKey(KeyCode::KeyX));
-}
-
-
-// TODO: make KeyConfig derivable?
-
-trait KeyConfig {
-    fn code(&self) -> KeyCode;
-}
-
-#[derive(Resource)]
-struct PanLeftKey(KeyCode);
-
-#[derive(Resource)]
-struct PanRightKey(KeyCode);
-
-#[derive(Resource)]
-struct PanUpKey(KeyCode);
-
-#[derive(Resource)]
-struct PanDownKey(KeyCode);
-
-#[derive(Resource)]
-struct ZoomInKey(KeyCode);
-
-#[derive(Resource)]
-struct ZoomOutKey(KeyCode);
-
-#[derive(Resource)]
-struct RotateCCWKey(KeyCode);
-
-#[derive(Resource)]
-struct RotateCWKey(KeyCode);
-
-impl KeyConfig for PanLeftKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-impl KeyConfig for PanRightKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-impl KeyConfig for PanUpKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-impl KeyConfig for PanDownKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-impl KeyConfig for ZoomInKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-impl KeyConfig for ZoomOutKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-impl KeyConfig for RotateCCWKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-impl KeyConfig for RotateCWKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
 }
 
 fn cfg_input_pressed<T>(
@@ -336,7 +193,7 @@ fn display_game(
     };
 
     commands.entity(*window)
-        .observe(on_camera_drag);
+        .observe(handle_pan_drag);
 
     let mut surface = Surface { max_z: 0.0 };
 
@@ -373,60 +230,19 @@ fn display_game(
                 },
                 DespawnOnExit(GameState::Game)
             ))
+            .observe(recolor_on::<Pointer<Over>>(Color::hsl(0.0, 0.9, 0.7)))
+            .observe(recolor_on::<Pointer<Out>>(Color::WHITE))
 /*
-            .observe(recolor_on::<Pointer<Over>>(Color::srgb(0.0, 1.0, 0.0)))
-            .observe(recolor_on::<Pointer<Out>>(Color::BLACK))
             .observe(recolor_on::<Pointer<Press>>(Color::srgb(0.0, 0.0, 1.0)))
             .observe(recolor_on::<Pointer<Release>>(Color::BLACK))
 */
             .observe(on_piece_pressed)
+//            .observe(on_piece_drag_start)
             .observe(on_piece_drag);
         }
     }
 
     commands.insert_resource(surface);
-
-    Ok(())
-}
-
-trait AsOrthographicProjection {
-    fn as_ortho(&self) -> Result<&OrthographicProjection, BevyError>;
-
-    fn as_ortho_mut(&mut self) -> Result<&mut OrthographicProjection, BevyError>;
-}
-
-impl AsOrthographicProjection for Projection {
-    fn as_ortho(&self) -> Result<&OrthographicProjection, BevyError> {
-        match *self {
-            Projection::Orthographic(ref p) => Ok(p),
-            _ => Err("Projection is not orthographic!".into())
-        }
-    }
-
-    fn as_ortho_mut(&mut self) -> Result<&mut OrthographicProjection, BevyError> {
-        match *self {
-            Projection::Orthographic(ref mut p) => Ok(p),
-            _ => Err("Projection is not orthographic!".into())
-        }
-    }
-}
-
-fn on_camera_drag(
-    drag: On<Pointer<Drag>>,
-    query: Single<(&Camera, &GlobalTransform, &mut Transform)>
-) -> Result
-{
-    trace!("on_camera_drag");
-
-    if drag.button != PointerButton::Primary {
-        return Ok(());
-    }
-
-    let (camera, global_transform, mut transform) = query.into_inner();
-
-    let mut viewport = camera.world_to_viewport(global_transform, transform.translation)?;
-    viewport += drag.delta * -1.0; // inverted feels more natural
-    transform.translation = camera.viewport_to_world_2d(global_transform, viewport)?.extend(0.0);
 
     Ok(())
 }
@@ -442,12 +258,11 @@ fn on_camera_scroll(
 }
 */
 
-fn recolor_on<E: Clone + EntityEvent + Reflect>(color: Color) -> impl Fn(On<E>, Query<&mut Sprite>) {
+fn recolor_on<E: EntityEvent>(color: Color) -> impl Fn(On<E>, Query<&mut Sprite>) {
     move |ev, mut sprites| {
-        let Ok(mut sprite) = sprites.get_mut(ev.event().event_target()) else {
-            return;
-        };
-        sprite.color = color;
+        if let Ok(mut sprite) = sprites.get_mut(ev.event().event_target()) {
+            sprite.color = color;
+        }
     }
 }
 
@@ -502,211 +317,6 @@ fn on_piece_drag(
 
     // prevent the event from bubbling up to the world
     drag.propagate(false);
-
-    Ok(())
-}
-
-fn pan_view(
-    transform: &mut Transform,
-    projection: &OrthographicProjection,
-    pan_delta: Vec2
-)
-{
-    let mut pan_delta = pan_delta.extend(0.0);
-
-    // apply current scale to the pan
-    pan_delta *= projection.scale;
-
-    // apply current rotation to the pan
-    pan_delta = transform.rotation * pan_delta;
-
-    transform.translation += pan_delta;
-}
-
-fn handle_pan(
-    mut query: Query<(&mut Transform, &Projection), With<Camera>>,
-    step: Res<KeyPanStep>,
-    time: Res<Time>,
-    mut pan_delta: Vec2
-) -> Result
-{
-    let (mut transform, projection) = query.single_mut()?;
-
-    pan_delta *= step.0 / (1.0 / (60.0 * time.delta_secs()));
-
-    pan_view(&mut transform, projection.as_ortho()?, pan_delta);
-
-    Ok(())
-}
-
-fn handle_pan_left(
-    query: Query<(&mut Transform, &Projection), With<Camera>>,
-    step: Res<KeyPanStep>,
-    time: Res<Time>
-) -> Result
-{
-    trace!("handle_pan_left");
-    handle_pan(query, step, time, Vec2::NEG_X)
-}
-
-fn handle_pan_right(
-    query: Query<(&mut Transform, &Projection), With<Camera>>,
-    step: Res<KeyPanStep>,
-    time: Res<Time>
-) -> Result
-{
-    trace!("handle_pan_right");
-    handle_pan(query, step, time, Vec2::X)
-}
-
-fn handle_pan_up(
-    query: Query<(&mut Transform, &Projection), With<Camera>>,
-    step: Res<KeyPanStep>,
-    time: Res<Time>
-) -> Result
-{
-    trace!("handle_pan_up");
-    handle_pan(query, step, time, Vec2::Y)
-}
-
-fn handle_pan_down(
-    query: Query<(&mut Transform, &Projection), With<Camera>>,
-    step: Res<KeyPanStep>,
-    time: Res<Time>
-) -> Result
-{
-    trace!("handle_pan_down");
-    handle_pan(query, step, time, Vec2::NEG_Y)
-}
-
-fn rotate_view(
-    transform: &mut Transform,
-    dt: f32
-)
-{
-    transform.rotate_local_z(dt);
-}
-
-fn handle_rotate(
-    mut query: Query<&mut Transform, With<Camera>>,
-    step: Res<KeyRotateStep>,
-    time: Res<Time>,
-    mut dt: f32
-) -> Result
-{
-    if dt != 0.0 {
-        let mut transform = query.single_mut()?;
-        dt *= step.0;
-        dt /= 1.0 / (60.0 * time.delta_secs());
-        rotate_view(&mut transform, dt);
-    }
-
-    Ok(())
-}
-
-fn handle_rotate_ccw(
-    query: Query<&mut Transform, With<Camera>>,
-    step: Res<KeyRotateStep>,
-    time: Res<Time>
-) -> Result
-{
-    trace!("handle_rotate_ccw");
-    handle_rotate(query, step, time, -1.0)
-}
-
-fn handle_rotate_cw(
-    query: Query<&mut Transform, With<Camera>>,
-    step: Res<KeyRotateStep>,
-    time: Res<Time>
-) -> Result
-{
-    trace!("handle_rotate_cw");
-    handle_rotate(query, step, time, 1.0)
-}
-
-fn zoom_view_set(
-    projection: &mut OrthographicProjection,
-    s: f32
-)
-{
-    projection.scale = s;
-}
-
-fn handle_zoom_reset(
-    mut query: Query<&mut Projection, With<Camera>>
-) -> Result
-{
-    trace!("handle_zoom_reset");
-    let mut projection = query.single_mut()?;
-    zoom_view_set(projection.as_ortho_mut()?, 1.0);
-    Ok(())
-}
-
-fn zoom_view(
-    projection: &mut OrthographicProjection,
-    ds: f32
-)
-{
-    if ds != 0.0 {
-        projection.scale *= (-ds).exp();
-    }
-}
-
-fn handle_zoom(
-    mut query: Query<&mut Projection, With<Camera>>,
-    step: Res<KeyScaleStep>,
-    time: Res<Time>,
-    mut ds: f32
-) -> Result
-{
-    let mut projection = query.single_mut()?;
-
-    ds *= step.0 / (1.0 / (60.0 * time.delta_secs()));
-
-    if ds != 0.0 {
-        zoom_view(projection.as_ortho_mut()?, ds);
-    }
-
-    Ok(())
-}
-
-fn handle_zoom_in(
-    query: Query<&mut Projection, With<Camera>>,
-    step: Res<KeyScaleStep>,
-    time: Res<Time>
-) -> Result
-{
-    trace!("handle_zoom_in");
-    handle_zoom(query, step, time, 1.0)
-}
-
-fn handle_zoom_out(
-    query: Query<&mut Projection, With<Camera>>,
-    step: Res<KeyScaleStep>,
-    time: Res<Time>
-) -> Result
-{
-    trace!("handle_zoom_out");
-    handle_zoom(query, step, time, -1.0)
-}
-
-fn handle_zoom_scroll(
-    mouse_scroll: Res<AccumulatedMouseScroll>,
-    mut query: Query<&mut Projection, With<Camera>>,
-    step: Res<WheelScaleStep>
-) -> Result
-{
-    trace!("handle_mouse_scroll");
-
-    let ds = match mouse_scroll.unit {
-        MouseScrollUnit::Line => mouse_scroll.delta.y * step.0,
-        MouseScrollUnit::Pixel => mouse_scroll.delta.y
-    };
-
-    if ds != 0.0 {
-        let mut projection = query.single_mut()?;
-        zoom_view(projection.as_ortho_mut()?, ds);
-    }
 
     Ok(())
 }
