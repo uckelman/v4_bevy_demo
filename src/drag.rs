@@ -48,16 +48,6 @@ pub fn on_piece_drag_start(
             .insert(DragAnchor { pos: transform.translation });
     }
 
-/*
-    let entity = drag.event().event_target();
-
-    let mut transform = query.get_mut(entity)?;
-    raise_piece_to_top(&mut transform, &mut surface);
-
-    commands.entity(entity)
-        .insert(DragAnchor { pos: transform.translation });
-*/
-
     Ok(())
 }
 
