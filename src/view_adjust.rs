@@ -6,16 +6,101 @@ use bevy::{
         observer::On,
         prelude::{Query, Single, With}
     },
-    input::mouse::{AccumulatedMouseScroll, MouseScrollUnit},
+    input::{
+        keyboard::KeyCode,
+        mouse::{AccumulatedMouseScroll, MouseScrollUnit}
+    },
     math::Vec2,
     picking::events::{Drag, Pointer},
-    prelude::{GlobalTransform, Projection, OrthographicProjection, PointerButton, Time, trace, Transform}
+    prelude::{GlobalTransform, OrthographicProjection, PointerButton, Projection, Time, trace, Transform, Resource}
 };
 
-use crate::config::{
-    KeyPanStep, KeyRotateStep, KeyScaleStep, WheelScaleStep
-};
+use crate::config::KeyConfig;
 use crate::util::AsOrthographicProjection;
+
+#[derive(Resource)]
+pub struct KeyPanStep(pub f32);
+
+#[derive(Resource)]
+pub struct KeyRotateStep(pub f32);
+
+#[derive(Resource)]
+pub struct KeyScaleStep(pub f32);
+
+#[derive(Resource)]
+pub struct WheelScaleStep(pub f32);
+
+#[derive(Resource)]
+pub struct PanLeftKey(pub KeyCode);
+
+#[derive(Resource)]
+pub struct PanRightKey(pub KeyCode);
+
+#[derive(Resource)]
+pub struct PanUpKey(pub KeyCode);
+
+#[derive(Resource)]
+pub struct PanDownKey(pub KeyCode);
+
+#[derive(Resource)]
+pub struct ZoomInKey(pub KeyCode);
+
+#[derive(Resource)]
+pub struct ZoomOutKey(pub KeyCode);
+
+#[derive(Resource)]
+pub struct RotateCCWKey(pub KeyCode);
+
+#[derive(Resource)]
+pub struct RotateCWKey(pub KeyCode);
+
+impl KeyConfig for PanLeftKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for PanRightKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for PanUpKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for PanDownKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for ZoomInKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for ZoomOutKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for RotateCCWKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
+
+impl KeyConfig for RotateCWKey {
+    fn code(&self) -> KeyCode {
+        self.0
+    }
+}
 
 fn pan_view(
     transform: &mut Transform,

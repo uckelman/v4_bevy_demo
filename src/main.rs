@@ -11,7 +11,10 @@ use rand::Rng;
 
 mod assets;
 mod config;
+mod drag;
 mod view_adjust;
+mod raise;
+mod select;
 mod state;
 mod title;
 mod util;
@@ -19,22 +22,22 @@ mod util;
 use crate::assets::{
    SpriteHandles, load_assets, is_folder_loaded, log_images_loaded
 };
-use crate::config::{
-    KeyConfig,
+use crate::config::KeyConfig;
+use crate::drag::{DragAnchor, on_piece_drag_start, on_piece_drag};
+use crate::view_adjust::{
+    handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
+    handle_rotate_ccw, handle_rotate_cw,
+    handle_zoom_reset, handle_zoom_in, handle_zoom_out, handle_zoom_scroll,
     KeyPanStep, KeyRotateStep, KeyScaleStep,
     PanLeftKey, PanRightKey, PanUpKey, PanDownKey,
     RotateCCWKey, RotateCWKey,
     ZoomInKey, ZoomOutKey,
     WheelScaleStep
 };
-use crate::view_adjust::{
-    handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
-    handle_rotate_ccw, handle_rotate_cw,
-    handle_zoom_reset, handle_zoom_in, handle_zoom_out, handle_zoom_scroll
-};
+use crate::raise::RaiseAnchor;
+use crate::select::{on_piece_selection, on_piece_deselection, on_piece_pressed, on_nonpiece_pressed, Selectable, SelectEvent, DeselectEvent};
 use crate::state::GameState;
 use crate::title::{SplashScreenTimer, display_title};
-use crate::util::AsOrthographicProjection;
 
 fn main() {
     App::new()
@@ -178,7 +181,8 @@ struct PieceBundle {
     marker: Piece,
     sprite: Sprite,
     transform: Transform,
-    pickable: Pickable
+    pickable: Pickable,
+    selectable: Selectable
 }
 
 fn display_game(
@@ -193,7 +197,8 @@ fn display_game(
     };
 
     commands.entity(*window)
-        .observe(handle_pan_drag);
+        .observe(handle_pan_drag)
+        .observe(on_nonpiece_pressed);
 
     let mut surface = Surface { max_z: 0.0 };
 
@@ -230,19 +235,27 @@ fn display_game(
                 },
                 DespawnOnExit(GameState::Game)
             ))
+/*
             .observe(recolor_on::<Pointer<Over>>(Color::hsl(0.0, 0.9, 0.7)))
             .observe(recolor_on::<Pointer<Out>>(Color::WHITE))
-/*
             .observe(recolor_on::<Pointer<Press>>(Color::srgb(0.0, 0.0, 1.0)))
             .observe(recolor_on::<Pointer<Release>>(Color::BLACK))
 */
+            .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
+            .observe(recolor_on::<DeselectEvent>(Color::WHITE))
             .observe(on_piece_pressed)
-//            .observe(on_piece_drag_start)
-            .observe(on_piece_drag);
+            .observe(raise::on_piece_pressed)
+            .observe(raise::on_piece_released)
+            .observe(on_piece_drag_start)
+            .observe(on_piece_drag)
+            .observe(on_piece_selection)
+            .observe(on_piece_deselection);
         }
     }
 
     commands.insert_resource(surface);
+    commands.insert_resource(DragAnchor::default());
+    commands.insert_resource(RaiseAnchor::default());
 
     Ok(())
 }
@@ -266,57 +279,12 @@ fn recolor_on<E: EntityEvent>(color: Color) -> impl Fn(On<E>, Query<&mut Sprite>
     }
 }
 
-fn on_piece_pressed(
-    mut press: On<Pointer<Press>>,
-    mut query: Query<&mut Transform, With<Piece>>,
-    mut surface: ResMut<Surface>
-) -> Result
-{
-    if press.button != PointerButton::Primary {
-        return Ok(());
-    }
+// TODO: context menus
+// TODO: selection
 
-    let mut transform = query.get_mut(press.event().event_target())?;
+// TODO: try turning off vsync to fix drag lag
 
-    surface.max_z = surface.max_z.next_up();
-    transform.translation.z = surface.max_z;
-
-    // prevent the event from bubbling up to the world
-    press.propagate(false);
-
-    Ok(())
-}
-
-fn on_piece_drag(
-    mut drag: On<Pointer<Drag>>,
-    mut p_query: Query<&mut Transform, (With<Piece>, Without<Camera>)>,
-    tp_query: Query<(&Transform, &Projection), With<Camera>>
-) -> Result
-{
-    trace!("on_piece_drag");
-
-    if drag.button != PointerButton::Primary {
-        return Ok(());
-    }
-
-    let mut transform = p_query.get_mut(drag.event().event_target())?;
-    let (camera_transform, camera_projection) = tp_query.single()?;
-
-    let camera_projection = camera_projection.as_ortho()?;
-
-    let mut drag_delta = drag.delta.extend(0.0);
-    drag_delta.y = -drag_delta.y;
-
-    // apply current scale to the drag
-    drag_delta *= camera_projection.scale;
-
-    // apply current rotation to the drag
-    drag_delta = camera_transform.rotation * drag_delta;
-
-    transform.translation += drag_delta;
-
-    // prevent the event from bubbling up to the world
-    drag.propagate(false);
-
-    Ok(())
-}
+/*
+store base positions and always calculate delta on that. translation = translation_start + screen_to_local(pointer_current - pointer_start)
+but im suspecting that the drag event is either being fired less often than you think, or the system itself is on a wrong schedule
+*/
