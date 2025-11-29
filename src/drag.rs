@@ -8,10 +8,10 @@ use bevy::{
     },
     math::Vec3,
     picking::{
-        events::{Drag, DragStart, Pointer},
+        events::{Drag, DragEnd, DragStart, Pointer},
         pointer::PointerButton
     },
-    prelude::{Camera, Projection, trace, Transform}
+    prelude::{Camera, Commands, Component, Entity, Projection, trace, Transform}
 };
 use tracing::instrument;
 
@@ -19,7 +19,10 @@ use crate::{Piece, Surface};
 use crate::raise::raise_piece_to_top;
 use crate::util::AsOrthographicProjection;
 
-#[derive(Default, Resource)]
+#[derive(Component, Default)]
+pub struct Draggable;
+
+#[derive(Component, Default)]
 pub struct DragAnchor {
     pos: Vec3
 }
@@ -27,9 +30,9 @@ pub struct DragAnchor {
 #[instrument(skip_all)]
 pub fn on_piece_drag_start(
     drag: On<Pointer<DragStart>>,
-    mut query: Query<&mut Transform, With<Piece>>,
-    mut anchor: ResMut<DragAnchor>,
-    mut surface: ResMut<Surface>
+    mut query: Query<&mut Transform, With<Draggable>>,
+    mut surface: ResMut<Surface>,
+    mut commands: Commands
 ) -> Result
 {
     trace!("");
@@ -38,15 +41,13 @@ pub fn on_piece_drag_start(
         return Ok(());
     }
 
-    if let Some(pos) = drag.hit.position {
-        let mut transform = query.get_mut(drag.event().event_target())?;
-        raise_piece_to_top(&mut transform, &mut surface);
+    let entity = drag.event().event_target();
 
-// FIXME: anchor doesn't respect offset from piece center
-        anchor.pos = pos.with_z(surface.max_z);
-//        trace!("{}", anchor.pos);
+    let mut transform = query.get_mut(entity)?;
+    raise_piece_to_top(&mut transform, &mut surface);
 
-    }
+    commands.entity(entity)
+        .insert(DragAnchor { pos: transform.translation });
 
     Ok(())
 }
@@ -54,9 +55,8 @@ pub fn on_piece_drag_start(
 #[instrument(skip_all)]
 pub fn on_piece_drag(
     mut drag: On<Pointer<Drag>>,
-    mut p_query: Query<&mut Transform, (With<Piece>, Without<Camera>)>,
-    tp_query: Query<(&Transform, &Projection), With<Camera>>,
-    anchor: Res<DragAnchor>
+    mut d_query: Query<(&mut Transform, &DragAnchor), Without<Camera>>,
+    tp_query: Query<(&Transform, &Projection), With<Camera>>
 ) -> Result
 {
     trace!("");
@@ -65,7 +65,9 @@ pub fn on_piece_drag(
         return Ok(());
     }
 
-    let mut transform = p_query.get_mut(drag.event().event_target())?;
+    let entity = drag.event().event_target();
+
+    let (mut transform, anchor) = d_query.get_mut(entity)?;
     let (camera_transform, camera_projection) = tp_query.single()?;
 
     let camera_projection = camera_projection.as_ortho()?;
@@ -85,6 +87,21 @@ pub fn on_piece_drag(
 
     // prevent the event from bubbling up to the world
     drag.propagate(false);
+
+    Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn on_piece_drag_end(
+    _drag: On<Pointer<DragEnd>>,
+    mut query: Query<Entity, With<DragAnchor>>,
+    mut commands: Commands
+) -> Result
+{
+    trace!("");
+
+    query.iter()
+        .for_each(|entity| { commands.entity(entity).remove::<DragAnchor>(); });
 
     Ok(())
 }

@@ -23,7 +23,7 @@ use crate::assets::{
    SpriteHandles, load_assets, is_folder_loaded, log_images_loaded
 };
 use crate::config::KeyConfig;
-use crate::drag::{DragAnchor, on_piece_drag_start, on_piece_drag};
+use crate::drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end};
 use crate::view_adjust::{
     handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
     handle_rotate_ccw, handle_rotate_cw,
@@ -182,7 +182,8 @@ struct PieceBundle {
     sprite: Sprite,
     transform: Transform,
     pickable: Pickable,
-    selectable: Selectable
+    selectable: Selectable,
+    draggable: Draggable
 }
 
 fn display_game(
@@ -248,13 +249,13 @@ fn display_game(
             .observe(raise::on_piece_released)
             .observe(on_piece_drag_start)
             .observe(on_piece_drag)
+            .observe(on_piece_drag_end)
             .observe(on_piece_selection)
             .observe(on_piece_deselection);
         }
     }
 
     commands.insert_resource(surface);
-    commands.insert_resource(DragAnchor::default());
     commands.insert_resource(RaiseAnchor::default());
 
     Ok(())
