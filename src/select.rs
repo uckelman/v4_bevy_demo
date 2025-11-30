@@ -83,7 +83,7 @@ fn ctrl_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
     inputs.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
 }
 
-fn toggle_selection(
+fn toggle(
     entity: Entity,
     query: &Query<Entity, With<Selected>>,
     commands: &mut Commands
@@ -95,39 +95,37 @@ fn toggle_selection(
     }
 }
 
-fn add_to_selection(
-    entity: Entity,
-    query: &Query<Entity, With<Selected>>,
-    commands: &mut Commands
-)
+fn select(entity: Entity, commands: &mut Commands)
 {
-    if !query.contains(entity) {
-        commands.trigger(SelectEvent { entity });
-    }
+    commands.trigger(SelectEvent { entity });
 }
 
-fn deselect(
+fn deselect(entity: Entity, commands: &mut Commands)
+{
+    commands.trigger(DeselectEvent { entity });
+}
+
+fn deselect_all(
     query: &Query<Entity, With<Selected>>,
-    commands: &mut Commands
+    mut commands: &mut Commands
 )
 {
-    query.iter()
-        .for_each(|entity| commands.trigger(DeselectEvent { entity }));
+    query.iter().for_each(|entity| deselect(entity, &mut commands));
 }
 
 fn set_selection_if_not_selected(
     entity: Entity,
     query: &Query<Entity, With<Selected>>,
-    commands: &mut Commands
+    mut commands: &mut Commands
 )
 {
     if !query.contains(entity) {
-        deselect(query, commands);
-        commands.trigger(SelectEvent { entity });
+        deselect_all(query, &mut commands);
+        select(entity, &mut commands);
     }
 }
 
-// TODO: check for Selectable
+// TODO: check for Selectable?
 
 #[instrument(skip_all)]
 pub fn on_piece_pressed(
@@ -135,12 +133,12 @@ pub fn on_piece_pressed(
     modifiers: Res<ButtonInput<KeyCode>>,
     query: Query<Entity, With<Selected>>,
     mut commands: Commands
-) -> Result
+)
 {
     trace!("");
 
     if press.button != PointerButton::Primary {
-        return Ok(());
+        return;
     }
 
     let entity = press.event().event_target();
@@ -148,12 +146,12 @@ pub fn on_piece_pressed(
     if ctrl_pressed(&modifiers) {
         // ctrl toggles
         trace!("ctrl");
-        toggle_selection(entity, &query, &mut commands);
+        toggle(entity, &query, &mut commands);
     }
     else if shift_pressed(&modifiers) {
         // shift adds
         trace!("shift");
-        add_to_selection(entity, &query, &mut commands);
+        select(entity, &mut commands);
     }
     else {
         // unmodified sets if not selected
@@ -163,8 +161,6 @@ pub fn on_piece_pressed(
 
     // prevent the event from bubbling up to the world
     press.propagate(false);
-
-    Ok(())
 }
 
 #[instrument(skip_all)]
@@ -182,7 +178,7 @@ pub fn clear_selection(
         PointerButton::Middle if !ctrl_pressed(&modifiers)
             && !shift_pressed(&modifiers) =>
         {
-            deselect(&query, &mut commands);
+            deselect_all(&query, &mut commands);
         },
         _ => {}
     }
@@ -250,33 +246,25 @@ pub fn selection_rect_drag_end(
     if drag.button == PointerButton::Middle {
         selection.active = false;
 
+        // TODO: checking all Selectables is probably slow?
+        let qi = query.iter()
+            .filter(|(_, transform)|
+                selection.rect.contains(transform.translation.xy())
+            )
+            .map(|(entity, _)| entity);
+
         if ctrl_pressed(&modifiers) {
             // toggle selection
-            for (entity, transform) in query {
-                if selection.rect.contains(transform.translation.xy()) {
-                    toggle_selection(entity, &s_query, &mut commands);
-                }
-            }
+            qi.for_each(|entity| toggle(entity, &s_query, &mut commands));
         }
         else if shift_pressed(&modifiers) {
             // add to selection
-            for (entity, transform) in query {
-                if selection.rect.contains(transform.translation.xy()) {
-                    if !s_query.contains(entity) {
-                        commands.trigger(SelectEvent { entity });
-                    }
-                }
-            }
+            qi.for_each(|entity| select(entity, &mut commands));
         }
         else {
             // set selection
-            deselect(&s_query, &mut commands);
-
-            for (entity, transform) in query {
-                if selection.rect.contains(transform.translation.xy()) {
-                    commands.trigger(SelectEvent { entity });
-                }
-            }
+            deselect_all(&s_query, &mut commands);
+            qi.for_each(|entity| select(entity, &mut commands));
         }
     }
 }
