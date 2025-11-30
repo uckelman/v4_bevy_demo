@@ -128,7 +128,7 @@ fn set_selection_if_not_selected(
 // TODO: check for Selectable?
 
 #[instrument(skip_all)]
-pub fn on_piece_pressed(
+pub fn selectable_pressed(
     mut press: On<Pointer<Press>>,
     modifiers: Res<ButtonInput<KeyCode>>,
     query: Query<Entity, With<Selected>>,

@@ -35,7 +35,7 @@ use crate::view_adjust::{
     WheelScaleStep
 };
 use crate::raise::RaiseAnchor;
-use crate::select::{clear_selection, draw_selection_rect, on_selection, on_deselection, on_piece_pressed, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box};
+use crate::select::{clear_selection, draw_selection_rect, on_selection, on_deselection, selectable_pressed, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box};
 use crate::state::GameState;
 use crate::title::{SplashScreenTimer, display_title};
 
@@ -257,7 +257,7 @@ fn display_game(
 */
             .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
             .observe(recolor_on::<DeselectEvent>(Color::WHITE))
-            .observe(on_piece_pressed)
+            .observe(selectable_pressed)
             .observe(raise::on_piece_pressed)
             .observe(raise::on_piece_released)
             .observe(on_piece_drag_start)
