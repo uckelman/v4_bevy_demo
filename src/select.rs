@@ -234,10 +234,10 @@ pub fn selection_rect_drag(
 #[instrument(skip_all)]
 pub fn selection_rect_drag_end(
     drag: On<Pointer<DragEnd>>,
+    modifiers: Res<ButtonInput<KeyCode>>,
     query: Query<(Entity, &Transform), With<Selectable>>,
     s_query: Query<Entity, With<Selected>>,
     mut selection: ResMut<SelectionRect>,
-    modifiers: Res<ButtonInput<KeyCode>>,
     mut commands: Commands
 )
 {
