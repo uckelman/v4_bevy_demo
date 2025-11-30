@@ -50,7 +50,7 @@ pub fn lower_piece_to_anchor(
 
 #[instrument(skip_all)]
 pub fn on_piece_pressed(
-    mut press: On<Pointer<Press>>,
+    press: On<Pointer<Press>>,
     mut query: Query<&mut Transform, With<Piece>>,
     mut anchor: ResMut<RaiseAnchor>,
     mut surface: ResMut<Surface>
@@ -68,15 +68,12 @@ pub fn on_piece_pressed(
 
     raise_piece_to_top_anchored(&mut transform, &mut surface, &mut anchor);
 
-    // prevent the event from bubbling up to the world
-    press.propagate(false);
-
     Ok(())
 }
 
 #[instrument(skip_all)]
 pub fn on_piece_released(
-    mut press: On<Pointer<Release>>,
+    press: On<Pointer<Release>>,
     mut query: Query<&mut Transform, With<Piece>>,
     anchor: Res<RaiseAnchor>
 ) -> Result
@@ -91,9 +88,6 @@ pub fn on_piece_released(
 
     let mut transform = query.get_mut(entity)?;
     lower_piece_to_anchor(&mut transform, &anchor);
-
-    // prevent the event from bubbling up to the world
-    press.propagate(false);
 
     Ok(())
 }
