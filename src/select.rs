@@ -1,21 +1,27 @@
 use bevy::{
+    camera::Camera,
     ecs::{
-        change_detection::Res,
+        change_detection::{Res, ResMut},
         component::Component,
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{Commands, Query, With}
+        prelude::{Commands, Query, Single, With}
+    },
+    gizmos::{
+        config::{DefaultGizmoConfigGroup, GizmoConfigStore, GizmoLineJoint},
+        gizmos::Gizmos
     },
     input::{
         ButtonInput,
         keyboard::KeyCode
     },
+    math::{Rect, Vec2},
     picking::{
-        events::{Pointer, Press},
+        events::{Drag, DragEnd, DragStart, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{debug, Entity, trace}
+    prelude::{Color, debug, Entity, GlobalTransform, trace, Transform, Resource, Vec3Swizzles, Window}
 };
 use tracing::instrument;
 
@@ -33,6 +39,12 @@ pub struct SelectEvent {
 #[derive(EntityEvent)]
 pub struct DeselectEvent {
     entity: Entity
+}
+
+#[derive(Resource, Default)]
+pub struct SelectionRect {
+    pub rect: Rect,
+    pub active: bool
 }
 
 #[instrument(skip_all)]
@@ -115,6 +127,8 @@ fn set_selection_if_not_selected(
     }
 }
 
+// TODO: check for Selectable
+
 #[instrument(skip_all)]
 pub fn on_piece_pressed(
     mut press: On<Pointer<Press>>,
@@ -162,12 +176,133 @@ pub fn on_nonpiece_pressed(
 {
     trace!("");
 
-    if press.button != PointerButton::Primary {
+    match press.button {
+        PointerButton::Primary => {
+            // clear selection
+            clear_selection(&query, &mut commands);
+        },
+        PointerButton::Middle => {
+
+        },
+        PointerButton::Secondary => {
+        }
+    }
+
+    Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn on_nonpiece_drag_start(
+    drag: On<Pointer<DragStart>>,
+    modifiers: Res<ButtonInput<KeyCode>>,
+    s_query: Query<Entity, With<Selected>>,
+    mut selection: ResMut<SelectionRect>,
+    mut commands: Commands
+)
+{
+    trace!("");
+
+    if drag.button == PointerButton::Middle {
+        if let Some(pos) = drag.hit.position {
+            let pos = pos.xy();
+            selection.rect = Rect::from_corners(pos, pos);
+            selection.active = true;
+        }
+
+        if !ctrl_pressed(&modifiers) && !shift_pressed(&modifiers) {
+            clear_selection(&s_query, &mut commands);
+        }
+    }
+}
+
+#[instrument(skip_all)]
+pub fn on_nonpiece_drag(
+    drag: On<Pointer<Drag>>,
+    query: Single<(&Camera, &GlobalTransform)>,
+    mut selection: ResMut<SelectionRect>
+) -> Result
+{
+    trace!("");
+
+    if drag.button != PointerButton::Middle {
         return Ok(());
     }
 
-    // clear selection
-    clear_selection(&query, &mut commands);
+    let (camera, global_transform) = query.into_inner();
+
+    let start = camera.viewport_to_world_2d(global_transform, drag.pointer_location.position - drag.distance)?;
+    let end = camera.viewport_to_world_2d(global_transform, drag.pointer_location.position)?;
+
+    selection.rect = Rect::from_corners(start, end);
 
     Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn on_nonpiece_drag_end(
+    drag: On<Pointer<DragEnd>>,
+    query: Query<(Entity, &Transform), With<Selectable>>,
+    s_query: Query<Entity, With<Selected>>,
+    mut selection: ResMut<SelectionRect>,
+    modifiers: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands
+)
+{
+    trace!("");
+
+    if drag.button == PointerButton::Middle {
+        selection.active = false;
+
+        if ctrl_pressed(&modifiers) {
+            // toggle selection
+            for (entity, transform) in query {
+                if selection.rect.contains(transform.translation.xy()) {
+                    toggle_selection(entity, &s_query, &mut commands);
+                }
+            }
+        }
+        else if shift_pressed(&modifiers) {
+            // add to selection
+            for (entity, transform) in query {
+                if selection.rect.contains(transform.translation.xy()) {
+                    if !s_query.contains(entity) {
+                        commands.trigger(SelectEvent { entity });
+                    }
+                }
+            }
+        }
+        else {
+            // set selection
+            clear_selection(&s_query, &mut commands);
+
+            for (entity, transform) in query {
+                if selection.rect.contains(transform.translation.xy()) {
+                    commands.trigger(SelectEvent { entity });
+                }
+            }
+        }
+    }
+}
+
+#[instrument(skip_all)]
+pub fn draw_selection_box(
+    selection: Res<SelectionRect>,
+    mut gizmos: Gizmos
+)
+{
+    trace!("");
+    gizmos.rect_2d(
+        selection.rect.center(),
+        selection.rect.size(),
+        Color::srgb_u8(0xFF, 0, 0)
+    );
+}
+
+pub fn setup_selection_box(
+    mut config_store: ResMut<GizmoConfigStore>
+)
+{
+    let (config, _) = config_store.config_mut::<DefaultGizmoConfigGroup>();
+    config.line.width = 5.0;
+    config.line.joints = GizmoLineJoint::Miter;
 }
