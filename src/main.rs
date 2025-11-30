@@ -35,7 +35,7 @@ use crate::view_adjust::{
     WheelScaleStep
 };
 use crate::raise::RaiseAnchor;
-use crate::select::{on_piece_selection, on_piece_deselection, on_piece_pressed, on_nonpiece_pressed, on_nonpiece_drag_start, on_nonpiece_drag, on_nonpiece_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box};
+use crate::select::{on_selection, on_deselection, on_piece_pressed, on_nonpiece_pressed, on_nonpiece_drag_start, on_nonpiece_drag, on_nonpiece_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box};
 use crate::state::GameState;
 use crate::title::{SplashScreenTimer, display_title};
 
@@ -266,8 +266,8 @@ fn display_game(
             .observe(on_piece_drag_start)
             .observe(on_piece_drag)
             .observe(on_piece_drag_end)
-            .observe(on_piece_selection)
-            .observe(on_piece_deselection);
+            .observe(on_selection)
+            .observe(on_deselection);
         }
     }
 

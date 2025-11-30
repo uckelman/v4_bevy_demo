@@ -48,7 +48,7 @@ pub struct SelectionRect {
 }
 
 #[instrument(skip_all)]
-pub fn on_piece_selection(
+pub fn on_selection(
     select: On<SelectEvent>,
     mut commands: Commands
 )
@@ -62,7 +62,7 @@ pub fn on_piece_selection(
 }
 
 #[instrument(skip_all)]
-pub fn on_piece_deselection(
+pub fn on_deselection(
     select: On<DeselectEvent>,
     mut commands: Commands
 )
