@@ -16,7 +16,7 @@ use bevy::{
         ButtonInput,
         keyboard::KeyCode
     },
-    math::{Rect, Vec2},
+    math::Rect,
     picking::{
         events::{Drag, DragEnd, DragStart, Pointer, Press},
         pointer::PointerButton
