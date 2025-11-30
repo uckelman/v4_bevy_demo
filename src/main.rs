@@ -35,7 +35,7 @@ use crate::view_adjust::{
     WheelScaleStep
 };
 use crate::raise::RaiseAnchor;
-use crate::select::{on_selection, on_deselection, on_piece_pressed, on_nonpiece_pressed, on_nonpiece_drag_start, on_nonpiece_drag, on_nonpiece_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box};
+use crate::select::{clear_selection, draw_selection_rect, on_selection, on_deselection, on_piece_pressed, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box};
 use crate::state::GameState;
 use crate::title::{SplashScreenTimer, display_title};
 
@@ -159,16 +159,13 @@ fn game_plugin(app: &mut App) {
                     )
                 ),
 
-                select::draw_selection_box.run_if(resource_exists::<SelectionRect>.and(|r: Res<SelectionRect>| r.active))
+                draw_selection_rect.run_if(
+                    resource_exists::<SelectionRect>
+                        .and(|r: Res<SelectionRect>| r.active)
+                )
             )
             .run_if(in_state(GameState::Game))
         );
-/*        
-        .add_systems(
-            PostUpdate,
-            select::draw_selection_box.run_if(resource_exists::<SelectionBoxAnchor>).after(TransformSystems::Propagate)
-        );
-*/
 }
 
 #[derive(Resource)]
@@ -212,10 +209,10 @@ fn display_game(
 
     commands.entity(*window)
         .observe(handle_pan_drag)
-        .observe(on_nonpiece_pressed)
-        .observe(on_nonpiece_drag_start)
-        .observe(on_nonpiece_drag)
-        .observe(on_nonpiece_drag_end);
+        .observe(clear_selection)
+        .observe(selection_rect_drag_start)
+        .observe(selection_rect_drag)
+        .observe(selection_rect_drag_end);
 
     let mut surface = Surface { max_z: 0.0 };
 

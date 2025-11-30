@@ -106,7 +106,7 @@ fn add_to_selection(
     }
 }
 
-fn clear_selection(
+fn deselect(
     query: &Query<Entity, With<Selected>>,
     commands: &mut Commands
 )
@@ -122,7 +122,7 @@ fn set_selection_if_not_selected(
 )
 {
     if !query.contains(entity) {
-        clear_selection(query, commands);
+        deselect(query, commands);
         commands.trigger(SelectEvent { entity });
     }
 }
@@ -168,36 +168,30 @@ pub fn on_piece_pressed(
 }
 
 #[instrument(skip_all)]
-pub fn on_nonpiece_pressed(
+pub fn clear_selection(
     press: On<Pointer<Press>>,
+    modifiers: Res<ButtonInput<KeyCode>>,
     query: Query<Entity, With<Selected>>,
     mut commands: Commands
-) -> Result
+)
 {
     trace!("");
 
     match press.button {
-        PointerButton::Primary => {
-            // clear selection
-            clear_selection(&query, &mut commands);
+        PointerButton::Primary |
+        PointerButton::Middle if !ctrl_pressed(&modifiers)
+            && !shift_pressed(&modifiers) =>
+        {
+            deselect(&query, &mut commands);
         },
-        PointerButton::Middle => {
-
-        },
-        PointerButton::Secondary => {
-        }
+        _ => {}
     }
-
-    Ok(())
 }
 
 #[instrument(skip_all)]
-pub fn on_nonpiece_drag_start(
+pub fn selection_rect_drag_start(
     drag: On<Pointer<DragStart>>,
-    modifiers: Res<ButtonInput<KeyCode>>,
-    s_query: Query<Entity, With<Selected>>,
-    mut selection: ResMut<SelectionRect>,
-    mut commands: Commands
+    mut selection: ResMut<SelectionRect>
 )
 {
     trace!("");
@@ -208,15 +202,11 @@ pub fn on_nonpiece_drag_start(
             selection.rect = Rect::from_corners(pos, pos);
             selection.active = true;
         }
-
-        if !ctrl_pressed(&modifiers) && !shift_pressed(&modifiers) {
-            clear_selection(&s_query, &mut commands);
-        }
     }
 }
 
 #[instrument(skip_all)]
-pub fn on_nonpiece_drag(
+pub fn selection_rect_drag(
     drag: On<Pointer<Drag>>,
     query: Single<(&Camera, &GlobalTransform)>,
     mut selection: ResMut<SelectionRect>
@@ -228,10 +218,17 @@ pub fn on_nonpiece_drag(
         return Ok(());
     }
 
-    let (camera, global_transform) = query.into_inner();
+    let (camera, global_transform) = *query;
 
-    let start = camera.viewport_to_world_2d(global_transform, drag.pointer_location.position - drag.distance)?;
-    let end = camera.viewport_to_world_2d(global_transform, drag.pointer_location.position)?;
+    let start = camera.viewport_to_world_2d(
+        global_transform,
+        drag.pointer_location.position - drag.distance
+    )?;
+
+    let end = camera.viewport_to_world_2d(
+        global_transform,
+        drag.pointer_location.position
+    )?;
 
     selection.rect = Rect::from_corners(start, end);
 
@@ -239,7 +236,7 @@ pub fn on_nonpiece_drag(
 }
 
 #[instrument(skip_all)]
-pub fn on_nonpiece_drag_end(
+pub fn selection_rect_drag_end(
     drag: On<Pointer<DragEnd>>,
     query: Query<(Entity, &Transform), With<Selectable>>,
     s_query: Query<Entity, With<Selected>>,
@@ -273,7 +270,7 @@ pub fn on_nonpiece_drag_end(
         }
         else {
             // set selection
-            clear_selection(&s_query, &mut commands);
+            deselect(&s_query, &mut commands);
 
             for (entity, transform) in query {
                 if selection.rect.contains(transform.translation.xy()) {
@@ -285,7 +282,7 @@ pub fn on_nonpiece_drag_end(
 }
 
 #[instrument(skip_all)]
-pub fn draw_selection_box(
+pub fn draw_selection_rect(
     selection: Res<SelectionRect>,
     mut gizmos: Gizmos
 )
@@ -297,6 +294,8 @@ pub fn draw_selection_box(
         Color::srgb_u8(0xFF, 0, 0)
     );
 }
+
+// FIXME: selection box has bad corner joint
 
 pub fn setup_selection_box(
     mut config_store: ResMut<GizmoConfigStore>
