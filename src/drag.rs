@@ -12,10 +12,12 @@ use bevy::{
     },
     prelude::{Camera, Commands, Component, Entity, Projection, trace, Transform}
 };
+use itertools::Itertools;
+use std::cmp::Ordering;
 use tracing::instrument;
 
 use crate::Surface;
-use crate::raise::raise_piece_to_top;
+use crate::raise::raise_piece;
 use crate::select::Selected;
 use crate::util::AsOrthographicProjection;
 
@@ -33,22 +35,34 @@ pub fn on_piece_drag_start(
     query: Query<(Entity, &mut Transform), (With<Draggable>, With<Selected>)>,
     mut surface: ResMut<Surface>,
     mut commands: Commands
-) -> Result
+)
 {
     trace!("");
 
-    if drag.button != PointerButton::Primary {
-        return Ok(());
+    if drag.button == PointerButton::Primary {
+        // find the min, max depth of the selection
+        let Some((min_z, max_z)) = query.iter()
+            .minmax_by(|(_, ta), (_, tb)|
+                ta.translation.z.partial_cmp(&tb.translation.z)
+                    .unwrap_or(Ordering::Less)
+            )
+            .into_option()
+            .map(|((_, a), (_, b))| (a.translation.z, b.translation.z))
+        else {
+            return;
+        };
+
+        // raise the entire selection to be above the max
+        let dz = surface.max_z.next_up() - min_z;
+        surface.max_z = max_z + dz;
+
+        for (entity, mut transform) in query {
+            raise_piece(&mut transform, dz);
+
+            commands.entity(entity)
+                .insert(DragAnchor { pos: transform.translation });
+        }
     }
-
-    for (entity, mut transform) in query {
-        raise_piece_to_top(&mut transform, &mut surface);
-
-        commands.entity(entity)
-            .insert(DragAnchor { pos: transform.translation });
-    }
-
-    Ok(())
 }
 
 #[instrument(skip_all)]

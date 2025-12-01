@@ -295,11 +295,9 @@ fn recolor_on<E: EntityEvent>(color: Color) -> impl Fn(On<E>, Query<&mut Sprite>
 }
 
 // TODO: context menus
-// TODO: selection
 
 // TODO: try turning off vsync to fix drag lag
 
 /*
-store base positions and always calculate delta on that. translation = translation_start + screen_to_local(pointer_current - pointer_start)
-but im suspecting that the drag event is either being fired less often than you think, or the system itself is on a wrong schedule
+Drag lag: im suspecting that the drag event is either being fired less often than you think, or the system itself is on a wrong schedule
 */

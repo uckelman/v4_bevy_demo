@@ -21,13 +21,29 @@ pub struct RaiseAnchor {
     z: f32
 }
 
+pub fn set_piece_depth(
+    transform: &mut Transform,
+    z: f32
+)
+{
+    transform.translation.z = z;
+}
+
+pub fn raise_piece(
+    transform: &mut Transform,
+    dz: f32
+)
+{
+    set_piece_depth(transform, transform.translation.z + dz)
+}
+
 pub fn raise_piece_to_top(
     transform: &mut Transform,
     surface: &mut ResMut<Surface>
 )
 {
     surface.max_z = surface.max_z.next_up();
-    transform.translation.z = surface.max_z;
+    set_piece_depth(transform, surface.max_z);
 }
 
 pub fn raise_piece_to_top_anchored(
