@@ -91,16 +91,12 @@ pub fn on_piece_drag_end(
     drag: On<Pointer<DragEnd>>,
     query: Query<Entity, With<DragAnchor>>,
     mut commands: Commands
-) -> Result
+)
 {
     trace!("");
 
-    if drag.button != PointerButton::Primary {
-        return Ok(());
+    if drag.button == PointerButton::Primary {
+        query.iter()
+            .for_each(|entity| { commands.entity(entity).remove::<DragAnchor>();});
     }
-
-    query.iter()
-        .for_each(|entity| { commands.entity(entity).remove::<DragAnchor>(); });
-
-    Ok(())
 }
