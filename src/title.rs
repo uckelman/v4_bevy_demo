@@ -22,21 +22,21 @@ pub fn display_title(mut commands: Commands) {
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             flex_direction: FlexDirection::Column,
-            ..default()
+            ..Default::default()
         },
         children![
             (
                 Text::new("V4 Bevy Demo"),
                 TextFont {
                     font_size: 130.0,
-                    ..default()
+                    ..Default::default()
                 },
             ),
             (
-                Text::new("November 2025"),
+                Text::new("December 2025"),
                 TextFont {
                     font_size: 100.0,
-                    ..default()
+                    ..Default::default()
                 },
             )
         ],
