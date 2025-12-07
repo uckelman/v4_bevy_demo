@@ -137,7 +137,9 @@ pub fn selectable_pressed(
 {
     trace!("");
 
-    if press.button != PointerButton::Primary {
+    if press.button != PointerButton::Primary &&
+        press.button != PointerButton::Secondary
+    {
         return;
     }
 

@@ -1,17 +1,25 @@
 use bevy::prelude::*;
 use bevy::{
-    asset::LoadedFolder,
     image::ImageSamplerDescriptor,
+    asset::io::AssetSourceBuilder,
     input::{
         common_conditions::input_pressed,
         mouse::AccumulatedMouseScroll
-    }
+    },
 };
 use rand::Rng;
+use serde::Deserialize;
+use std::{
+    collections::HashMap,
+    path::Path
+};
 
+mod actions;
 mod assets;
 mod config;
+mod context_menu;
 mod drag;
+mod flip;
 mod view_adjust;
 mod raise;
 mod select;
@@ -19,11 +27,14 @@ mod state;
 mod title;
 mod util;
 
+use crate::actions::{add_action_observer};
 use crate::assets::{
-   SpriteHandles, load_assets, is_folder_loaded, log_images_loaded
+   LoadingHandles, SpriteHandles, load_assets, mark_images_loaded
 };
 use crate::config::KeyConfig;
+use crate::context_menu::{open_piece_context_menu, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel};
 use crate::drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end};
+use crate::flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back};
 use crate::view_adjust::{
     handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
     handle_rotate_ccw, handle_rotate_cw,
@@ -39,8 +50,49 @@ use crate::select::{clear_selection, draw_selection_rect, on_selection, on_desel
 use crate::state::GameState;
 use crate::title::{SplashScreenTimer, display_title};
 
-fn main() {
+// TODO: check faces against images
+#[derive(Debug, Deserialize)]
+struct PieceType {
+    name: String,
+    faces: Vec<String>,
+    actions: Vec<String>
+}
+
+#[derive(Debug, Deserialize)]
+struct MapType {
+    image: String,
+    x: f32,
+    y: f32
+}
+
+#[derive(Debug, Deserialize)]
+struct SurfaceType {
+    map: Vec<MapType>
+}
+
+#[derive(Debug, Deserialize, Resource)]
+struct GameBox {
+    images: HashMap<String, String>,
+    piece: Vec<PieceType>,
+    surface: SurfaceType
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = std::env::args().collect::<Vec<_>>();
+
+// FIXME: unwrap
+    let base = Path::new(&args[1])
+        .parent()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_owned();
+
     App::new()
+        .register_asset_source(
+            base.clone(),
+            AssetSourceBuilder::platform_default(&base, None)
+        )
         .add_plugins(DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
@@ -62,6 +114,8 @@ fn main() {
             game_plugin
         ))
         .run();
+
+    Ok(())
 }
 
 fn splash_plugin(app: &mut App) {
@@ -77,22 +131,20 @@ fn splash_plugin(app: &mut App) {
         )
         .add_systems(
             Update,
-            switch_to_game.run_if(in_state(GameState::Splash))
+            (
+                mark_images_loaded,
+                switch_to_game
+            ).run_if(in_state(GameState::Splash))
         );
 }
 
 fn switch_to_game(
     mut next: ResMut<NextState<GameState>>,
-    asset_events_folder: MessageReader<AssetEvent<LoadedFolder>>,
-    asset_events_image: MessageReader<AssetEvent<Image>>,
-    sprite_handles: Res<SpriteHandles>,
+    loading_handles: Res<LoadingHandles>,
     mut timer: ResMut<SplashScreenTimer>,
     time: Res<Time>
 ) {
-    log_images_loaded(asset_events_image);
-
-    if timer.0.tick(time.delta()).is_finished()
-        && is_folder_loaded(asset_events_folder, sprite_handles)
+    if timer.0.tick(time.delta()).is_finished() && loading_handles.0.is_empty()
     {
         next.set(GameState::Game);
     }
@@ -114,6 +166,9 @@ fn load_input_settings(mut commands: Commands) {
 
     commands.insert_resource(RotateCCWKey(KeyCode::KeyZ));
     commands.insert_resource(RotateCWKey(KeyCode::KeyX));
+
+    commands.insert_resource(FlipForwardKey(KeyCode::BracketLeft));
+    commands.insert_resource(FlipBackKey(KeyCode::BracketRight));
 }
 
 fn cfg_input_pressed<T>(
@@ -124,6 +179,16 @@ where
     T: Resource + KeyConfig
 {
     inputs.pressed(key.code())
+}
+
+fn cfg_input_just_pressed<T>(
+    key: Res<T>,
+    inputs: Res<ButtonInput<KeyCode>>
+) -> bool
+where
+    T: Resource + KeyConfig
+{
+    inputs.just_pressed(key.code())
 }
 
 fn game_plugin(app: &mut App) {
@@ -162,10 +227,21 @@ fn game_plugin(app: &mut App) {
                 draw_selection_rect.run_if(
                     resource_exists::<SelectionRect>
                         .and(|r: Res<SelectionRect>| r.active)
-                )
+                ),
+
+                trigger_close_context_menus_wheel.run_if(
+                    resource_changed::<AccumulatedMouseScroll>.and(
+                        not(resource_equals(AccumulatedMouseScroll::default()))
+                    )
+                ),
+
+                handle_flip_forward.run_if(cfg_input_just_pressed::<FlipForwardKey>),
+                handle_flip_back.run_if(cfg_input_just_pressed::<FlipBackKey>)
             )
             .run_if(in_state(GameState::Game))
-        );
+        )
+        .add_observer(open_context_menu)
+        .add_observer(close_context_menus);
 }
 
 #[derive(Resource)]
@@ -186,85 +262,99 @@ struct MapBundle {
 #[derive(Component, Default)]
 struct Piece;
 
+// TODO: should this reference a piece type?
+#[derive(Component, Default)]
+struct Faces(Vec<Handle<Image>>);
+
+// TODO: should this be a cyclic iterator?
+#[derive(Component, Default)]
+struct FaceUp(usize);
+
+#[derive(Component, Default)]
+pub struct Actions(pub Vec<String>);
+
 #[derive(Bundle, Default)]
 struct PieceBundle {
     marker: Piece,
-    sprite: Sprite,
-    transform: Transform,
     pickable: Pickable,
     selectable: Selectable,
-    draggable: Draggable
+    draggable: Draggable,
+    sprite: Sprite,
+    transform: Transform,
+    faces: Faces,
+    up: FaceUp,
+    actions: Actions
 }
 
 fn display_game(
     mut commands: Commands,
     window: Single<Entity, With<Window>>,
     sprite_handles: Res<SpriteHandles>,
-    loaded_folders: Res<Assets<LoadedFolder>>,
+    gamebox: Res<GameBox>
 ) -> Result
 {
-    let Some(loaded_folder) = loaded_folders.get(&sprite_handles.0) else {
-        return Ok(());
-    };
-
     commands.entity(*window)
         .observe(handle_pan_drag)
         .observe(clear_selection)
         .observe(selection_rect_drag_start)
         .observe(selection_rect_drag)
-        .observe(selection_rect_drag_end);
+        .observe(selection_rect_drag_end)
+        .observe(trigger_close_context_menus_press);
 
     let mut surface = Surface { max_z: 0.0 };
 
-    let mut rng = rand::rng();
-
-    for handle in loaded_folder.handles.iter() {
-        let handle = handle.clone().try_typed::<Image>()?;
-
-        surface.max_z = surface.max_z.next_up();
-
-        let Some(path) = handle.path() else {
-            continue;
-        };
-
-        if path.to_string() == "map.png" {
+    for m in &gamebox.surface.map {
+        if let Some(handle) = sprite_handles.0.get(&m.image) {
             commands.spawn((
                 MapBundle {
-                    sprite: Sprite::from_image(handle),
-                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+                    sprite: Sprite::from_image(handle.clone()),
+                    transform: Transform::from_xyz(m.x, m.y, 0.0),
                     ..Default::default()
                 },
                 DespawnOnExit(GameState::Game)
             ));
         }
-        else {
-            let x = rng.random_range(-500.0..=500.0);
-            let y = rng.random_range(-500.0..=500.0);
+    }
 
-            commands.spawn((
-                PieceBundle {
-                    sprite: Sprite::from_image(handle),
-                    transform: Transform::from_xyz(x, y, surface.max_z),
-                    ..Default::default()
-                },
-                DespawnOnExit(GameState::Game)
-            ))
-/*
-            .observe(recolor_on::<Pointer<Over>>(Color::hsl(0.0, 0.9, 0.7)))
-            .observe(recolor_on::<Pointer<Out>>(Color::WHITE))
-            .observe(recolor_on::<Pointer<Press>>(Color::srgb(0.0, 0.0, 1.0)))
-            .observe(recolor_on::<Pointer<Release>>(Color::BLACK))
-*/
-            .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
-            .observe(recolor_on::<DeselectEvent>(Color::WHITE))
-            .observe(selectable_pressed)
-            .observe(raise::on_piece_pressed)
-            .observe(raise::on_piece_released)
-            .observe(on_piece_drag_start)
-            .observe(on_piece_drag)
-            .observe(on_piece_drag_end)
-            .observe(on_selection)
-            .observe(on_deselection);
+    let mut rng = rand::rng();
+
+    for p in &gamebox.piece {
+        let faces = p.faces.iter()
+            .filter_map(|f| sprite_handles.0.get(f).cloned())
+            .collect::<Vec<_>>();
+
+        let x = rng.random_range(-500.0..=500.0);
+        let y = rng.random_range(-500.0..=500.0);
+
+        surface.max_z = surface.max_z.next_up();
+
+        let mut ec = commands.spawn((
+            PieceBundle {
+                sprite: Sprite::from_image(faces[0].clone()),
+                transform: Transform::from_xyz(x, y, surface.max_z),
+                faces: Faces(faces),
+                up: FaceUp(0),
+                actions: Actions(p.actions.clone()),
+                ..Default::default()
+            },
+            DespawnOnExit(GameState::Game)
+        ));
+
+        ec
+        .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
+        .observe(recolor_on::<DeselectEvent>(Color::WHITE))
+        .observe(selectable_pressed)
+        .observe(raise::on_piece_pressed)
+        .observe(raise::on_piece_released)
+        .observe(on_piece_drag_start)
+        .observe(on_piece_drag)
+        .observe(on_piece_drag_end)
+        .observe(on_selection)
+        .observe(on_deselection)
+        .observe(open_piece_context_menu);
+
+        for a in &p.actions {
+            add_action_observer(a, &mut ec);
         }
     }
 
@@ -293,8 +383,6 @@ fn recolor_on<E: EntityEvent>(color: Color) -> impl Fn(On<E>, Query<&mut Sprite>
         }
     }
 }
-
-// TODO: context menus
 
 // TODO: try turning off vsync to fix drag lag
 
