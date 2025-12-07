@@ -16,7 +16,7 @@ use bevy::{
         events::{Out, Over, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, Entity, FlexDirection, Node, PositionType, percent, px, Reflect, SpawnRelated, Text, TextColor, TextFont, trace, UiRect, Val}
+    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, Entity, FlexDirection, Node, PositionType, px, Reflect, SpawnRelated, Text, TextColor, TextFont, trace, UiRect}
 };
 use std::{
     collections::HashSet,

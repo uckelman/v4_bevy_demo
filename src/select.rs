@@ -110,7 +110,7 @@ fn deselect_all(
     mut commands: &mut Commands
 )
 {
-    query.iter().for_each(|entity| deselect(entity, &mut commands));
+    query.iter().for_each(|entity| deselect(entity, commands));
 }
 
 fn set_selection_if_not_selected(
@@ -120,8 +120,8 @@ fn set_selection_if_not_selected(
 )
 {
     if !query.contains(entity) {
-        deselect_all(query, &mut commands);
-        select(entity, &mut commands);
+        deselect_all(query, commands);
+        select(entity, commands);
     }
 }
 
@@ -194,12 +194,12 @@ pub fn selection_rect_drag_start(
 {
     trace!("");
 
-    if drag.button == PointerButton::Middle {
-        if let Some(pos) = drag.hit.position {
-            let pos = pos.xy();
-            selection.rect = Rect::from_corners(pos, pos);
-            selection.active = true;
-        }
+    if drag.button == PointerButton::Middle &&
+        let Some(pos) = drag.hit.position
+    {
+        let pos = pos.xy();
+        selection.rect = Rect::from_corners(pos, pos);
+        selection.active = true;
     }
 }
 
