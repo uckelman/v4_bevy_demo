@@ -11,6 +11,7 @@ use bevy::{
     image::Image,
     prelude::{debug, AssetId, Commands, Resource}
 };
+use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
     path::Path
@@ -33,7 +34,7 @@ pub fn load_assets(
 
     let game: GameBox = toml::from_str(&std::fs::read_to_string(&args[1])?)?;
 
-// FIXME: unwrap
+   // FIXME: unwrap
     let base = Path::new(&args[1])
         .parent()
         .unwrap()
@@ -55,6 +56,16 @@ pub fn load_assets(
     let lh = sh.iter()
         .map(|h| h.1.id())
         .collect::<HashSet<_>>();
+
+// TODO: check that actions exist, etc
+// TODO: check faces against images
+    assert!(
+        game.piece.iter()
+            .map(|p| &p.faces)
+            .flatten()
+            .unique()
+            .all(|f| sh.contains_key(f))
+    );
 
     commands.insert_resource(game);
     commands.insert_resource(LoadingHandles(lh));
