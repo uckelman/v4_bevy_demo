@@ -1,7 +1,7 @@
 use bevy::prelude::States;
 use std::hash::Hash;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, States, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, States)]
 pub enum GameState {
     #[default]
     Splash,

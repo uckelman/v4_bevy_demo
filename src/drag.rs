@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{
-        change_detection::ResMut,
+        change_detection::{Res, ResMut},
         error::Result,
         observer::On,
         prelude::{Query, With, Without}
@@ -10,16 +10,19 @@ use bevy::{
         events::{Drag, DragEnd, DragStart, Pointer},
         pointer::PointerButton
     },
-    prelude::{Camera, Commands, Component, Entity, Projection, trace, Transform}
+    prelude::{Camera, Commands, Component, Entity, Projection, State, trace, Transform}
 };
 use itertools::Itertools;
 use std::cmp::Ordering;
 use tracing::instrument;
 
-use crate::Surface;
-use crate::raise::raise_piece;
-use crate::select::Selected;
-use crate::util::AsOrthographicProjection;
+use crate::{
+    Surface,
+    context_menu::ContextMenuState,
+    raise::raise_piece,
+    select::Selected,
+    util::AsOrthographicProjection
+};
 
 #[derive(Component, Default)]
 pub struct Draggable;
@@ -33,35 +36,42 @@ pub struct DragAnchor {
 pub fn on_piece_drag_start(
     drag: On<Pointer<DragStart>>,
     query: Query<(Entity, &mut Transform), (With<Draggable>, With<Selected>)>,
+    context_menu_state: Res<State<ContextMenuState>>,
     mut surface: ResMut<Surface>,
     mut commands: Commands
 )
 {
     trace!("");
 
-    if drag.button == PointerButton::Primary {
-        // find the min, max depth of the selection
-        let Some((min_z, max_z)) = query.iter()
-            .minmax_by(|(_, ta), (_, tb)|
-                ta.translation.z.partial_cmp(&tb.translation.z)
-                    .unwrap_or(Ordering::Less)
-            )
-            .into_option()
-            .map(|((_, a), (_, b))| (a.translation.z, b.translation.z))
-        else {
-            return;
-        };
+    if drag.button != PointerButton::Primary {
+        return;
+    }
 
-        // raise the entire selection to be above the max
-        let dz = surface.max_z.next_up() - min_z;
-        surface.max_z = max_z + dz;
+    if *context_menu_state == ContextMenuState::Open {
+        return;
+    }
 
-        for (entity, mut transform) in query {
-            raise_piece(&mut transform, dz);
+    // find the min, max depth of the selection
+    let Some((min_z, max_z)) = query.iter()
+        .minmax_by(|(_, ta), (_, tb)|
+            ta.translation.z.partial_cmp(&tb.translation.z)
+                .unwrap_or(Ordering::Less)
+        )
+        .into_option()
+        .map(|((_, a), (_, b))| (a.translation.z, b.translation.z))
+    else {
+        return;
+    };
 
-            commands.entity(entity)
-                .insert(DragAnchor { pos: transform.translation });
-        }
+    // raise the entire selection to be above the max
+    let dz = surface.max_z.next_up() - min_z;
+    surface.max_z = max_z + dz;
+
+    for (entity, mut transform) in query {
+        raise_piece(&mut transform, dz);
+
+        commands.entity(entity)
+            .insert(DragAnchor { pos: transform.translation });
     }
 }
 
@@ -69,12 +79,17 @@ pub fn on_piece_drag_start(
 pub fn on_piece_drag(
     mut drag: On<Pointer<Drag>>,
     mut d_query: Query<(&mut Transform, &DragAnchor), Without<Camera>>,
-    tp_query: Query<(&Transform, &Projection), With<Camera>>
+    tp_query: Query<(&Transform, &Projection), With<Camera>>,
+    context_menu_state: Res<State<ContextMenuState>>
 ) -> Result
 {
     trace!("");
 
     if drag.button != PointerButton::Primary {
+        return Ok(());
+    }
+
+    if *context_menu_state == ContextMenuState::Open {
         return Ok(());
     }
 
@@ -104,10 +119,15 @@ pub fn on_piece_drag(
 pub fn on_piece_drag_end(
     drag: On<Pointer<DragEnd>>,
     query: Query<Entity, With<DragAnchor>>,
+    context_menu_state: Res<State<ContextMenuState>>,
     mut commands: Commands
 )
 {
     trace!("");
+
+    if *context_menu_state == ContextMenuState::Open {
+        return;
+    }
 
     if drag.button == PointerButton::Primary {
         query.iter()

@@ -32,7 +32,7 @@ use crate::assets::{
    LoadingHandles, SpriteHandles, load_assets, mark_images_loaded
 };
 use crate::config::KeyConfig;
-use crate::context_menu::{open_piece_context_menu, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel};
+use crate::context_menu::{ContextMenuState, open_piece_context_menu, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_selectable_press, trigger_close_context_menus_wheel};
 use crate::drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end};
 use crate::flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back};
 use crate::view_adjust::{
@@ -50,7 +50,6 @@ use crate::select::{clear_selection, draw_selection_rect, on_selection, on_desel
 use crate::state::GameState;
 use crate::title::{SplashScreenTimer, display_title};
 
-// TODO: check faces against images
 #[derive(Debug, Deserialize)]
 struct PieceType {
     name: String,
@@ -197,6 +196,7 @@ fn game_plugin(app: &mut App) {
             OnEnter(GameState::Game),
             display_game
         )
+        .init_state::<ContextMenuState>()
         .add_systems(
             Update,
             (
@@ -351,7 +351,8 @@ fn display_game(
         .observe(on_piece_drag_end)
         .observe(on_selection)
         .observe(on_deselection)
-        .observe(open_piece_context_menu);
+        .observe(open_piece_context_menu)
+        .observe(trigger_close_context_menus_selectable_press);
 
         for a in &p.actions {
             add_action_observer(a, &mut ec);

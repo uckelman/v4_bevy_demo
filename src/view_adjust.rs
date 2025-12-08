@@ -12,11 +12,14 @@ use bevy::{
     },
     math::Vec2,
     picking::events::{Drag, Pointer},
-    prelude::{GlobalTransform, OrthographicProjection, PointerButton, Projection, Time, trace, Transform, Resource}
+    prelude::{GlobalTransform, OrthographicProjection, PointerButton, Projection, State, Time, trace, Transform, Resource}
 };
 
-use crate::config::KeyConfig;
-use crate::util::AsOrthographicProjection;
+use crate::{
+    config::KeyConfig,
+    context_menu::ContextMenuState,
+    util::AsOrthographicProjection
+};
 
 #[derive(Resource)]
 pub struct KeyPanStep(pub f32);
@@ -177,12 +180,17 @@ pub fn handle_pan_down(
 
 pub fn handle_pan_drag(
     drag: On<Pointer<Drag>>,
-    query: Single<(&Camera, &GlobalTransform, &mut Transform)>
+    query: Single<(&Camera, &GlobalTransform, &mut Transform)>,
+    context_menu_state: Res<State<ContextMenuState>>
 ) -> Result
 {
-    trace!("on_camera_drag");
+    trace!("handle_pan_drag");
 
     if drag.button != PointerButton::Primary {
+        return Ok(());
+    }
+
+    if *context_menu_state == ContextMenuState::Open {
         return Ok(());
     }
 

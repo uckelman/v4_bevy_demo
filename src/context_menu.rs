@@ -5,7 +5,7 @@ use bevy::{
     },
     ecs::{
         bundle::Bundle,
-        change_detection::Res,
+        change_detection::{Res, ResMut},
         component::Component,
         event::{EntityEvent, Event},
         observer::On,
@@ -18,7 +18,7 @@ use bevy::{
         events::{Out, Over, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, Entity, FlexDirection, Node, PositionType, px, Reflect, SpawnRelated, Text, TextColor, TextFont, trace, UiRect}
+    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, CommandsStatesExt, Entity, FlexDirection, NextState, Node, PositionType, px, Reflect, SpawnRelated, State, States, Text, TextColor, TextFont, trace, UiRect}
 };
 use std::{
     collections::HashSet,
@@ -31,6 +31,13 @@ use crate::{
     actions::trigger_action,
     select::Selected
 };
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, States)]
+pub enum ContextMenuState {
+    #[default]
+    Closed,
+    Open
+}
 
 #[derive(EntityEvent)]
 pub struct OpenContextMenu {
@@ -71,12 +78,13 @@ pub fn open_piece_context_menu(
 pub fn open_context_menu(
     open: On<OpenContextMenu>,
     query: Query<&Actions, With<Selected>>,
+    mut next_state: ResMut<NextState<ContextMenuState>>,
     mut commands: Commands
 )
 {
     trace!("");
 
-    commands.trigger(CloseContextMenus);
+//    commands.trigger(CloseContextMenus);
 
     // show intersection of actions for selected entities
 // FIXME: maintain order somehow
@@ -92,6 +100,8 @@ pub fn open_context_menu(
         // there are no actions shared by all selected items
         return;
     }
+
+    commands.set_state(ContextMenuState::Open);
 
     let bg = GRAY_50.into();
     let border: Color = GRAY_200.into();
@@ -138,9 +148,16 @@ fn on_item_selection(
     event.propagate(false);
 }
 
-fn context_item(key: &str, text: &str, bg: Color) -> impl Bundle {
+// TODO: drags should be impossible when a context menu is open
+
+fn context_item(
+    action: impl Into<String>,
+    text: impl Into<String>,
+    bg: Color
+) -> impl Bundle
+{
     (
-        ContextMenuItem(key.into()),
+        ContextMenuItem(action.into()),
         Button,
         Node {
             padding: UiRect::all(px(5)),
@@ -194,6 +211,19 @@ pub fn trigger_close_context_menus_press(
 }
 
 #[instrument(skip_all)]
+pub fn trigger_close_context_menus_selectable_press(
+    _event: On<Pointer<Press>>,
+    context_menu_state: Res<State<ContextMenuState>>,
+    mut commands: Commands
+)
+{
+    trace!("");
+    if *context_menu_state == ContextMenuState::Open {
+        commands.trigger(CloseContextMenus);
+    }
+}
+
+#[instrument(skip_all)]
 pub fn trigger_close_context_menus_wheel(
     _mouse_scroll: Res<AccumulatedMouseScroll>,
     mut commands: Commands
@@ -207,10 +237,12 @@ pub fn trigger_close_context_menus_wheel(
 pub fn close_context_menus(
     _event: On<CloseContextMenus>,
     menus: Query<Entity, With<ContextMenu>>,
+    mut next_state: ResMut<NextState<ContextMenuState>>,
     mut commands: Commands,
 )
 {
     trace!("");
     menus.iter()
         .for_each(|entity| commands.entity(entity).despawn());
+    next_state.set(ContextMenuState::Closed);
 }
