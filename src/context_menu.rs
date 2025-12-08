@@ -45,7 +45,7 @@ pub struct CloseContextMenus;
 pub struct ContextMenu;
 
 #[derive(Component, Default)]
-pub struct ContextMenuItem(usize);
+pub struct ContextMenuItem(String);
 
 #[instrument(skip_all)]
 pub fn open_piece_context_menu(
@@ -115,41 +115,36 @@ pub fn open_context_menu(
         BorderRadius::all(px(4)),
         BackgroundColor(bg),
     ))
-    .with_children(|parent| {
-        for (i, a) in actions.iter().enumerate() {
-            parent.spawn(context_item(i, a, bg));
-        }
-    })
-    .observe(
-        move |
-            mut event: On<Pointer<Press>>,
-            menu_items: Query<&ContextMenuItem>,
-            query: Query<(Entity, &Actions), With<Selected>>,
-            mut commands: Commands
-        |
-        {
-            let target = event.original_event_target();
-
-// FIXME: this actions list doesn't necesarily match the one we computed
-// we should store the action in the item
-            if let Ok(item) = menu_items.get(target) {
-                for (entity, actions) in query {
-                    trigger_action(entity, &actions.0[item.0], &mut commands);
-                }
-            }
-
-            event.propagate(false);
-        }
+    .with_children(|parent|
+        actions.iter().for_each(|a| { parent.spawn(context_item(a, a, bg)); })
     )
+    .observe(on_item_selection)
     .observe(highlight_on_hover::<Out>(bg))
     .observe(highlight_on_hover::<Over>(highlight));
 
     Ok(())
 }
 
-fn context_item(id: usize, text: &str, bg: Color) -> impl Bundle {
+fn on_item_selection(
+    mut event: On<Pointer<Press>>,
+    menu_items: Query<&ContextMenuItem>,
+    query: Query<Entity, With<Selected>>,
+    mut commands: Commands
+)
+{
+    let target = event.original_event_target();
+
+    if let Ok(item) = menu_items.get(target) {
+        query.iter()
+            .for_each(|entity| trigger_action(entity, &item.0, &mut commands));
+    }
+
+    event.propagate(false);
+}
+
+fn context_item(key: &str, text: &str, bg: Color) -> impl Bundle {
     (
-        ContextMenuItem(id),
+        ContextMenuItem(key.into()),
         Button,
         Node {
             padding: UiRect::all(px(5)),
