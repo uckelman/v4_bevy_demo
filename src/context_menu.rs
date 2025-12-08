@@ -1,5 +1,8 @@
 use bevy::{
-    color::Color,
+    color::{
+        Color,
+        palettes::tailwind::{GRAY_50, GRAY_200}
+    },
     ecs::{
         bundle::Bundle,
         change_detection::Res,
@@ -19,8 +22,7 @@ use bevy::{
 };
 use std::{
     collections::HashSet,
-    fmt::Debug,
-    ops::BitAnd
+    fmt::Debug
 };
 use tracing::instrument;
 
@@ -72,8 +74,6 @@ pub fn open_context_menu(
     mut commands: Commands
 )
 {
-    use bevy::color::palettes::tailwind::{GRAY_50, GRAY_200};
-
     trace!("");
 
     commands.trigger(CloseContextMenus);
