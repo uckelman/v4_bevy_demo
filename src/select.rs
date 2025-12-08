@@ -107,7 +107,7 @@ fn deselect(entity: Entity, commands: &mut Commands)
 
 fn deselect_all(
     query: &Query<Entity, With<Selected>>,
-    mut commands: &mut Commands
+    commands: &mut Commands
 )
 {
     query.iter().for_each(|entity| deselect(entity, commands));
@@ -116,7 +116,7 @@ fn deselect_all(
 fn set_selection_if_not_selected(
     entity: Entity,
     query: &Query<Entity, With<Selected>>,
-    mut commands: &mut Commands
+    commands: &mut Commands
 )
 {
     if !query.contains(entity) {

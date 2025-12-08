@@ -4,7 +4,6 @@ use bevy::{
         bundle::Bundle,
         change_detection::Res,
         component::Component,
-        error::Result,
         event::{EntityEvent, Event},
         observer::On,
         prelude::{Commands, Query, With}
@@ -28,7 +27,6 @@ use tracing::instrument;
 use crate::{
     Actions,
     actions::trigger_action,
-    flip::{FlipForwardEvent, FlipBackEvent},
     select::Selected
 };
 
@@ -72,11 +70,13 @@ pub fn open_context_menu(
     open: On<OpenContextMenu>,
     query: Query<&Actions, With<Selected>>,
     mut commands: Commands
-) -> Result
+)
 {
     use bevy::color::palettes::tailwind::{GRAY_50, GRAY_200};
 
     trace!("");
+
+    commands.trigger(CloseContextMenus);
 
     // show intersection of actions for selected entities
 // FIXME: maintain order somehow
@@ -89,16 +89,13 @@ pub fn open_context_menu(
         .collect::<Vec<_>>();
 
     if actions.is_empty() {
-        return Ok(());
+        // there are no actions shared by all selected items
+        return;
     }
-
-    let entity = open.event().event_target();
 
     let bg = GRAY_50.into();
     let border: Color = GRAY_200.into();
     let highlight = GRAY_200.into();
-
-    commands.trigger(CloseContextMenus);
 
     commands.spawn((
         ContextMenu,
@@ -116,13 +113,12 @@ pub fn open_context_menu(
         BackgroundColor(bg),
     ))
     .with_children(|parent|
-        actions.iter().for_each(|a| { parent.spawn(context_item(a, a, bg)); })
+        actions.iter()
+            .for_each(|a| { parent.spawn(context_item(a, a, bg)); })
     )
     .observe(on_item_selection)
     .observe(highlight_on_hover::<Out>(bg))
     .observe(highlight_on_hover::<Over>(highlight));
-
-    Ok(())
 }
 
 fn on_item_selection(
