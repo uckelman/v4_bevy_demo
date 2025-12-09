@@ -17,7 +17,7 @@ use std::{
     path::Path
 };
 
-use crate::GameBox;
+use crate::gamebox::GameBox;
 
 #[derive(Resource)]
 pub struct LoadingHandles(pub HashSet<AssetId<Image>>);

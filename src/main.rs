@@ -8,11 +8,7 @@ use bevy::{
     },
 };
 use rand::Rng;
-use serde::Deserialize;
-use std::{
-    collections::HashMap,
-    path::Path
-};
+use std::path::Path;
 
 mod actions;
 mod assets;
@@ -20,6 +16,7 @@ mod config;
 mod context_menu;
 mod drag;
 mod flip;
+mod gamebox;
 mod view;
 mod view_adjust;
 mod raise;
@@ -36,6 +33,7 @@ use crate::config::KeyConfig;
 use crate::context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel};
 use crate::drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end};
 use crate::flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back};
+use crate::gamebox::GameBox;
 use crate::view::handle_piece_pressed;
 use crate::view_adjust::{
     handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
@@ -51,32 +49,6 @@ use crate::raise::RaiseAnchor;
 use crate::select::{clear_selection, draw_selection_rect, on_selection, on_deselection, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box};
 use crate::state::GameState;
 use crate::title::{SplashScreenTimer, display_title};
-
-#[derive(Debug, Deserialize)]
-struct PieceType {
-    name: String,
-    faces: Vec<String>,
-    actions: Vec<String>
-}
-
-#[derive(Debug, Deserialize)]
-struct MapType {
-    image: String,
-    x: f32,
-    y: f32
-}
-
-#[derive(Debug, Deserialize)]
-struct SurfaceType {
-    map: Vec<MapType>
-}
-
-#[derive(Debug, Deserialize, Resource)]
-struct GameBox {
-    images: HashMap<String, String>,
-    piece: Vec<PieceType>,
-    surface: SurfaceType
-}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().collect::<Vec<_>>();
