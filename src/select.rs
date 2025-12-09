@@ -205,29 +205,31 @@ pub fn selection_rect_drag_end(
 {
     trace!("");
 
-    if drag.button == PointerButton::Middle {
-        selection.active = false;
+    if drag.button != PointerButton::Middle {
+        return;
+    }
 
-        // TODO: checking all Selectables is probably slow?
-        let qi = query.iter()
-            .filter(|(_, transform)|
-                selection.rect.contains(transform.translation.xy())
-            )
-            .map(|(entity, _)| entity);
+    selection.active = false;
 
-        if ctrl_pressed(&modifiers) {
-            // toggle selection
-            qi.for_each(|entity| toggle(entity, &s_query, &mut commands));
-        }
-        else if shift_pressed(&modifiers) {
-            // add to selection
-            qi.for_each(|entity| select(entity, &mut commands));
-        }
-        else {
-            // set selection
-            deselect_all(&s_query, &mut commands);
-            qi.for_each(|entity| select(entity, &mut commands));
-        }
+    // TODO: checking all Selectables is probably slow, maybe use a quadtree?
+    let qi = query.iter()
+        .filter(|(_, transform)|
+            selection.rect.contains(transform.translation.xy())
+        )
+        .map(|(entity, _)| entity);
+
+    if ctrl_pressed(&modifiers) {
+        // toggle selection
+        qi.for_each(|entity| toggle(entity, &s_query, &mut commands));
+    }
+    else if shift_pressed(&modifiers) {
+        // add to selection
+        qi.for_each(|entity| select(entity, &mut commands));
+    }
+    else {
+        // set selection
+        deselect_all(&s_query, &mut commands);
+        qi.for_each(|entity| select(entity, &mut commands));
     }
 }
 

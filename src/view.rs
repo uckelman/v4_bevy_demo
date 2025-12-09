@@ -40,12 +40,12 @@ pub fn handle_piece_pressed(
         commands.trigger(CloseContextMenus);
     }
 
-    let entity = press.event().event_target();
-
-    // primary, secondary select
+    // primary, secondary buttons select
     if press.button == PointerButton::Primary ||
         press.button == PointerButton::Secondary
     {
+        let entity = press.event().event_target();
+
         if ctrl_pressed(&modifiers) {
             // ctrl toggles
             trace!("ctrl");
@@ -65,13 +65,13 @@ pub fn handle_piece_pressed(
                 &mut commands
             );
         }
-    }
 
-    // secondary opens a context menu
-    if press.button == PointerButton::Secondary {
-        commands.trigger(OpenContextMenu {
-            entity,
-            pos: press.pointer_location.position
-        });
+        // secondary button opens a context menu
+        if press.button == PointerButton::Secondary {
+            commands.trigger(OpenContextMenu {
+                entity,
+                pos: press.pointer_location.position
+            });
+        }
     }
 }
