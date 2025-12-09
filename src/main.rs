@@ -159,8 +159,8 @@ fn load_input_settings(mut commands: Commands) {
     commands.insert_resource(RotateCCWKey(KeyCode::KeyZ));
     commands.insert_resource(RotateCWKey(KeyCode::KeyX));
 
-    commands.insert_resource(FlipForwardKey(KeyCode::BracketLeft));
-    commands.insert_resource(FlipBackKey(KeyCode::BracketRight));
+    commands.insert_resource(FlipBackKey(KeyCode::BracketLeft));
+    commands.insert_resource(FlipForwardKey(KeyCode::BracketRight));
 }
 
 fn cfg_input_pressed<T>(
