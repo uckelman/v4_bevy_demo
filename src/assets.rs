@@ -79,12 +79,9 @@ pub fn mark_images_loaded(
 )
 {
     for e in asset_events.read() {
-        match e {
-            AssetEvent::LoadedWithDependencies { id } => {
-                loading_handles.0.remove(id);
-                eprint!(".");
-            },
-            _ => {}
+        if let AssetEvent::LoadedWithDependencies { id } = e {
+            loading_handles.0.remove(id);
+            eprint!(".");
         }
     }
 }
