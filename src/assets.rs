@@ -61,8 +61,7 @@ pub fn load_assets(
 // TODO: check faces against images
     assert!(
         game.piece.iter()
-            .map(|p| &p.faces)
-            .flatten()
+            .flat_map(|p| &p.faces)
             .unique()
             .all(|f| sh.contains_key(f))
     );
