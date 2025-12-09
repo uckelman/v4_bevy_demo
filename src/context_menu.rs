@@ -18,7 +18,7 @@ use bevy::{
         events::{Out, Over, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, CommandsStatesExt, Entity, FlexDirection, NextState, Node, PositionType, px, Reflect, SpawnRelated, State, States, Text, TextColor, TextFont, trace, UiRect}
+    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, Entity, FlexDirection, NextState, Node, PositionType, px, Reflect, SpawnRelated, States, Text, TextColor, TextFont, trace, UiRect}
 };
 use std::{
     collections::HashSet,
@@ -41,8 +41,8 @@ pub enum ContextMenuState {
 
 #[derive(EntityEvent)]
 pub struct OpenContextMenu {
-    entity: Entity,
-    pos: Vec2
+    pub entity: Entity,
+    pub pos: Vec2
 }
 
 #[derive(Event, Default)]
@@ -55,26 +55,6 @@ pub struct ContextMenu;
 pub struct ContextMenuItem(String);
 
 #[instrument(skip_all)]
-pub fn open_piece_context_menu(
-    mut press: On<Pointer<Press>>,
-    mut commands: Commands
-)
-{
-    trace!("");
-
-    if press.button != PointerButton::Secondary {
-        return;
-    }
-
-    commands.trigger(OpenContextMenu {
-        entity: press.event().event_target(),
-        pos: press.pointer_location.position
-    });
-
-    press.propagate(false);
-}
-
-#[instrument(skip_all)]
 pub fn open_context_menu(
     open: On<OpenContextMenu>,
     query: Query<&Actions, With<Selected>>,
@@ -83,8 +63,6 @@ pub fn open_context_menu(
 )
 {
     trace!("");
-
-//    commands.trigger(CloseContextMenus);
 
     // show intersection of actions for selected entities
 // FIXME: maintain order somehow
@@ -101,7 +79,7 @@ pub fn open_context_menu(
         return;
     }
 
-    commands.set_state(ContextMenuState::Open);
+    next_state.set(ContextMenuState::Open);
 
     let bg = GRAY_50.into();
     let border: Color = GRAY_200.into();
@@ -132,23 +110,24 @@ pub fn open_context_menu(
 }
 
 fn on_item_selection(
-    mut event: On<Pointer<Press>>,
+    mut press: On<Pointer<Press>>,
     menu_items: Query<&ContextMenuItem>,
     query: Query<Entity, With<Selected>>,
     mut commands: Commands
 )
 {
-    let target = event.original_event_target();
+    let target = press.original_event_target();
 
-    if let Ok(item) = menu_items.get(target) {
+    if let Ok(item) = menu_items.get(target)
+        && press.button == PointerButton::Primary
+    {
+        commands.trigger(CloseContextMenus);
         query.iter()
             .for_each(|entity| trigger_action(entity, &item.0, &mut commands));
     }
 
-    event.propagate(false);
+    press.propagate(false);
 }
-
-// TODO: drags should be impossible when a context menu is open
 
 fn context_item(
     action: impl Into<String>,
@@ -211,19 +190,6 @@ pub fn trigger_close_context_menus_press(
 }
 
 #[instrument(skip_all)]
-pub fn trigger_close_context_menus_selectable_press(
-    _event: On<Pointer<Press>>,
-    context_menu_state: Res<State<ContextMenuState>>,
-    mut commands: Commands
-)
-{
-    trace!("");
-    if *context_menu_state == ContextMenuState::Open {
-        commands.trigger(CloseContextMenus);
-    }
-}
-
-#[instrument(skip_all)]
 pub fn trigger_close_context_menus_wheel(
     _mouse_scroll: Res<AccumulatedMouseScroll>,
     mut commands: Commands
@@ -242,7 +208,7 @@ pub fn close_context_menus(
 )
 {
     trace!("");
+    next_state.set(ContextMenuState::Closed);
     menus.iter()
         .for_each(|entity| commands.entity(entity).despawn());
-    next_state.set(ContextMenuState::Closed);
 }

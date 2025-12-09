@@ -75,15 +75,15 @@ pub fn on_deselection(
     debug!("deselected {}", entity);
 }
 
-fn shift_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
+pub fn shift_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
     inputs.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight])
 }
 
-fn ctrl_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
+pub fn ctrl_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
     inputs.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
 }
 
-fn toggle(
+pub fn toggle(
     entity: Entity,
     query: &Query<Entity, With<Selected>>,
     commands: &mut Commands
@@ -95,7 +95,7 @@ fn toggle(
     }
 }
 
-fn select(entity: Entity, commands: &mut Commands)
+pub fn select(entity: Entity, commands: &mut Commands)
 {
     commands.trigger(SelectEvent { entity });
 }
@@ -113,7 +113,7 @@ fn deselect_all(
     query.iter().for_each(|entity| deselect(entity, commands));
 }
 
-fn set_selection_if_not_selected(
+pub fn set_selection_if_not_selected(
     entity: Entity,
     query: &Query<Entity, With<Selected>>,
     commands: &mut Commands
@@ -123,46 +123,6 @@ fn set_selection_if_not_selected(
         deselect_all(query, commands);
         select(entity, commands);
     }
-}
-
-// TODO: check for Selectable?
-
-#[instrument(skip_all)]
-pub fn selectable_pressed(
-    mut press: On<Pointer<Press>>,
-    modifiers: Res<ButtonInput<KeyCode>>,
-    query: Query<Entity, With<Selected>>,
-    mut commands: Commands
-)
-{
-    trace!("");
-
-    if press.button != PointerButton::Primary &&
-        press.button != PointerButton::Secondary
-    {
-        return;
-    }
-
-    let entity = press.event().event_target();
-
-    if ctrl_pressed(&modifiers) {
-        // ctrl toggles
-        trace!("ctrl");
-        toggle(entity, &query, &mut commands);
-    }
-    else if shift_pressed(&modifiers) {
-        // shift adds
-        trace!("shift");
-        select(entity, &mut commands);
-    }
-    else {
-        // unmodified sets if not selected
-        trace!("unmodified");
-        set_selection_if_not_selected(entity, &query, &mut commands);
-    }
-
-    // prevent the event from bubbling up to the world
-    press.propagate(false);
 }
 
 #[instrument(skip_all)]

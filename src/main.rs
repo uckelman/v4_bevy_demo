@@ -20,6 +20,7 @@ mod config;
 mod context_menu;
 mod drag;
 mod flip;
+mod view;
 mod view_adjust;
 mod raise;
 mod select;
@@ -32,9 +33,10 @@ use crate::assets::{
    LoadingHandles, SpriteHandles, load_assets, mark_images_loaded
 };
 use crate::config::KeyConfig;
-use crate::context_menu::{ContextMenuState, open_piece_context_menu, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_selectable_press, trigger_close_context_menus_wheel};
+use crate::context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel};
 use crate::drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end};
 use crate::flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back};
+use crate::view::handle_piece_pressed;
 use crate::view_adjust::{
     handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
     handle_rotate_ccw, handle_rotate_cw,
@@ -46,7 +48,7 @@ use crate::view_adjust::{
     WheelScaleStep
 };
 use crate::raise::RaiseAnchor;
-use crate::select::{clear_selection, draw_selection_rect, on_selection, on_deselection, selectable_pressed, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box};
+use crate::select::{clear_selection, draw_selection_rect, on_selection, on_deselection, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box};
 use crate::state::GameState;
 use crate::title::{SplashScreenTimer, display_title};
 
@@ -343,16 +345,14 @@ fn display_game(
         ec
         .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
         .observe(recolor_on::<DeselectEvent>(Color::WHITE))
-        .observe(selectable_pressed)
+        .observe(handle_piece_pressed)
         .observe(raise::on_piece_pressed)
         .observe(raise::on_piece_released)
         .observe(on_piece_drag_start)
         .observe(on_piece_drag)
         .observe(on_piece_drag_end)
         .observe(on_selection)
-        .observe(on_deselection)
-        .observe(open_piece_context_menu)
-        .observe(trigger_close_context_menus_selectable_press);
+        .observe(on_deselection);
 
         for a in &p.actions {
             add_action_observer(a, &mut ec);
