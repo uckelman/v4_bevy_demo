@@ -232,8 +232,10 @@ fn game_plugin(app: &mut App) {
                 ),
 
                 trigger_close_context_menus_wheel.run_if(
-                    resource_changed::<AccumulatedMouseScroll>.and(
-                        not(resource_equals(AccumulatedMouseScroll::default()))
+                    in_state(ContextMenuState::Open).and(
+                        resource_changed::<AccumulatedMouseScroll>.and(
+                            not(resource_equals(AccumulatedMouseScroll::default()))
+                        )
                     )
                 ),
 
