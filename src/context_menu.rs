@@ -181,7 +181,7 @@ pub fn highlight_on_hover<T: Debug + Clone + Reflect>(
 
 #[instrument(skip_all)]
 pub fn trigger_close_context_menus_press(
-    _event: On<Pointer<Press>>,
+    _press: On<Pointer<Press>>,
     mut commands: Commands
 )
 {
