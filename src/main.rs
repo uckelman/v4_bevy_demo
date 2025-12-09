@@ -1,11 +1,29 @@
-use bevy::prelude::*;
 use bevy::{
-    image::ImageSamplerDescriptor,
-    asset::io::AssetSourceBuilder,
+    DefaultPlugins,
+    app::{App, PluginGroup, Update},
+    asset::{
+        AssetApp, Handle,
+        io::AssetSourceBuilder
+    },
+    ecs::{
+        bundle::Bundle,
+        change_detection::{Res, ResMut},
+        component::Component,
+        entity::Entity,
+        event::EntityEvent,
+        error::Result,
+        observer::On,
+        prelude::{Commands, not, Query, resource_changed, resource_equals, resource_exists, Single, SystemCondition, With}
+    },
+    image::{Image, ImageFilterMode, ImagePlugin, ImageSamplerDescriptor},
     input::{
+        ButtonInput,
         common_conditions::input_pressed,
+        keyboard::KeyCode,
         mouse::AccumulatedMouseScroll
     },
+    picking::Pickable,
+    prelude::{AppExtStates, Color, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, Transform, Window, WindowPlugin}
 };
 use rand::Rng;
 use std::path::Path;
@@ -70,13 +88,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "V4 Bevy Demo".into(),
-                    ..default()
+                    ..Default::default()
                 }),
-                ..default()
+                ..Default::default()
             })
             .set(ImagePlugin {
                 default_sampler: ImageSamplerDescriptor {
                     anisotropy_clamp: 16,
+//                    mag_filter: ImageFilterMode::Nearest,
                     ..ImageSamplerDescriptor::linear()
                 }
             })
