@@ -44,8 +44,8 @@ pub fn handle_piece_pressed(
 
     // primary, secondary select
     if press.button == PointerButton::Primary ||
-        press.button == PointerButton::Secondary {
-
+        press.button == PointerButton::Secondary
+    {
         if ctrl_pressed(&modifiers) {
             // ctrl toggles
             trace!("ctrl");
