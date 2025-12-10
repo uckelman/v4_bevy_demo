@@ -16,12 +16,12 @@ use bevy::{
         ButtonInput,
         keyboard::KeyCode
     },
-    math::Rect,
+    math::{Rect, Vec2},
     picking::{
         events::{Drag, DragEnd, DragStart, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{Color, debug, Entity, GlobalTransform, trace, Transform, Resource, Vec3Swizzles, Window}
+    prelude::{Color, debug, Entity, GlobalTransform, Isometry2d, trace, Transform, Resource, Vec3Swizzles}
 };
 use tracing::instrument;
 
@@ -233,6 +233,15 @@ pub fn selection_rect_drag_end(
     }
 }
 
+fn rect_inner(size: Vec2) -> [Vec2; 4] {
+    let half_size = size / 2.;
+    let tl = Vec2::new(-half_size.x, half_size.y);
+    let tr = Vec2::new(half_size.x, half_size.y);
+    let bl = Vec2::new(-half_size.x, -half_size.y);
+    let br = Vec2::new(half_size.x, -half_size.y);
+    [tl, tr, br, bl]
+}
+
 #[instrument(skip_all)]
 pub fn draw_selection_rect(
     selection: Res<SelectionRect>,
@@ -240,14 +249,23 @@ pub fn draw_selection_rect(
 )
 {
     trace!("");
+
+// TODO: Once joint drawing is fixed in Bevy, switch back to rect_2d
+/*
     gizmos.rect_2d(
         selection.rect.center(),
         selection.rect.size(),
         Color::srgb_u8(0xFF, 0, 0)
     );
+*/
+    let color = Color::srgb_u8(0xFF, 0, 0);
+    let size = selection.rect.size();
+    let isometry: Isometry2d = selection.rect.center().into();
+    let [tl, tr, br, bl] = rect_inner(size).map(|vec2| isometry * vec2);
+    gizmos.linestrip_2d([tl, tr, br, bl, tl, tr], color);
 }
 
-// FIXME: selection box has bad corner joint
+// TODO: look into bevy_vector_shapes for drawing selection box
 
 pub fn setup_selection_box(
     mut config_store: ResMut<GizmoConfigStore>
