@@ -11,7 +11,6 @@ use bevy::{
     image::Image,
     prelude::{debug, AssetId, Commands, Resource}
 };
-use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
     path::Path
@@ -56,15 +55,6 @@ pub fn load_assets(
     let lh = sh.iter()
         .map(|h| h.1.id())
         .collect::<HashSet<_>>();
-
-// TODO: check that actions exist, etc
-// TODO: check faces against images
-    assert!(
-        game.piece.iter()
-            .flat_map(|p| &p.faces)
-            .unique()
-            .all(|f| sh.contains_key(f))
-    );
 
     commands.insert_resource(game);
     commands.insert_resource(LoadingHandles(lh));

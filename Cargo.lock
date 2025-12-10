@@ -583,6 +583,7 @@ dependencies = [
  "itertools 0.14.0",
  "rand",
  "serde",
+ "thiserror 2.0.17",
  "toml",
  "tracing",
 ]

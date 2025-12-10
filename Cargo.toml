@@ -8,5 +8,6 @@ bevy = { version = "0.17", features = ["gif", "jpeg", "png", "webp"] }
 itertools = "0.14.0"
 rand = "0.9"
 serde = { version = "1", features = ["derive"] }
+thiserror = "2.0.17"
 toml = "0.9.8"
 tracing = "0.1.43"
