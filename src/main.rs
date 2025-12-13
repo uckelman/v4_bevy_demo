@@ -45,7 +45,7 @@ mod util;
 
 use crate::{
     actions::{add_action_observer},
-    assets::{LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
+    assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
     config::KeyConfig,
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
@@ -259,7 +259,7 @@ struct Piece;
 
 // TODO: should this reference a piece type?
 #[derive(Component, Default)]
-struct Faces(Vec<Handle<Image>>);
+struct Faces(Vec<ImageSource>);
 
 // TODO: should this be a cyclic iterator?
 #[derive(Component, Default)]
@@ -299,10 +299,16 @@ fn display_game(
     let mut surface = Surface { max_z: 0.0 };
 
     for m in &gamebox.surface.map {
-        if let Some(handle) = sprite_handles.0.get(&m.image) {
+        if let Some(src) = sprite_handles.0.get(&m.image) {
+            let sprite = match src {
+                ImageSource::Single(handle) =>
+                    Sprite::from_image(handle.clone()),
+                _ => todo!()
+            };
+
             commands.spawn((
                 MapBundle {
-                    sprite: Sprite::from_image(handle.clone()),
+                    sprite,
                     transform: Transform::from_xyz(m.x, m.y, 0.0),
                     ..Default::default()
                 },
@@ -315,7 +321,8 @@ fn display_game(
 
     for p in &gamebox.piece {
         let faces = p.faces.iter()
-            .filter_map(|f| sprite_handles.0.get(f).cloned())
+            .filter_map(|f| sprite_handles.0.get(f))
+            .cloned()
             .collect::<Vec<_>>();
 
         let x = rng.random_range(-500.0..=500.0);
@@ -323,9 +330,17 @@ fn display_game(
 
         surface.max_z = surface.max_z.next_up();
 
+        let sprite = match &faces[0] {
+            ImageSource::Single(handle) => Sprite::from_image(handle.clone()),
+            ImageSource::Crop { handle, atlas } => Sprite::from_atlas_image(
+                handle.clone(),
+                atlas.clone()
+            )
+        };
+
         let mut ec = commands.spawn((
             PieceBundle {
-                sprite: Sprite::from_image(faces[0].clone()),
+                sprite,
                 transform: Transform::from_xyz(x, y, surface.max_z),
                 faces: Faces(faces),
                 up: FaceUp(0),

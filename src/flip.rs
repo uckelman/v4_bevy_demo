@@ -12,6 +12,7 @@ use tracing::instrument;
 
 use crate::{
     Faces, FaceUp,
+    assets::ImageSource,
     config::KeyConfig,
     select::Selected,
 };
@@ -44,6 +45,43 @@ pub struct FlipBackEvent {
     pub entity: Entity
 }
 
+fn set_face(
+    sprite: &mut Sprite,
+    faces: &Faces,
+    up: &FaceUp
+)
+{
+    match &faces.0[up.0] {
+        ImageSource::Single(handle) => {
+            sprite.image = handle.clone();
+            sprite.texture_atlas = None;
+        },
+        ImageSource::Crop { handle, atlas } => {
+            sprite.image = handle.clone();
+            sprite.texture_atlas = Some(atlas.clone());
+        }
+    }
+}
+
+fn do_flip<const FORWARD: bool>(
+    entity: Entity,
+    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite), With<Selected>>
+) -> Result
+{
+
+    let (faces, mut up, mut sprite) = query.get_mut(entity)?;
+    up.0 = if FORWARD {
+       up.0 + 1
+    }
+    else {
+       up.0 + faces.0.len() - 1
+    } % faces.0.len();
+
+    set_face(&mut sprite, faces, &up);
+
+    Ok(())
+}
+
 #[instrument(skip_all)]
 pub fn on_flip_forward(
     flip: On<FlipForwardEvent>,
@@ -51,14 +89,8 @@ pub fn on_flip_forward(
 ) -> Result
 {
     trace!("");
-
     let entity = flip.event().event_target();
-
-    let (faces, mut up, mut sprite) = query.get_mut(entity)?;
-    up.0 = (up.0 + 1) % faces.0.len();
-    sprite.image = faces.0[up.0].clone();
-
-    Ok(())
+    do_flip::<true>(entity, query)
 }
 
 #[instrument(skip_all)]
@@ -68,14 +100,8 @@ pub fn on_flip_back(
 ) -> Result
 {
     trace!("");
-
     let entity = flip.event().event_target();
-
-    let (faces, mut up, mut sprite) = query.get_mut(entity)?;
-    up.0 = (up.0 + faces.0.len() - 1) % faces.0.len();
-    sprite.image = faces.0[up.0].clone();
-
-    Ok(())
+    do_flip::<false>(entity, query)
 }
 
 #[instrument(skip_all)]
