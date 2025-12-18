@@ -146,7 +146,7 @@ impl TryFrom<MaybeGameBox> for GameBox {
         if !m.piece.iter()
             .flat_map(|p| &p.faces)
             .unique()
-            .map(|f| f.rsplit_once('@').map(|(l, r)| l).unwrap_or(f))
+            .map(|f| f.rsplit_once('@').map(|(l, _)| l).unwrap_or(f))
             .all(|f| m.images.contains_key(f))
         {
             return Err(GameBoxError);
