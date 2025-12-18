@@ -513,12 +513,17 @@ fn display_game(
             SurfaceType::GroupItem(g) => {
                 let mut t = t.clone();
                 t.translation += Vec3::new(g.x, g.y, 0.0);
-                t.translation.z = t.translation.z.next_down();
+                let mut z = t.translation.z;
 
                 stack.extend(
                     g.children
                         .iter()
-                        .map(|ch| (ch, t.clone()))
+                        .map(|ch| {
+                            let mut t = t.clone();
+                            z = z.next_down();
+                            t.translation.z = z;
+                            (ch, t)
+                        })
                 );
             }
         }
