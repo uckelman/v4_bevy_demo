@@ -22,6 +22,7 @@ use bevy::{
         keyboard::KeyCode,
         mouse::AccumulatedMouseScroll
     },
+    math::Vec2,
     picking::Pickable,
     prelude::{AppExtStates, Color, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, Transform, Window, WindowPlugin}
 };
@@ -50,7 +51,7 @@ use crate::{
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back},
-    gamebox::GameBox,
+    gamebox::{GameBox, SurfaceType},
     view::handle_piece_pressed,
     view_adjust::{
         handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
@@ -298,25 +299,50 @@ fn display_game(
 
     let mut surface = Surface { max_z: 0.0 };
 
-    for m in &gamebox.surface.map {
-        if let Some(src) = sprite_handles.0.get(&m.image) {
-            let sprite = match src {
-                ImageSource::Single(handle) =>
-                    Sprite::from_image(handle.clone()),
-                _ => todo!()
-            };
+    // create surface
 
-            commands.spawn((
-                MapBundle {
-                    sprite,
-                    transform: Transform::from_xyz(m.x, m.y, 0.0),
-                    ..Default::default()
-                },
-                DespawnOnExit(GameState::Game)
-            ));
+    let mut stack = vec![(&gamebox.surface, Vec2::ZERO)];
+
+    loop {
+        let Some((st, t)) = stack.pop() else { break; };
+
+        match st {
+            SurfaceType::MapItem(m) => {
+                if let Some(src) = sprite_handles.0.get(&m.image) {
+                    let sprite = match src {
+                        ImageSource::Single(handle) =>
+                            Sprite::from_image(handle.clone()),
+                        _ => todo!()
+                    };
+
+                    commands.spawn((
+                        MapBundle {
+                            sprite,
+                            transform: Transform::from_xyz(
+                                t.x + m.x,
+                                t.y + m.y,
+                                0.0
+                            ),
+                            ..Default::default()
+                        },
+                        DespawnOnExit(GameState::Game)
+                    ));
+                }
+            },
+            SurfaceType::GridItem(g) => {
+                todo!();
+            },
+            SurfaceType::GroupItem(g) => {
+                stack.extend(
+                    g.children
+                        .iter()
+                        .map(|ch| (ch, Vec2::new(g.x, g.y)))
+                );
+            }
         }
     }
 
+    // create pieces
     let mut rng = rand::rng();
 
     for p in &gamebox.piece {

@@ -9,7 +9,8 @@ use bevy::{
         message::MessageReader
     },
     image::Image,
-    prelude::{debug, AssetId, Assets, Commands, Resource, TextureAtlas, TextureAtlasLayout, URect, UVec2}
+    math::{URect, UVec2},
+    prelude::{debug, AssetId, Assets, Commands, Resource, TextureAtlas, TextureAtlasLayout}
 };
 use itertools::Itertools;
 use std::{

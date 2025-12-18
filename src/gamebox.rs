@@ -20,9 +20,32 @@ pub struct MapType {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SurfaceType {
-    #[serde(default)]
-    pub map: Vec<MapType>
+pub enum GridType {
+    RectGrid {
+        x: f32,
+        y: f32,
+        cols: u32,
+        rows: u32,
+        cw: f32,
+        rh: f32
+    },
+    HexGrid {
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GroupType {
+    pub x: f32,
+    pub y: f32,
+    pub children: Vec<SurfaceType>
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum SurfaceType {
+    MapItem(MapType),
+    GridItem(GridType),
+    GroupItem(GroupType)
 }
 
 #[derive(Debug, Deserialize)]
