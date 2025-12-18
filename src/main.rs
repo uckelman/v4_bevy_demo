@@ -333,7 +333,6 @@ fn spawn_map(
     };
 
     t.translation += Vec3::new(m.x, m.y, 0.0);
-    t.translation.z = t.translation.z.next_down();
 
     commands.spawn((
         MapBundle {
@@ -362,7 +361,6 @@ fn spawn_grid(
 
             let mut t = t.clone();
             t.translation += Vec3::new(*x, *y, 0.0);
-            t.translation.z = t.translation.z.next_down();
 
             t.translation += match anchor {
                 gamebox::Anchor::BottomLeft => rect.half_size, 
@@ -520,7 +518,7 @@ fn display_game(
                         .iter()
                         .map(|ch| {
                             let mut t = t.clone();
-                            z = z.next_down();
+                            z -= 1.0;
                             t.translation.z = z;
                             (ch, t)
                         })
@@ -536,7 +534,7 @@ fn display_game(
         let x = rng.random_range(-500.0..=500.0);
         let y = rng.random_range(-500.0..=500.0);
 
-        surface.max_z = surface.max_z.next_up();
+        surface.max_z += 1.0;
 
         let t = Transform::from_xyz(x, y, surface.max_z);
 
