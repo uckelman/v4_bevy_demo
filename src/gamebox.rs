@@ -3,6 +3,37 @@ use itertools::Itertools;
 use serde::Deserialize;
 use std::collections::HashMap;
 
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[serde(rename_all(deserialize = "kebab-case"))]
+pub enum Anchor {
+    BottomLeft,
+    BottomCenter,
+    BottomRight,
+    CenterLeft,
+    #[default]
+    Center,
+    CenterRight,
+    TopLeft,
+    TopCenter,
+    TopRight
+}
+
+impl From<Anchor> for bevy::sprite::Anchor {
+    fn from(a: Anchor) -> Self {
+        match a {
+            Anchor::BottomLeft => bevy::sprite::Anchor::BOTTOM_LEFT,
+            Anchor::BottomCenter => bevy::sprite::Anchor::BOTTOM_CENTER,
+            Anchor::BottomRight => bevy::sprite::Anchor::BOTTOM_RIGHT,
+            Anchor::CenterLeft => bevy::sprite::Anchor::CENTER_LEFT,
+            Anchor::Center => bevy::sprite::Anchor::CENTER,
+            Anchor::CenterRight => bevy::sprite::Anchor::CENTER_RIGHT,
+            Anchor::TopLeft => bevy::sprite::Anchor::TOP_LEFT,
+            Anchor::TopCenter => bevy::sprite::Anchor::TOP_CENTER,
+            Anchor::TopRight => bevy::sprite::Anchor::TOP_RIGHT
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct PieceType {
     pub name: String,
@@ -14,29 +45,36 @@ pub struct PieceType {
 
 #[derive(Debug, Deserialize)]
 pub struct MapType {
-    pub image: String,
     pub x: f32,
-    pub y: f32
+    pub y: f32,
+    #[serde(default)]
+    pub anchor: Anchor,
+    pub image: String
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
 pub enum GridType {
-    RectGrid {
+    Rect {
         x: f32,
         y: f32,
+        #[serde(default)]
+        anchor: Anchor,
         cols: u32,
         rows: u32,
         cw: f32,
         rh: f32
     },
-    HexGrid {
-    }
+//    Hex {
+//    }
 }
 
 #[derive(Debug, Deserialize)]
 pub struct GroupType {
     pub x: f32,
     pub y: f32,
+    #[serde(default)]
+    pub anchor: Anchor,
     pub children: Vec<SurfaceType>
 }
 

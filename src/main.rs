@@ -2,7 +2,7 @@ use bevy::{
     DefaultPlugins,
     app::{App, PluginGroup, Update},
     asset::{
-        AssetApp, Handle,
+        AssetApp, Assets, Handle,
         io::AssetSourceBuilder
     },
     ecs::{
@@ -22,9 +22,18 @@ use bevy::{
         keyboard::KeyCode,
         mouse::AccumulatedMouseScroll
     },
-    math::Vec2,
-    picking::Pickable,
-    prelude::{AppExtStates, Color, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, Transform, Window, WindowPlugin}
+    math::{
+        Vec2, Vec3,
+        prelude::{Plane3d, Rectangle}
+    },
+    mesh::{Mesh, Mesh2d},
+    picking::{
+        Pickable,
+        mesh_picking::MeshPickingPlugin
+    },
+    prelude::{AppExtStates, Color, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, Meshable, MeshMaterial2d, NextState, OnEnter, Resource, Sprite, Time, Transform, Window, WindowPlugin},
+    sprite::Anchor,
+    sprite_render::Material2d
 };
 use rand::Rng;
 use std::path::Path;
@@ -36,6 +45,7 @@ mod context_menu;
 mod drag;
 mod flip;
 mod gamebox;
+mod grid;
 mod view;
 mod view_adjust;
 mod raise;
@@ -51,7 +61,8 @@ use crate::{
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back},
-    gamebox::{GameBox, SurfaceType},
+    gamebox::{GameBox, GridType, MapType, PieceType, SurfaceType},
+    grid::handle_over_grid,
     view::handle_piece_pressed,
     view_adjust::{
         handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
@@ -85,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             base.clone(),
             AssetSourceBuilder::platform_default(&base, None)
         )
-        .add_plugins(DefaultPlugins
+        .add_plugins((DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "V4 Bevy Demo".into(),
@@ -99,8 +110,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 //                    mag_filter: ImageFilterMode::Nearest,
                     ..ImageSamplerDescriptor::linear()
                 }
-            })
-        )
+            }),
+            MeshPickingPlugin
+        ))
         .init_state::<GameState>()
         .add_plugins((
             splash_plugin,
@@ -252,7 +264,31 @@ struct Map;
 struct MapBundle {
     marker: Map,
     sprite: Sprite,
+    anchor: Anchor,
     transform: Transform
+}
+
+#[derive(Component, Default)]
+struct RectGrid;
+
+#[derive(Bundle, Default)]
+struct RectGridBundle<M: Material2d> {
+    marker: RectGrid,
+    pickable: Pickable,
+    transform: Transform,
+    mesh: Mesh2d,
+    mesh_material: MeshMaterial2d<M>,
+    grid: RectGridParams
+}
+
+#[derive(Component, Default)]
+struct RectGridParams {
+    x: f32,
+    y: f32,
+    cols: u32,
+    rows: u32,
+    cw: f32,
+    rh: f32
 }
 
 #[derive(Component, Default)]
@@ -282,11 +318,176 @@ struct PieceBundle {
     actions: Actions
 }
 
+fn spawn_map(
+    m: &MapType,
+    mut t: Transform,
+    sprite_handles: &Res<SpriteHandles>,
+    commands: &mut Commands
+)
+{
+    let Some(src) = sprite_handles.0.get(&m.image) else { return; };
+    
+    let sprite = match src {
+        ImageSource::Single(handle) => Sprite::from_image(handle.clone()),
+        _ => todo!()
+    };
+
+    t.translation += Vec3::new(m.x, m.y, 0.0);
+    t.translation.z = t.translation.z.next_down();
+
+    commands.spawn((
+        MapBundle {
+            sprite,
+            anchor: m.anchor.into(),
+            transform: t,
+            ..Default::default()
+        },
+        DespawnOnExit(GameState::Game)
+    ));
+}
+
+fn spawn_grid(
+    g: &GridType,
+    mut t: Transform,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    commands: &mut Commands
+)
+{
+    match g {
+        GridType::Rect { x, y, anchor, cols, rows, cw, rh } => {
+            let rect = Rectangle::new(*cols as f32 * cw, *rows as f32 * rh);
+            let mesh = Mesh2d(meshes.add(rect));
+            let mesh_material = MeshMaterial2d(materials.add(Color::srgba_u8(255, 0, 0, 16)));
+
+            let mut t = t.clone();
+            t.translation += Vec3::new(*x, *y, 0.0);
+            t.translation.z = t.translation.z.next_down();
+
+            t.translation += match anchor {
+                gamebox::Anchor::BottomLeft => rect.half_size, 
+                gamebox::Anchor::BottomCenter => rect.half_size.with_x(0.0),
+                gamebox::Anchor::BottomRight => rect.half_size * Vec2::new(-1.0, 1.0),
+                gamebox::Anchor::CenterLeft => rect.half_size.with_y(0.0),
+                gamebox::Anchor::Center => Vec2::ZERO,  
+                gamebox::Anchor::CenterRight => -rect.half_size.with_y(0.0),
+                gamebox::Anchor::TopLeft => rect.half_size * Vec2::new(1.0, -1.0),
+                gamebox::Anchor::TopCenter => -rect.half_size.with_x(0.0),
+                gamebox::Anchor::TopRight => -rect.half_size
+            }.extend(0.0);
+
+            let mut ts = t.clone();
+            ts.translation += Vec3::new(-rect.half_size.x + cw / 2.0, -rect.half_size.y + rh / 2.0, 0.0);
+            ts.translation.z = ts.translation.z.next_down();
+
+            commands.spawn((
+                RectGridBundle {
+                    transform: t,
+                    mesh,
+                    mesh_material,
+                    grid: RectGridParams {
+                        x: *x,
+                        y: *y,
+                        cols: *cols,
+                        rows: *rows,
+                        cw: *cw,
+                        rh: *rh
+                    },
+                    ..Default::default()
+                },
+                DespawnOnExit(GameState::Game)
+            ))
+            .observe(handle_over_grid);
+
+/*
+            let black_material = materials.add(Color::BLACK);
+            let white_material = materials.add(Color::WHITE);
+
+            let rect = Rectangle::new(*cw, *rh);
+            let mesh = meshes.add(rect);
+
+            for r in 0..*rows {
+                for c in 0..*cols {
+                    let mut tx = ts.clone();
+                    tx.translation += Vec3::new(c as f32 * *cw, r as f32 * *rh, 0.0);
+
+                    commands.spawn((
+                        Mesh2d(mesh.clone()),
+                        MeshMaterial2d(
+                            if (r + c) % 2 == 0 {
+                                black_material.clone()
+                            }
+                            else {
+                                white_material.clone()
+                            }
+                        ),
+                        tx
+                    ));
+                }
+            }
+*/
+        },
+        _ => todo!() 
+    }
+}
+
+fn spawn_piece(
+    p: &PieceType,
+    mut t: Transform,
+    sprite_handles: &Res<SpriteHandles>,
+    commands: &mut Commands
+)
+{
+// FIXME: should fail if we can't get a sprite?
+    let faces = p.faces.iter()
+        .filter_map(|f| sprite_handles.0.get(f))
+        .cloned()
+        .collect::<Vec<_>>();
+
+    let sprite = match &faces[0] {
+        ImageSource::Single(handle) => Sprite::from_image(handle.clone()),
+        ImageSource::Crop { handle, atlas } => Sprite::from_atlas_image(
+            handle.clone(),
+            atlas.clone()
+        )
+    };
+
+    let mut ec = commands.spawn((
+        PieceBundle {
+            sprite,
+            transform: t,
+            faces: Faces(faces),
+            up: FaceUp(0),
+            actions: Actions(p.actions.clone()),
+            ..Default::default()
+        },
+        DespawnOnExit(GameState::Game)
+    ));
+
+    ec
+    .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
+    .observe(recolor_on::<DeselectEvent>(Color::WHITE))
+    .observe(handle_piece_pressed)
+    .observe(raise::on_piece_pressed)
+    .observe(raise::on_piece_released)
+    .observe(on_piece_drag_start)
+    .observe(on_piece_drag)
+    .observe(on_piece_drag_end)
+    .observe(on_selection)
+    .observe(on_deselection);
+
+    for a in &p.actions {
+        add_action_observer(a, &mut ec);
+    }
+}
+
 fn display_game(
     mut commands: Commands,
     window: Single<Entity, With<Window>>,
     sprite_handles: Res<SpriteHandles>,
-    gamebox: Res<GameBox>
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    gamebox: Res<GameBox>,
 ) -> Result
 {
     commands.entity(*window)
@@ -301,42 +502,23 @@ fn display_game(
 
     // create surface
 
-    let mut stack = vec![(&gamebox.surface, Vec2::ZERO)];
+    let mut stack = vec![(&gamebox.surface, Transform::IDENTITY)];
 
     loop {
         let Some((st, t)) = stack.pop() else { break; };
 
         match st {
-            SurfaceType::MapItem(m) => {
-                if let Some(src) = sprite_handles.0.get(&m.image) {
-                    let sprite = match src {
-                        ImageSource::Single(handle) =>
-                            Sprite::from_image(handle.clone()),
-                        _ => todo!()
-                    };
-
-                    commands.spawn((
-                        MapBundle {
-                            sprite,
-                            transform: Transform::from_xyz(
-                                t.x + m.x,
-                                t.y + m.y,
-                                0.0
-                            ),
-                            ..Default::default()
-                        },
-                        DespawnOnExit(GameState::Game)
-                    ));
-                }
-            },
-            SurfaceType::GridItem(g) => {
-                todo!();
-            },
+            SurfaceType::MapItem(m) => spawn_map(m, t, &sprite_handles, &mut commands),
+            SurfaceType::GridItem(g) => spawn_grid(g, t, &mut meshes, &mut materials, &mut commands),
             SurfaceType::GroupItem(g) => {
+                let mut t = t.clone();
+                t.translation += Vec3::new(g.x, g.y, 0.0);
+                t.translation.z = t.translation.z.next_down();
+
                 stack.extend(
                     g.children
                         .iter()
-                        .map(|ch| (ch, Vec2::new(g.x, g.y)))
+                        .map(|ch| (ch, t.clone()))
                 );
             }
         }
@@ -346,51 +528,14 @@ fn display_game(
     let mut rng = rand::rng();
 
     for p in &gamebox.piece {
-        let faces = p.faces.iter()
-            .filter_map(|f| sprite_handles.0.get(f))
-            .cloned()
-            .collect::<Vec<_>>();
-
         let x = rng.random_range(-500.0..=500.0);
         let y = rng.random_range(-500.0..=500.0);
 
         surface.max_z = surface.max_z.next_up();
 
-        let sprite = match &faces[0] {
-            ImageSource::Single(handle) => Sprite::from_image(handle.clone()),
-            ImageSource::Crop { handle, atlas } => Sprite::from_atlas_image(
-                handle.clone(),
-                atlas.clone()
-            )
-        };
+        let t = Transform::from_xyz(x, y, surface.max_z);
 
-        let mut ec = commands.spawn((
-            PieceBundle {
-                sprite,
-                transform: Transform::from_xyz(x, y, surface.max_z),
-                faces: Faces(faces),
-                up: FaceUp(0),
-                actions: Actions(p.actions.clone()),
-                ..Default::default()
-            },
-            DespawnOnExit(GameState::Game)
-        ));
-
-        ec
-        .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
-        .observe(recolor_on::<DeselectEvent>(Color::WHITE))
-        .observe(handle_piece_pressed)
-        .observe(raise::on_piece_pressed)
-        .observe(raise::on_piece_released)
-        .observe(on_piece_drag_start)
-        .observe(on_piece_drag)
-        .observe(on_piece_drag_end)
-        .observe(on_selection)
-        .observe(on_deselection);
-
-        for a in &p.actions {
-            add_action_observer(a, &mut ec);
-        }
+        spawn_piece(p, t, &sprite_handles, &mut commands);
     }
 
     commands.insert_resource(surface);
