@@ -138,53 +138,59 @@ fn handle_pan(
     Ok(())
 }
 
+#[instrument(skip_all)]
 pub fn handle_pan_left(
     query: Query<(&mut Transform, &Projection), With<Camera>>,
     step: Res<KeyPanStep>,
     time: Res<Time>
 ) -> Result
 {
-    trace!("handle_pan_left");
+    trace!("");
     handle_pan(query, step, time, Vec2::NEG_X)
 }
 
+#[instrument(skip_all)]
 pub fn handle_pan_right(
     query: Query<(&mut Transform, &Projection), With<Camera>>,
     step: Res<KeyPanStep>,
     time: Res<Time>
 ) -> Result
 {
-    trace!("handle_pan_right");
+    trace!("");
     handle_pan(query, step, time, Vec2::X)
 }
 
+#[instrument(skip_all)]
 pub fn handle_pan_up(
     query: Query<(&mut Transform, &Projection), With<Camera>>,
     step: Res<KeyPanStep>,
     time: Res<Time>
 ) -> Result
 {
-    trace!("handle_pan_up");
+    trace!("");
     handle_pan(query, step, time, Vec2::Y)
 }
 
+#[instrument(skip_all)]
 pub fn handle_pan_down(
     query: Query<(&mut Transform, &Projection), With<Camera>>,
     step: Res<KeyPanStep>,
     time: Res<Time>
 ) -> Result
 {
-    trace!("handle_pan_down");
+    trace!("");
     handle_pan(query, step, time, Vec2::NEG_Y)
 }
 
+#[instrument(skip_all)]
 pub fn handle_pan_drag(
     drag: On<Pointer<Drag>>,
+    hit_query: Query<Has<Draggable>>,
     query: Single<(&Camera, &GlobalTransform, &mut Transform)>,
     context_menu_state: Res<State<ContextMenuState>>
 ) -> Result
 {
-    trace!("handle_pan_drag");
+    trace!("");
 
     if drag.button != PointerButton::Primary {
         return Ok(());
@@ -228,23 +234,25 @@ fn handle_rotate(
     Ok(())
 }
 
+#[instrument(skip_all)]
 pub fn handle_rotate_ccw(
     query: Query<&mut Transform, With<Camera>>,
     step: Res<KeyRotateStep>,
     time: Res<Time>
 ) -> Result
 {
-    trace!("handle_rotate_ccw");
+    trace!("");
     handle_rotate(query, step, time, -1.0)
 }
 
+#[instrument(skip_all)]
 pub fn handle_rotate_cw(
     query: Query<&mut Transform, With<Camera>>,
     step: Res<KeyRotateStep>,
     time: Res<Time>
 ) -> Result
 {
-    trace!("handle_rotate_cw");
+    trace!("");
     handle_rotate(query, step, time, 1.0)
 }
 
@@ -256,11 +264,12 @@ fn zoom_view_set(
     projection.scale = s;
 }
 
+#[instrument(skip_all)]
 pub fn handle_zoom_reset(
     mut query: Query<&mut Projection, With<Camera>>
 ) -> Result
 {
-    trace!("handle_zoom_reset");
+    trace!("");
     let mut projection = query.single_mut()?;
     zoom_view_set(projection.as_ortho_mut()?, 1.0);
     Ok(())
@@ -294,33 +303,36 @@ fn handle_zoom(
     Ok(())
 }
 
+#[instrument(skip_all)]
 pub fn handle_zoom_in(
     query: Query<&mut Projection, With<Camera>>,
     step: Res<KeyScaleStep>,
     time: Res<Time>
 ) -> Result
 {
-    trace!("handle_zoom_in");
+    trace!("");
     handle_zoom(query, step, time, 1.0)
 }
 
+#[instrument(skip_all)]
 pub fn handle_zoom_out(
     query: Query<&mut Projection, With<Camera>>,
     step: Res<KeyScaleStep>,
     time: Res<Time>
 ) -> Result
 {
-    trace!("handle_zoom_out");
+    trace!("");
     handle_zoom(query, step, time, -1.0)
 }
 
+#[instrument(skip_all)]
 pub fn handle_zoom_scroll(
     mouse_scroll: Res<AccumulatedMouseScroll>,
     mut query: Query<&mut Projection, With<Camera>>,
     step: Res<WheelScaleStep>
 ) -> Result
 {
-    trace!("handle_mouse_scroll");
+    trace!("");
 
     let ds = match mouse_scroll.unit {
         MouseScrollUnit::Line => mouse_scroll.delta.y * step.0,

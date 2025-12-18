@@ -58,7 +58,7 @@ pub fn on_selection(
     let entity = select.event().event_target();
     commands.entity(entity).insert(Selected);
 
-    debug!("selected {}", entity);
+    trace!("selected {}", entity);
 }
 
 #[instrument(skip_all)]
@@ -72,7 +72,7 @@ pub fn on_deselection(
     let entity = select.event().event_target();
     commands.entity(entity).remove::<Selected>();
 
-    debug!("deselected {}", entity);
+    trace!("deselected {}", entity);
 }
 
 pub fn shift_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
