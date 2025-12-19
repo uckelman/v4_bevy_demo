@@ -32,7 +32,7 @@ pub fn handle_piece_pressed(
 {
     trace!("");
 
-    // prevent the event from bubbling up to the world
+    // prevent the event from bubbling up
     press.propagate(false);
 
     // all buttons close context menus
