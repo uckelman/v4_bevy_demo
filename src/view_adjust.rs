@@ -4,7 +4,7 @@ use bevy::{
         change_detection::Res,
         error::Result,
         observer::On,
-        prelude::{Query, Single, With}
+        prelude::{Or, Query, Single, With}
     },
     input::{
         keyboard::KeyCode,
@@ -14,10 +14,13 @@ use bevy::{
     picking::events::{Drag, Pointer},
     prelude::{GlobalTransform, OrthographicProjection, PointerButton, Projection, State, Time, trace, Transform, Resource}
 };
+use tracing::instrument;
 
 use crate::{
     config::KeyConfig,
     context_menu::ContextMenuState,
+    drag::Draggable,
+    select::Selectable,
     util::AsOrthographicProjection
 };
 
@@ -185,7 +188,7 @@ pub fn handle_pan_down(
 #[instrument(skip_all)]
 pub fn handle_pan_drag(
     drag: On<Pointer<Drag>>,
-    hit_query: Query<Has<Draggable>>,
+    hit_query: Query<Entity, Or<(With<Draggable>, With<Selectable>)>>,
     query: Single<(&Camera, &GlobalTransform, &mut Transform)>,
     context_menu_state: Res<State<ContextMenuState>>
 ) -> Result
@@ -197,6 +200,11 @@ pub fn handle_pan_drag(
     }
 
     if *context_menu_state == ContextMenuState::Open {
+        return Ok(());
+    }
+
+    // don't pan if the original drag target is draggable or selectable
+    if hit_query.contains(drag.original_event_target()) {
         return Ok(());
     }
 

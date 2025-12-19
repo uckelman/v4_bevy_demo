@@ -7,6 +7,7 @@ use bevy::{
     },
     math::Vec3,
     picking::{
+        Pickable,
         events::{Drag, DragEnd, DragStart, Pointer},
         pointer::PointerButton
     },
@@ -70,8 +71,10 @@ pub fn on_piece_drag_start(
     for (entity, mut transform) in query {
         raise_piece(&mut transform, dz);
 
+        // set the drag anchor, prevent picking from hitting piece
         commands.entity(entity)
-            .insert(DragAnchor { pos: transform.translation });
+            .insert(DragAnchor { pos: transform.translation })
+            .insert(Pickable::IGNORE);
     }
 }
 
@@ -130,7 +133,12 @@ pub fn on_piece_drag_end(
     }
 
     if drag.button == PointerButton::Primary {
+        // remove the drag anchor, make piece pickable again
         query.iter()
-            .for_each(|entity| { commands.entity(entity).remove::<DragAnchor>();});
+            .for_each(|entity| {
+                commands.entity(entity)
+                    .remove::<DragAnchor>()
+                    .insert(Pickable::default());
+            });
     }
 }

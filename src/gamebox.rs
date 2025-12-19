@@ -45,6 +45,7 @@ pub struct PieceType {
 
 #[derive(Debug, Deserialize)]
 pub struct MapType {
+    pub name: String,
     pub x: f32,
     pub y: f32,
     #[serde(default)]

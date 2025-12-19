@@ -12,6 +12,7 @@ use bevy::{
         entity::Entity,
         event::EntityEvent,
         error::Result,
+        name::Name,
         observer::On,
         prelude::{Commands, not, Query, resource_changed, resource_equals, resource_exists, Single, SystemCondition, With}
     },
@@ -263,6 +264,7 @@ struct Map;
 #[derive(Bundle, Default)]
 struct MapBundle {
     marker: Map,
+    name: Name,
     sprite: Sprite,
     anchor: Anchor,
     transform: Transform
@@ -274,6 +276,7 @@ struct RectGrid;
 #[derive(Bundle, Default)]
 struct RectGridBundle<M: Material2d> {
     marker: RectGrid,
+    name: Name,
     pickable: Pickable,
     transform: Transform,
     mesh: Mesh2d,
@@ -308,6 +311,7 @@ pub struct Actions(pub Vec<String>);
 #[derive(Bundle, Default)]
 struct PieceBundle {
     marker: Piece,
+    name: Name,
     pickable: Pickable,
     selectable: Selectable,
     draggable: Draggable,
@@ -380,6 +384,7 @@ fn spawn_grid(
 
             commands.spawn((
                 RectGridBundle {
+                    name: "RectGrid".into(),
                     transform: t,
                     mesh,
                     mesh_material,
@@ -452,6 +457,7 @@ fn spawn_piece(
 
     let mut ec = commands.spawn((
         PieceBundle {
+            name: Name::from(p.name.as_ref()),
             sprite,
             transform: t,
             faces: Faces(faces),
