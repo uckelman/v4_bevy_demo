@@ -12,7 +12,7 @@ use bevy::{
     },
     math::Vec2,
     picking::events::{Drag, Pointer},
-    prelude::{GlobalTransform, OrthographicProjection, PointerButton, Projection, State, Time, trace, Transform, Resource}
+    prelude::{Entity, GlobalTransform, OrthographicProjection, PointerButton, Projection, State, Time, trace, Transform, Resource}
 };
 use tracing::instrument;
 
