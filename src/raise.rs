@@ -82,6 +82,7 @@ pub fn on_piece_pressed(
 
     let mut transform = query.get_mut(entity)?;
 
+// TODO: maybe we don't want this?
     raise_piece_to_top_anchored(&mut transform, &mut surface, &mut anchor);
 
     Ok(())

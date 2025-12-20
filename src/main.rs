@@ -30,9 +30,10 @@ use bevy::{
     mesh::{Mesh, Mesh2d},
     picking::{
         Pickable,
+        events::{Pointer, Click, Over, Out},
         mesh_picking::MeshPickingPlugin
     },
-    prelude::{AppExtStates, Color, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, Meshable, MeshMaterial2d, NextState, OnEnter, Resource, Sprite, Time, Transform, Window, WindowPlugin},
+    prelude::{AppExtStates, Color, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, Meshable, MeshMaterial2d, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
     sprite::Anchor,
     sprite_render::Material2d
 };
@@ -63,7 +64,7 @@ use crate::{
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back},
     gamebox::{GameBox, GridType, MapType, PieceType, SurfaceType},
-    grid::handle_over_grid,
+    grid::{on_piece_drop, handle_over_grid},
     view::handle_piece_pressed,
     view_adjust::{
         handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
@@ -250,7 +251,8 @@ fn game_plugin(app: &mut App) {
             .run_if(in_state(GameState::Game))
         )
         .add_observer(open_context_menu)
-        .add_observer(close_context_menus);
+        .add_observer(close_context_menus)
+        .add_observer(pick_dbg);
 }
 
 #[derive(Resource)]
@@ -338,6 +340,8 @@ fn spawn_map(
 
     t.translation += Vec3::new(m.x, m.y, 0.0);
 
+    trace!("map {}", t.translation.z);
+
     commands.spawn((
         MapBundle {
             sprite,
@@ -361,7 +365,7 @@ fn spawn_grid(
         GridType::Rect { x, y, anchor, cols, rows, cw, rh } => {
             let rect = Rectangle::new(*cols as f32 * cw, *rows as f32 * rh);
             let mesh = Mesh2d(meshes.add(rect));
-            let mesh_material = MeshMaterial2d(materials.add(Color::srgba_u8(255, 0, 0, 16)));
+            let mesh_material = MeshMaterial2d(materials.add(Color::srgba_u8(255, 0, 0, 8)));
 
             let mut t = t.clone();
             t.translation += Vec3::new(*x, *y, 0.0);
@@ -378,9 +382,19 @@ fn spawn_grid(
                 gamebox::Anchor::TopRight => -rect.half_size
             }.extend(0.0);
 
+            trace!("grid {}", t.translation.z);
+
             let mut ts = t.clone();
-            ts.translation += Vec3::new(-rect.half_size.x + cw / 2.0, -rect.half_size.y + rh / 2.0, 0.0);
-            ts.translation.z = ts.translation.z.next_down();
+//            ts.translation += Vec3::new(-rect.half_size.x + cw / 2.0, -rect.half_size.y + rh / 2.0, 0.0);
+            ts.translation += Vec3::new(-rect.half_size.x * 2.0 + cw / 2.0, -rect.half_size.y * 2.0 + rh / 2.0, 0.0);
+//            ts.translation.z += 0.5;
+
+
+            let black_material = materials.add(Color::BLACK);
+            let white_material = materials.add(Color::WHITE);
+            
+            let cell_rect = Rectangle::new(*cw, *rh);
+            let cell_mesh = meshes.add(cell_rect);
 
             commands.spawn((
                 RectGridBundle {
@@ -400,35 +414,32 @@ fn spawn_grid(
                 },
                 DespawnOnExit(GameState::Game)
             ))
-            .observe(handle_over_grid);
-
-/*
-            let black_material = materials.add(Color::BLACK);
-            let white_material = materials.add(Color::WHITE);
-
-            let rect = Rectangle::new(*cw, *rh);
-            let mesh = meshes.add(rect);
-
-            for r in 0..*rows {
-                for c in 0..*cols {
-                    let mut tx = ts.clone();
-                    tx.translation += Vec3::new(c as f32 * *cw, r as f32 * *rh, 0.0);
-
-                    commands.spawn((
-                        Mesh2d(mesh.clone()),
-                        MeshMaterial2d(
-                            if (r + c) % 2 == 0 {
-                                black_material.clone()
-                            }
-                            else {
-                                white_material.clone()
-                            }
-                        ),
-                        tx
-                    ));
+            .observe(handle_over_grid)
+            .observe(on_piece_drop)
+            .with_children(|parent| {
+                for r in 0..*rows {
+                    for c in 0..*cols {
+                        let mut tx = ts.clone();
+                        tx.translation += Vec3::new(c as f32 * *cw, r as f32 * *rh, 0.0);
+                        parent
+                            .spawn((
+                                Mesh2d(cell_mesh.clone()),
+                                MeshMaterial2d(
+                                    if (r + c) % 2 == 0 {
+                                        black_material.clone()
+                                    }
+                                    else {
+                                        white_material.clone()
+                                    }
+                                ),
+                                Pickable::default(),
+                                tx
+                            ))
+                            .observe(recolor_grid_rect_on::<Pointer<Over>>(Color::hsl(1.0, 0.9, 0.7)))                    
+                            .observe(recolor_grid_rect_on::<Pointer<Out>>(Color::WHITE));
+                    }
                 }
-            }
-*/
+            });
         },
         _ => todo!() 
     }
@@ -455,6 +466,8 @@ fn spawn_piece(
         )
     };
 
+    trace!("piece {}", t.translation.z);
+
     let mut ec = commands.spawn((
         PieceBundle {
             name: Name::from(p.name.as_ref()),
@@ -469,20 +482,30 @@ fn spawn_piece(
     ));
 
     ec
-    .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
-    .observe(recolor_on::<DeselectEvent>(Color::WHITE))
-    .observe(handle_piece_pressed)
-    .observe(raise::on_piece_pressed)
-    .observe(raise::on_piece_released)
-    .observe(on_piece_drag_start)
-    .observe(on_piece_drag)
-    .observe(on_piece_drag_end)
-    .observe(on_selection)
-    .observe(on_deselection);
+        .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
+        .observe(recolor_on::<DeselectEvent>(Color::WHITE))
+        .observe(handle_piece_pressed)
+        .observe(raise::on_piece_pressed)
+        .observe(raise::on_piece_released)
+        .observe(on_piece_drag_start)
+        .observe(on_piece_drag)
+        .observe(on_piece_drag_end)
+    //    .observe(on_piece_drop)
+        .observe(on_selection)
+        .observe(on_deselection);
 
     for a in &p.actions {
         add_action_observer(a, &mut ec);
     }
+}
+
+fn pick_dbg(ev: On<Pointer<Click>>, names: Query<&Name>) {
+    let name = names
+        .get(ev.event_target())
+        .map(|n| n.to_string())
+        .unwrap_or("Unknown".to_string());
+
+    trace!("Picked {name}({:?})", ev.event_target());
 }
 
 fn display_game(
@@ -565,10 +588,32 @@ fn on_camera_scroll(
 }
 */
 
-fn recolor_on<E: EntityEvent>(color: Color) -> impl Fn(On<E>, Query<&mut Sprite>) {
+fn recolor_on<E: EntityEvent>(
+    color: Color
+) -> impl Fn(On<E>, Query<&mut Sprite>)
+{
     move |ev, mut sprites| {
         if let Ok(mut sprite) = sprites.get_mut(ev.event().event_target()) {
             sprite.color = color;
+        }
+    }
+}
+
+fn recolor_grid_rect_on<E: EntityEvent>(
+    color: Color
+) -> impl Fn(
+    On<E>,
+    Query<Entity, With<Mesh2d>>,
+    ResMut<Assets<ColorMaterial>>,
+    Commands
+)
+{
+    move |ev, entities, mut materials, mut commands| {
+        trace!("");    
+        if let Ok(entity) = entities.get(ev.event().event_target()) {
+            commands
+                .entity(entity)
+                .insert(MeshMaterial2d(materials.add(color))); 
         }
     }
 }
@@ -578,3 +623,21 @@ fn recolor_on<E: EntityEvent>(color: Color) -> impl Fn(On<E>, Query<&mut Sprite>
 /*
 Drag lag: im suspecting that the drag event is either being fired less often than you think, or the system itself is on a wrong schedule
 */
+
+// TODO: load svg
+// TODO: load pdf
+// TODO: load avif
+// TODO: log
+// TODO: undo/redo
+// TODO: grid
+// TODO: stacking
+
+// Actions
+// TODO: delete piece
+// TODO: clone piece
+// TODO: rotate piece
+// TODO: context menu text
+// TODO: context menu hotkeys
+
+
+// TODO: make states for lasso select, piece drag, etc

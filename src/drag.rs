@@ -113,7 +113,7 @@ pub fn on_piece_drag(
     });
 
     // prevent the event from bubbling up to the world
-    drag.propagate(false);
+//    drag.propagate(false);
 
     Ok(())
 }
