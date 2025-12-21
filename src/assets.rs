@@ -74,8 +74,8 @@ pub fn load_assets(
         .collect::<HashMap<_, _>>();
 
     // track which asset handles have loaded
-    let lh = files.iter()
-        .map(|(_, v)| v.id())
+    let lh = files.values()
+        .map(|v| v.id())
         .collect::<HashSet<_>>();
 
     commands.insert_resource(LoadingHandles(lh));
