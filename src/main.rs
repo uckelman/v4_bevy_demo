@@ -2,7 +2,7 @@ use bevy::{
     DefaultPlugins,
     app::{App, PluginGroup, Update},
     asset::{
-        AssetApp, Assets, Handle,
+        AssetApp, Assets,
         io::AssetSourceBuilder
     },
     ecs::{
@@ -16,26 +16,22 @@ use bevy::{
         observer::On,
         prelude::{Commands, not, Query, resource_changed, resource_equals, resource_exists, Single, SystemCondition, With}
     },
-    image::{Image, ImageFilterMode, ImagePlugin, ImageSamplerDescriptor},
+    image::{ImagePlugin, ImageSamplerDescriptor},
     input::{
         ButtonInput,
         common_conditions::input_pressed,
         keyboard::KeyCode,
         mouse::AccumulatedMouseScroll
     },
-    math::{
-        Vec2, Vec3,
-        prelude::{Plane3d, Rectangle}
-    },
-    mesh::{Mesh, Mesh2d},
+    math::Vec3,
+    mesh::Mesh,
     picking::{
         Pickable,
-        events::{Pointer, Click, Over, Out},
+        events::{Pointer, Click},
         mesh_picking::MeshPickingPlugin
     },
-    prelude::{AppExtStates, Color, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, Meshable, MeshMaterial2d, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
+    prelude::{AppExtStates, Color, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
     sprite::Anchor,
-    sprite_render::Material2d
 };
 use rand::Rng;
 use std::path::Path;
@@ -63,8 +59,8 @@ use crate::{
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back},
-    gamebox::{GameBox, GridType, MapType, PieceType, SurfaceType},
-    grid::{on_piece_drop, handle_over_grid},
+    gamebox::{GameBox, MapDefinition, PieceType, SurfaceItem},
+    grid::spawn_grid,
     view::handle_piece_pressed,
     view_adjust::{
         handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
@@ -273,30 +269,6 @@ struct MapBundle {
 }
 
 #[derive(Component, Default)]
-struct RectGrid;
-
-#[derive(Bundle, Default)]
-struct RectGridBundle<M: Material2d> {
-    marker: RectGrid,
-    name: Name,
-    pickable: Pickable,
-    transform: Transform,
-    mesh: Mesh2d,
-    mesh_material: MeshMaterial2d<M>,
-    grid: RectGridParams
-}
-
-#[derive(Component, Default)]
-struct RectGridParams {
-    x: f32,
-    y: f32,
-    cols: u32,
-    rows: u32,
-    cw: f32,
-    rh: f32
-}
-
-#[derive(Component, Default)]
 struct Piece;
 
 // TODO: should this reference a piece type?
@@ -325,7 +297,7 @@ struct PieceBundle {
 }
 
 fn spawn_map(
-    m: &MapType,
+    m: &MapDefinition,
     mut t: Transform,
     sprite_handles: &Res<SpriteHandles>,
     commands: &mut Commands
@@ -351,98 +323,6 @@ fn spawn_map(
         },
         DespawnOnExit(GameState::Game)
     ));
-}
-
-fn spawn_grid(
-    g: &GridType,
-    mut t: Transform,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
-    commands: &mut Commands
-)
-{
-    match g {
-        GridType::Rect { x, y, anchor, cols, rows, cw, rh } => {
-            let rect = Rectangle::new(*cols as f32 * cw, *rows as f32 * rh);
-            let mesh = Mesh2d(meshes.add(rect));
-            let mesh_material = MeshMaterial2d(materials.add(Color::srgba_u8(255, 0, 0, 8)));
-
-            let mut t = t.clone();
-            t.translation += Vec3::new(*x, *y, 0.0);
-
-            t.translation += match anchor {
-                gamebox::Anchor::BottomLeft => rect.half_size, 
-                gamebox::Anchor::BottomCenter => rect.half_size.with_x(0.0),
-                gamebox::Anchor::BottomRight => rect.half_size * Vec2::new(-1.0, 1.0),
-                gamebox::Anchor::CenterLeft => rect.half_size.with_y(0.0),
-                gamebox::Anchor::Center => Vec2::ZERO,  
-                gamebox::Anchor::CenterRight => -rect.half_size.with_y(0.0),
-                gamebox::Anchor::TopLeft => rect.half_size * Vec2::new(1.0, -1.0),
-                gamebox::Anchor::TopCenter => -rect.half_size.with_x(0.0),
-                gamebox::Anchor::TopRight => -rect.half_size
-            }.extend(0.0);
-
-            trace!("grid {}", t.translation.z);
-
-            let mut ts = t.clone();
-//            ts.translation += Vec3::new(-rect.half_size.x + cw / 2.0, -rect.half_size.y + rh / 2.0, 0.0);
-            ts.translation += Vec3::new(-rect.half_size.x * 2.0 + cw / 2.0, -rect.half_size.y * 2.0 + rh / 2.0, 0.0);
-//            ts.translation.z += 0.5;
-
-
-            let black_material = materials.add(Color::BLACK);
-            let white_material = materials.add(Color::WHITE);
-            
-            let cell_rect = Rectangle::new(*cw, *rh);
-            let cell_mesh = meshes.add(cell_rect);
-
-            commands.spawn((
-                RectGridBundle {
-                    name: "RectGrid".into(),
-                    transform: t,
-                    mesh,
-                    mesh_material,
-                    grid: RectGridParams {
-                        x: *x,
-                        y: *y,
-                        cols: *cols,
-                        rows: *rows,
-                        cw: *cw,
-                        rh: *rh
-                    },
-                    ..Default::default()
-                },
-                DespawnOnExit(GameState::Game)
-            ))
-            .observe(handle_over_grid)
-            .observe(on_piece_drop)
-            .with_children(|parent| {
-                for r in 0..*rows {
-                    for c in 0..*cols {
-                        let mut tx = ts.clone();
-                        tx.translation += Vec3::new(c as f32 * *cw, r as f32 * *rh, 0.0);
-                        parent
-                            .spawn((
-                                Mesh2d(cell_mesh.clone()),
-                                MeshMaterial2d(
-                                    if (r + c) % 2 == 0 {
-                                        black_material.clone()
-                                    }
-                                    else {
-                                        white_material.clone()
-                                    }
-                                ),
-                                Pickable::default(),
-                                tx
-                            ))
-                            .observe(recolor_grid_rect_on::<Pointer<Over>>(Color::hsl(1.0, 0.9, 0.7)))                    
-                            .observe(recolor_grid_rect_on::<Pointer<Out>>(Color::WHITE));
-                    }
-                }
-            });
-        },
-        _ => todo!() 
-    }
 }
 
 fn spawn_piece(
@@ -535,10 +415,10 @@ fn display_game(
         let Some((st, t)) = stack.pop() else { break; };
 
         match st {
-            SurfaceType::MapItem(m) => spawn_map(m, t, &sprite_handles, &mut commands),
-            SurfaceType::GridItem(g) => spawn_grid(g, t, &mut meshes, &mut materials, &mut commands),
-            SurfaceType::GroupItem(g) => {
-                let mut t = t.clone();
+            SurfaceItem::Map(m) => spawn_map(m, t, &sprite_handles, &mut commands),
+            SurfaceItem::Grid(g) => spawn_grid(g, t, &mut meshes, &mut materials, &mut commands),
+            SurfaceItem::Group(g) => {
+                let mut t = t;
                 t.translation += Vec3::new(g.x, g.y, 0.0);
                 let mut z = t.translation.z;
 
@@ -546,7 +426,7 @@ fn display_game(
                     g.children
                         .iter()
                         .map(|ch| {
-                            let mut t = t.clone();
+                            let mut t = t;
                             z -= 1.0;
                             t.translation.z = z;
                             (ch, t)
@@ -595,25 +475,6 @@ fn recolor_on<E: EntityEvent>(
     move |ev, mut sprites| {
         if let Ok(mut sprite) = sprites.get_mut(ev.event().event_target()) {
             sprite.color = color;
-        }
-    }
-}
-
-fn recolor_grid_rect_on<E: EntityEvent>(
-    color: Color
-) -> impl Fn(
-    On<E>,
-    Query<Entity, With<Mesh2d>>,
-    ResMut<Assets<ColorMaterial>>,
-    Commands
-)
-{
-    move |ev, entities, mut materials, mut commands| {
-        trace!("");    
-        if let Ok(entity) = entities.get(ev.event().event_target()) {
-            commands
-                .entity(entity)
-                .insert(MeshMaterial2d(materials.add(color))); 
         }
     }
 }

@@ -20,7 +20,7 @@ use std::{
 
 use crate::gamebox::{
     GameBox,
-    ImageDescriptor
+    ImageDefinition
 };
 
 #[derive(Clone, Debug)]
@@ -61,7 +61,7 @@ pub fn load_assets(
     // begin loading the file-source images
     let files = game.images.iter()
         .filter_map(|(k, v)| match v {
-            ImageDescriptor::File(f) => Some(
+            ImageDefinition::File(f) => Some(
                 (
                     k.clone(),
                     asset_server.load(
@@ -84,7 +84,7 @@ pub fn load_assets(
     // make texture atlas layouts for the grids
     let layouts = game.images.iter()
         .filter_map(|(k, v)| match v {
-            ImageDescriptor::Grid { src, x, y, cols, rows, cw, rh, cgap, rgap } => {
+            ImageDefinition::Grid { src, x, y, cols, rows, cw, rh, cgap, rgap } => {
                 let x = *x as i32;
                 let y = *y as i32;
                 let cols = *cols as i32;
@@ -119,7 +119,7 @@ pub fn load_assets(
     // add the derived assets to the image sources
     let derived = game.images.iter()
         .flat_map(|(k, v)| match v {
-            ImageDescriptor::Crop { src, x, y, w, h } => {
+            ImageDefinition::Crop { src, x, y, w, h } => {
                 let tal = TextureAtlasLayout {
                     size: UVec2::new(x + w, y + h),
                     textures: vec![URect::new(*x, *y, x + w, y + h)]
@@ -136,7 +136,7 @@ pub fn load_assets(
                     )
                 ]
             },
-            ImageDescriptor::Grid { src, cols, rows, .. } => {
+            ImageDefinition::Grid { src, cols, rows, .. } => {
                 (0..*rows)
                     .cartesian_product(0..*cols)
                     .map(|(r, c)|

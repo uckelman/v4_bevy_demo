@@ -34,62 +34,117 @@ impl From<Anchor> for bevy::sprite::Anchor {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct PieceType {
-    pub name: String,
-    #[serde(default)]
-    pub faces: Vec<String>,
-    #[serde(default)]
-    pub actions: Vec<String>
+const fn default_scale() -> f32 {
+    1.0
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MapType {
+pub struct GroupDefinition {
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub x: f32,
+    #[serde(default)]
     pub y: f32,
+    #[serde(default = "default_scale")]
+    pub s: f32,
+    #[serde(default)]
+    pub a: f32,
+    #[serde(default)]
+    pub anchor: Anchor,
+    pub children: Vec<SurfaceItem>
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MapDefinition {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub x: f32,
+    #[serde(default)]
+    pub y: f32,
+    #[serde(default = "default_scale")]
+    pub s: f32,
+    #[serde(default)]
+    pub a: f32,
     #[serde(default)]
     pub anchor: Anchor,
     pub image: String
 }
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
-pub enum GridType {
-    Rect {
-        x: f32,
-        y: f32,
-        #[serde(default)]
-        anchor: Anchor,
-        cols: u32,
-        rows: u32,
-        cw: f32,
-        rh: f32
-    },
-//    Hex {
-//    }
-}
+// first hex column: high or low?
+// show/hide grid
+// grid color, opacity
+// grid thickness
+// either hs or hw, hh
 
 #[derive(Debug, Deserialize)]
-pub struct GroupType {
+pub struct RectGridDefinition {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
     pub x: f32,
+    #[serde(default)]
     pub y: f32,
+    #[serde(default = "default_scale")]
+    pub s: f32,
+    #[serde(default)]
+    pub a: f32,
     #[serde(default)]
     pub anchor: Anchor,
-    pub children: Vec<SurfaceType>
+    pub cols: u32,
+    pub rows: u32,
+    pub cw: f32,
+    pub rh: f32
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all(deserialize = "lowercase"))]
+pub enum ColumnStagger {
+    Low,
+    High
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HexGridDefinition {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub x: f32,
+    #[serde(default)]
+    pub y: f32,
+    #[serde(default = "default_scale")]
+    pub s: f32,
+    #[serde(default)]
+    pub a: f32,
+    #[serde(default)]
+    pub anchor: Anchor,
+    pub cols: u32,
+    pub rows: u32,
+    pub hw: f32,
+    pub hh: f32,
+    pub hs: f32,
+    pub first: ColumnStagger
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-pub enum SurfaceType {
-    MapItem(MapType),
-    GridItem(GridType),
-    GroupItem(GroupType)
+pub enum GridDefinition {
+    Rect(RectGridDefinition),
+    Hex(HexGridDefinition)
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-pub enum ImageDescriptor {
+pub enum SurfaceItem {
+    Map(MapDefinition),
+    Grid(GridDefinition),
+    Group(GroupDefinition)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum ImageDefinition {
     File(String),
     Crop {
         src: String,
@@ -114,21 +169,30 @@ pub enum ImageDescriptor {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct PieceType {
+    pub name: String,
+    #[serde(default)]
+    pub faces: Vec<String>,
+    #[serde(default)]
+    pub actions: Vec<String>
+}
+
+#[derive(Debug, Deserialize)]
 struct MaybeGameBox {
     #[serde(default)]
-    pub images: HashMap<String, ImageDescriptor>,
+    pub images: HashMap<String, ImageDefinition>,
     #[serde(default)]
     pub piece: Vec<PieceType>,
-    pub surface: SurfaceType
+    pub surface: SurfaceItem
 }
 
 // TODO: rename fields? pieces is probably a nicer name?
 #[derive(Debug, Deserialize, Resource)]
 #[serde(try_from = "MaybeGameBox")]
 pub struct GameBox {
-    pub images: HashMap<String, ImageDescriptor>,
+    pub images: HashMap<String, ImageDefinition>,
     pub piece: Vec<PieceType>,
-    pub surface: SurfaceType
+    pub surface: SurfaceItem
 }
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
@@ -157,8 +221,8 @@ impl TryFrom<MaybeGameBox> for GameBox {
         // check that crop source keys exist 
         if !m.images.iter()
             .all(|(k, v)| match v {
-                ImageDescriptor::Crop { src, .. } => m.images.contains_key(src),
-                ImageDescriptor::Grid { src, .. } => m.images.contains_key(src),
+                ImageDefinition::Crop { src, .. } => m.images.contains_key(src),
+                ImageDefinition::Grid { src, .. } => m.images.contains_key(src),
                 _ => true
             })
         {
