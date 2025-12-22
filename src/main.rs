@@ -26,11 +26,10 @@ use bevy::{
     math::Vec3,
     mesh::Mesh,
     picking::{
-        Pickable,
         events::{Pointer, Click},
         mesh_picking::MeshPickingPlugin
     },
-    prelude::{AppExtStates, Color, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
+    prelude::{AppExtStates, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
     sprite::Anchor,
 };
 use rand::Rng;
@@ -44,6 +43,7 @@ mod drag;
 mod flip;
 mod gamebox;
 mod grid;
+mod piece;
 mod view;
 mod view_adjust;
 mod raise;
@@ -53,15 +53,13 @@ mod title;
 mod util;
 
 use crate::{
-    actions::{add_action_observer},
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
     config::KeyConfig,
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
-    drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back},
-    gamebox::{GameBox, MapDefinition, PieceType, SurfaceItem},
+    gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
-    view::handle_piece_pressed,
+    piece::spawn_piece,
     view_adjust::{
         handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
         handle_rotate_ccw, handle_rotate_cw,
@@ -73,7 +71,7 @@ use crate::{
         WheelScaleStep
     },
     raise::RaiseAnchor,
-    select::{clear_selection, draw_selection_rect, on_selection, on_deselection, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selectable, SelectEvent, DeselectEvent, SelectionRect, setup_selection_box},
+    select::{clear_selection, draw_selection_rect, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, SelectionRect, setup_selection_box},
     state::GameState,
     title::{SplashScreenTimer, display_title}
 };
@@ -268,34 +266,6 @@ struct MapBundle {
     transform: Transform
 }
 
-#[derive(Component, Default)]
-struct Piece;
-
-// TODO: should this reference a piece type?
-#[derive(Component, Default)]
-struct Faces(Vec<ImageSource>);
-
-// TODO: should this be a cyclic iterator?
-#[derive(Component, Default)]
-struct FaceUp(usize);
-
-#[derive(Component, Default)]
-pub struct Actions(pub Vec<String>);
-
-#[derive(Bundle, Default)]
-struct PieceBundle {
-    marker: Piece,
-    name: Name,
-    pickable: Pickable,
-    selectable: Selectable,
-    draggable: Draggable,
-    sprite: Sprite,
-    transform: Transform,
-    faces: Faces,
-    up: FaceUp,
-    actions: Actions
-}
-
 fn spawn_map(
     m: &MapDefinition,
     mut t: Transform,
@@ -323,60 +293,6 @@ fn spawn_map(
         },
         DespawnOnExit(GameState::Game)
     ));
-}
-
-fn spawn_piece(
-    p: &PieceType,
-    mut t: Transform,
-    sprite_handles: &Res<SpriteHandles>,
-    commands: &mut Commands
-)
-{
-// FIXME: should fail if we can't get a sprite?
-    let faces = p.faces.iter()
-        .filter_map(|f| sprite_handles.0.get(f))
-        .cloned()
-        .collect::<Vec<_>>();
-
-    let sprite = match &faces[0] {
-        ImageSource::Single(handle) => Sprite::from_image(handle.clone()),
-        ImageSource::Crop { handle, atlas } => Sprite::from_atlas_image(
-            handle.clone(),
-            atlas.clone()
-        )
-    };
-
-    trace!("piece {}", t.translation.z);
-
-    let mut ec = commands.spawn((
-        PieceBundle {
-            name: Name::from(p.name.as_ref()),
-            sprite,
-            transform: t,
-            faces: Faces(faces),
-            up: FaceUp(0),
-            actions: Actions(p.actions.clone()),
-            ..Default::default()
-        },
-        DespawnOnExit(GameState::Game)
-    ));
-
-    ec
-        .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
-        .observe(recolor_on::<DeselectEvent>(Color::WHITE))
-        .observe(handle_piece_pressed)
-        .observe(raise::on_piece_pressed)
-        .observe(raise::on_piece_released)
-        .observe(on_piece_drag_start)
-        .observe(on_piece_drag)
-        .observe(on_piece_drag_end)
-    //    .observe(on_piece_drop)
-        .observe(on_selection)
-        .observe(on_deselection);
-
-    for a in &p.actions {
-        add_action_observer(a, &mut ec);
-    }
 }
 
 fn pick_dbg(ev: On<Pointer<Click>>, names: Query<&Name>) {
@@ -467,17 +383,6 @@ fn on_camera_scroll(
     }
 }
 */
-
-fn recolor_on<E: EntityEvent>(
-    color: Color
-) -> impl Fn(On<E>, Query<&mut Sprite>)
-{
-    move |ev, mut sprites| {
-        if let Ok(mut sprite) = sprites.get_mut(ev.event().event_target()) {
-            sprite.color = color;
-        }
-    }
-}
 
 // TODO: try turning off vsync to fix drag lag
 

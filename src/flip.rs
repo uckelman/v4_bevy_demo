@@ -11,9 +11,9 @@ use bevy::{
 use tracing::instrument;
 
 use crate::{
-    Faces, FaceUp,
     assets::ImageSource,
     config::KeyConfig,
+    piece::{Faces, FaceUp},
     select::Selected,
 };
 

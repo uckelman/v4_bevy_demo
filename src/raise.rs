@@ -14,7 +14,10 @@ use bevy::{
 };
 use tracing::instrument;
 
-use crate::{Piece, Surface};
+use crate::{
+    Surface,
+    piece::Piece
+};
 
 #[derive(Default, Resource)]
 pub struct RaiseAnchor {

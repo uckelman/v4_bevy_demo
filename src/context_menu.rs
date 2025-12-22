@@ -27,8 +27,8 @@ use std::{
 use tracing::instrument;
 
 use crate::{
-    Actions,
     actions::trigger_action,
+    piece::Actions,
     select::Selected
 };
 

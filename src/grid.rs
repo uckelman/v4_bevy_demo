@@ -26,8 +26,8 @@ use bevy::{
 use tracing::instrument;
 
 use crate::{
-    Piece,
     gamebox::{Anchor, ColumnStagger, GridDefinition, HexGridDefinition, RectGridDefinition},
+    piece::Piece,
     state::GameState
 };
 
