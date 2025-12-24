@@ -32,7 +32,7 @@ where
     A: IntoIterator<Item = S>
 {
     actions.into_iter()
-        .for_each(|a| add_action_observer(a, &mut commands));
+        .for_each(|a| add_action_observer(a, commands));
 }
 
 pub fn trigger_action(

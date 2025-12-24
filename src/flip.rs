@@ -65,7 +65,7 @@ fn set_face(
 
 fn do_flip<const FORWARD: bool>(
     entity: Entity,
-    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite), With<Selected>>
+    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
 
@@ -85,7 +85,7 @@ fn do_flip<const FORWARD: bool>(
 #[instrument(skip_all)]
 pub fn on_flip_forward(
     flip: On<FlipForwardEvent>,
-    query: Query<(&Faces, &mut FaceUp, &mut Sprite), With<Selected>>
+    query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
     trace!("");
@@ -96,7 +96,7 @@ pub fn on_flip_forward(
 #[instrument(skip_all)]
 pub fn on_flip_back(
     flip: On<FlipBackEvent>,
-    query: Query<(&Faces, &mut FaceUp, &mut Sprite), With<Selected>>
+    query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
     trace!("");

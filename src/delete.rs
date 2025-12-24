@@ -1,7 +1,6 @@
 use bevy::{
     ecs::{
         event::EntityEvent,
-        error::Result,
         observer::On,
         prelude::Commands
     },
@@ -11,7 +10,6 @@ use bevy::{
 
 use crate::{
     config::KeyConfig,
-    select::Selected
 };
 
 use tracing::instrument;
