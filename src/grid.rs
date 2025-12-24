@@ -20,7 +20,7 @@ use bevy::{
         Pickable,
         events::{DragDrop, Over, Out, Pointer, Move}
     },
-    prelude::{Color, ColorMaterial, debug, DespawnOnExit, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform, Vec3Swizzles},
+    prelude::{Color, ColorMaterial, debug, DespawnOnExit, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform},
     sprite_render::Material2d
 };
 use tracing::instrument;
@@ -317,7 +317,7 @@ fn spawn_hex_grid(
 
 pub fn spawn_grid(
     g: &GridDefinition,
-    mut t: Transform,
+    t: Transform,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
     commands: &mut Commands
