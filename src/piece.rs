@@ -1,6 +1,5 @@
 use bevy::{
     ecs::{
-        bundle::Bundle,
         change_detection::Res,
         component::Component,
         event::EntityEvent,
@@ -37,20 +36,6 @@ pub struct FaceUp(pub usize);
 #[derive(Clone, Component, Debug, Default)]
 pub struct Actions(pub Vec<String>);
 
-#[derive(Bundle, Default)]
-struct PieceBundle {
-    marker: Piece,
-    name: Name,
-    pickable: Pickable,
-    selectable: Selectable,
-    draggable: Draggable,
-    sprite: Sprite,
-    transform: Transform,
-    faces: Faces,
-    up: FaceUp,
-    actions: Actions
-}
-
 pub fn spawn_piece(
     p: &PieceType,
     t: Transform,
@@ -75,15 +60,16 @@ pub fn spawn_piece(
     trace!("piece {}", t.translation.z);
 
     let mut ec = commands.spawn((
-        PieceBundle {
-            name: Name::from(p.name.as_ref()),
-            sprite,
-            transform: t,
-            faces: Faces(faces),
-            up: FaceUp(0),
-            actions: Actions(p.actions.clone()),
-            ..Default::default()
-        },
+        Piece,
+        Name::from(p.name.as_ref()),
+        Pickable::default(),
+        Selectable,
+        Draggable,
+        sprite,
+        t,
+        Faces(faces),
+        FaceUp(0),
+        Actions(p.actions.clone()),
         DespawnOnExit(GameState::Game)
     ));
 
