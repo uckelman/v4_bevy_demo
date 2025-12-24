@@ -25,10 +25,10 @@ use bevy::{
 };
 use tracing::instrument;
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Selectable;
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Selected;
 
 #[derive(EntityEvent)]

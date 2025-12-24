@@ -25,7 +25,7 @@ use crate::{
     util::AsOrthographicProjection
 };
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Copy, Debug,  Default)]
 pub struct Draggable;
 
 #[derive(Component, Default)]

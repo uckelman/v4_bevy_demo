@@ -23,18 +23,18 @@ use crate::{
     view::handle_piece_pressed
 };
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Piece;
 
 // TODO: should this reference a piece type?
-#[derive(Component, Default)]
+#[derive(Clone, Component, Debug, Default)]
 pub struct Faces(pub Vec<ImageSource>);
 
 // TODO: should this be a cyclic iterator?
-#[derive(Component, Default)]
+#[derive(Clone, Component, Debug, Default)]
 pub struct FaceUp(pub usize);
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Debug, Default)]
 pub struct Actions(pub Vec<String>);
 
 #[derive(Bundle, Default)]
