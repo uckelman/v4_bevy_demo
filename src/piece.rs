@@ -53,7 +53,7 @@ struct PieceBundle {
 
 pub fn spawn_piece(
     p: &PieceType,
-    mut t: Transform,
+    t: Transform,
     sprite_handles: &Res<SpriteHandles>,
     commands: &mut Commands
 )
