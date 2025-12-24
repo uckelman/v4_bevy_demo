@@ -89,7 +89,7 @@ pub fn spawn_piece(
     ));
 
     add_observers(&mut ec);
-    add_action_observers(p.actions, &mut ec);
+    add_action_observers(&p.actions, &mut ec);
 }
 
 fn recolor_on<E: EntityEvent>(

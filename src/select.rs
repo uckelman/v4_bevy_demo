@@ -28,7 +28,9 @@ use tracing::instrument;
 #[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Selectable;
 
-#[derive(Clone, Component, Copy, Debug, Default)]
+// FIXME: this breaks cloning somehow
+//#[derive(Clone, Component, Copy, Debug, Default)]
+#[derive(Component, Debug, Default)]
 pub struct Selected;
 
 #[derive(EntityEvent)]
