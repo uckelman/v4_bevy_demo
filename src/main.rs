@@ -37,8 +37,10 @@ use std::path::Path;
 
 mod actions;
 mod assets;
+mod clone;
 mod config;
 mod context_menu;
+mod delete;
 mod drag;
 mod flip;
 mod gamebox;

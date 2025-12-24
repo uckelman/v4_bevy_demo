@@ -5,14 +5,14 @@ use bevy::{
         event::EntityEvent,
         name::Name,
         observer::On,
-        prelude::{Commands, Query}
+        prelude::{Commands, EntityCommands, Query}
     },
     picking::Pickable,
     prelude::{Color, DespawnOnExit, Sprite, trace, Transform}
 };
 
 use crate::{
-    actions::{add_action_observer},
+    actions::{add_action_observers},
     assets::{ImageSource, SpriteHandles},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::PieceType,
@@ -35,6 +35,21 @@ pub struct FaceUp(pub usize);
 
 #[derive(Clone, Component, Debug, Default)]
 pub struct Actions(pub Vec<String>);
+
+pub fn add_observers(commands: &mut EntityCommands<'_>) {
+    commands
+        .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
+        .observe(recolor_on::<DeselectEvent>(Color::WHITE))
+        .observe(handle_piece_pressed)
+        .observe(raise::on_piece_pressed)
+        .observe(raise::on_piece_released)
+        .observe(on_piece_drag_start)
+        .observe(on_piece_drag)
+        .observe(on_piece_drag_end)
+    //    .observe(on_piece_drop)
+        .observe(on_selection)
+        .observe(on_deselection);
+}
 
 pub fn spawn_piece(
     p: &PieceType,
@@ -73,22 +88,8 @@ pub fn spawn_piece(
         DespawnOnExit(GameState::Game)
     ));
 
-    ec
-        .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
-        .observe(recolor_on::<DeselectEvent>(Color::WHITE))
-        .observe(handle_piece_pressed)
-        .observe(raise::on_piece_pressed)
-        .observe(raise::on_piece_released)
-        .observe(on_piece_drag_start)
-        .observe(on_piece_drag)
-        .observe(on_piece_drag_end)
-    //    .observe(on_piece_drop)
-        .observe(on_selection)
-        .observe(on_deselection);
-
-    for a in &p.actions {
-        add_action_observer(a, &mut ec);
-    }
+    add_observers(&mut ec);
+    add_action_observers(p.actions, &mut ec);
 }
 
 fn recolor_on<E: EntityEvent>(
