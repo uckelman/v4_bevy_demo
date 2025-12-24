@@ -249,7 +249,6 @@ fn spawn_hex_grid(
             .chain(hex.vertices()
                 .first()
                 .cloned()
-                .into_iter()
             )
     ));
 
