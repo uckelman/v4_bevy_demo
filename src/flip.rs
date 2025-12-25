@@ -36,13 +36,9 @@ impl KeyConfig for FlipBackKey {
 }
 
 #[derive(EntityEvent)]
-pub struct FlipForwardEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct FlipBackEvent {
-    pub entity: Entity
+pub struct FlipEvent {
+    pub entity: Entity,
+    pub delta: i32
 }
 
 fn set_face(
@@ -63,19 +59,16 @@ fn set_face(
     }
 }
 
-fn do_flip<const FORWARD: bool>(
+fn do_flip(
     entity: Entity,
-    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
+    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>,
+    delta: i32
 ) -> Result
 {
-
     let (faces, mut up, mut sprite) = query.get_mut(entity)?;
-    up.0 = if FORWARD {
-       up.0 + 1
-    }
-    else {
-       up.0 + faces.0.len() - 1
-    } % faces.0.len();
+
+// TODO: check this
+    up.0 = ((up.0 as i32 + delta) % faces.0.len() as i32) as usize;
 
     set_face(&mut sprite, faces, &up);
 
@@ -83,25 +76,14 @@ fn do_flip<const FORWARD: bool>(
 }
 
 #[instrument(skip_all)]
-pub fn on_flip_forward(
-    flip: On<FlipForwardEvent>,
+pub fn on_flip(
+    flip: On<FlipEvent>,
     query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
     trace!("");
     let entity = flip.event().event_target();
-    do_flip::<true>(entity, query)
-}
-
-#[instrument(skip_all)]
-pub fn on_flip_back(
-    flip: On<FlipBackEvent>,
-    query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
-) -> Result
-{
-    trace!("");
-    let entity = flip.event().event_target();
-    do_flip::<false>(entity, query)
+    do_flip(entity, query, flip.delta)
 }
 
 #[instrument(skip_all)]
@@ -112,7 +94,7 @@ pub fn handle_flip_forward(
 {
     trace!("");
     query.iter()
-        .for_each(|entity| commands.trigger(FlipForwardEvent { entity }));
+        .for_each(|entity| commands.trigger(FlipEvent { entity, delta: 1 }));
 }
 
 #[instrument(skip_all)]
@@ -123,5 +105,5 @@ pub fn handle_flip_back(
 {
     trace!("");
     query.iter()
-        .for_each(|entity| commands.trigger(FlipBackEvent { entity }));
+        .for_each(|entity| commands.trigger(FlipEvent { entity, delta: -1 }));
 }
