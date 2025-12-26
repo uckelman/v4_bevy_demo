@@ -144,6 +144,7 @@ fn make_context_item(
         Node {
             padding: UiRect::all(px(5)),
             flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(font.font_size), 
             ..Default::default()
         },
         BackgroundColor(bg_color),
@@ -167,7 +168,6 @@ fn make_context_item(
             item.spawn((
                 Node {
                     justify_self: JustifySelf::End,
-                    margin: UiRect::left(Val::Px(font.font_size)), 
                     ..Default::default()
                 },
                 Pickable::IGNORE,
