@@ -1,7 +1,7 @@
 use bevy::{
     color::{
         Color,
-        palettes::tailwind::{GRAY_50, GRAY_200}
+        palettes::tailwind::{GRAY_50, GRAY_200, GRAY_400}
     },
     ecs::{
         bundle::Bundle,
@@ -9,7 +9,8 @@ use bevy::{
         component::Component,
         event::{EntityEvent, Event},
         observer::On,
-        prelude::{Commands, Query, With}
+        prelude::{Commands, Query, With},
+        relationship::RelatedSpawnerCommands
     },
     input::mouse::AccumulatedMouseScroll,
     math::Vec2,
@@ -18,8 +19,9 @@ use bevy::{
         events::{Out, Over, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, Entity, FlexDirection, NextState, Node, PositionType, px, Reflect, SpawnRelated, States, Text, TextColor, TextFont, trace, UiRect}
+    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, ChildOf, Display, Entity, FlexDirection, JustifySelf, NextState, Node, PositionType, px, Reflect, SpawnRelated, States, Text, TextColor, TextFont, trace, UiRect, Val}
 };
+use itertools::Itertools;
 use std::{
     collections::HashSet,
     fmt::Debug
@@ -28,7 +30,7 @@ use tracing::instrument;
 
 use crate::{
     actions::trigger_action,
-    piece::Actions,
+    piece::{Action, Actions},
     select::Selected
 };
 
@@ -65,12 +67,9 @@ pub fn open_context_menu(
     trace!("");
 
     // show intersection of actions for selected entities
-// FIXME: maintain order somehow
-    let actions: Vec<String> = query.iter()
-        .map(|a| HashSet::from_iter(a.0.iter()))
-        .reduce(|acc: HashSet<&String>, s| &acc & &s)
-        .unwrap_or_default()
-        .into_iter()
+    let actions: Vec<Action> = query.iter()
+        .flat_map(|a| a.0.iter())
+        .unique()
         .cloned()
         .collect::<Vec<_>>();
 
@@ -81,9 +80,16 @@ pub fn open_context_menu(
 
     next_state.set(ContextMenuState::Open);
 
-    let bg = GRAY_50.into();
-    let border: Color = GRAY_200.into();
-    let highlight = GRAY_200.into();
+    let bg_color = GRAY_50.into();
+    let label_color = Color::BLACK;
+    let key_color = GRAY_400.into();
+    let border_color: Color = GRAY_200.into();
+    let highlight_color = GRAY_200.into();
+
+    let font = TextFont {
+        font_size: 14.0,
+        ..Default::default()
+    };
 
     commands.spawn((
         ContextMenu,
@@ -91,69 +97,86 @@ pub fn open_context_menu(
             position_type: PositionType::Absolute,
             left: px(open.pos.x),
             top: px(open.pos.y),
+            display: Display::Flex,
             flex_direction: FlexDirection::Column,
             padding: UiRect::all(px(4)),
             border: UiRect::all(px(1)),
             ..Default::default()
         },
-        BorderColor::all(border),
+        Pickable {
+            should_block_lower: true,
+            is_hoverable: false
+        },
+        BorderColor::all(border_color),
         BorderRadius::all(px(4)),
-        BackgroundColor(bg),
+        BackgroundColor(bg_color),
     ))
     .with_children(|parent|
         actions.iter()
-            .for_each(|a| { parent.spawn(context_item(a, a, bg)); })
+            .for_each(|a| { 
+                make_context_item(
+                    a,
+                    font.clone(),
+                    bg_color,
+                    label_color,
+                    key_color,
+                    parent
+                );
+            })
     )
     .observe(on_item_selection)
-    .observe(highlight_on_hover::<Out>(bg))
-    .observe(highlight_on_hover::<Over>(highlight));
+    .observe(highlight_on_hover::<Out>(bg_color))
+    .observe(highlight_on_hover::<Over>(highlight_color));
 }
 
-fn on_item_selection(
-    mut press: On<Pointer<Press>>,
-    menu_items: Query<&ContextMenuItem>,
-    query: Query<Entity, With<Selected>>,
-    mut commands: Commands
+fn make_context_item(
+    action: &Action,
+    font: TextFont,
+    bg_color: Color,
+    label_color: Color,
+    key_color: Color,
+    mut commands: &mut RelatedSpawnerCommands<'_, ChildOf>
 )
 {
-    let target = press.original_event_target();
-
-    if let Ok(item) = menu_items.get(target)
-        && press.button == PointerButton::Primary
-    {
-        commands.trigger(CloseContextMenus);
-        query.iter()
-            .for_each(|entity| trigger_action(entity, &item.0, &mut commands));
-    }
-
-    press.propagate(false);
-}
-
-fn context_item(
-    action: impl Into<String>,
-    text: impl Into<String>,
-    bg: Color
-) -> impl Bundle
-{
-    (
-        ContextMenuItem(action.into()),
+    let mut item = commands.spawn((
+        ContextMenuItem(action.action.clone()),
         Button,
         Node {
             padding: UiRect::all(px(5)),
+            flex_direction: FlexDirection::Row,
             ..Default::default()
         },
-        BackgroundColor(bg),
+        BackgroundColor(bg_color),
         BorderRadius::all(px(4)),
+        Pickable::default(),
         children![(
-            Pickable::IGNORE,
-            Text::new(text),
-            TextFont {
-                font_size: 14.0,
+            Node {
+                justify_self: JustifySelf::Start,
+                flex_grow: 1.0,
                 ..Default::default()
             },
-            TextColor(Color::BLACK)
+            Pickable::IGNORE,
+            Text::new(action.label.clone()),
+            font.clone(),
+            TextColor(label_color)
         )]
-    )
+    ));
+
+    if let Some(key) = &action.key {
+        item.with_children(|item| {
+            item.spawn((
+                Node {
+                    justify_self: JustifySelf::End,
+                    margin: UiRect::left(Val::Px(font.font_size)), 
+                    ..Default::default()
+                },
+                Pickable::IGNORE,
+                Text::new(key.clone()),
+                font.clone(),
+                TextColor(key_color)
+            ));
+        });
+    }
 }
 
 #[instrument(skip_all)]
@@ -177,6 +200,26 @@ pub fn highlight_on_hover<T: Debug + Clone + Reflect>(
 
         event.propagate(false);
     }
+}
+
+fn on_item_selection(
+    mut press: On<Pointer<Press>>,
+    menu_items: Query<&ContextMenuItem>,
+    query: Query<Entity, With<Selected>>,
+    mut commands: Commands
+)
+{
+    let target = press.original_event_target();
+
+    if let Ok(item) = menu_items.get(target)
+        && press.button == PointerButton::Primary
+    {
+        commands.trigger(CloseContextMenus);
+        query.iter()
+            .for_each(|entity| trigger_action(entity, &item.0, &mut commands));
+    }
+
+    press.propagate(false);
 }
 
 #[instrument(skip_all)]

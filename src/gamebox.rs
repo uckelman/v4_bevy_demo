@@ -168,13 +168,20 @@ pub enum ImageDefinition {
     }
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct Action {
+    pub label: String,
+    pub action: String,
+    pub key: Option<String>
+}
+
 #[derive(Debug, Deserialize)]
 pub struct PieceType {
     pub name: String,
     #[serde(default)]
     pub faces: Vec<String>,
     #[serde(default)]
-    pub actions: Vec<String>
+    pub actions: Vec<Action>
 }
 
 #[derive(Debug, Deserialize)]

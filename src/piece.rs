@@ -33,8 +33,15 @@ pub struct Faces(pub Vec<ImageSource>);
 #[derive(Clone, Component, Debug, Default)]
 pub struct FaceUp(pub usize);
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct Action {
+    pub label: String,
+    pub action: String,
+    pub key: Option<String>
+}
+
 #[derive(Clone, Component, Debug, Default)]
-pub struct Actions(pub Vec<String>);
+pub struct Actions(pub Vec<Action>);
 
 pub fn add_observers(commands: &mut EntityCommands<'_>) {
     commands
@@ -84,12 +91,12 @@ pub fn spawn_piece(
         t,
         Faces(faces),
         FaceUp(0),
-        Actions(p.actions.clone()),
+        Actions(p.actions.iter().map(|a| Action { label: a.label.clone(), action: a.action.clone(), key: a.key.clone() }).collect::<Vec<_>>()),
         DespawnOnExit(GameState::Game)
     ));
 
     add_observers(&mut ec);
-    add_action_observers(&p.actions, &mut ec);
+    add_action_observers(p.actions.iter().map(|a| &a.action), &mut ec);
 }
 
 fn recolor_on<E: EntityEvent>(
