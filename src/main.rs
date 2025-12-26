@@ -46,13 +46,14 @@ mod flip;
 mod gamebox;
 mod grid;
 mod piece;
-mod view;
-mod view_adjust;
 mod raise;
+mod rotate;
 mod select;
 mod state;
 mod title;
 mod util;
+mod view;
+mod view_adjust;
 
 use crate::{
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
