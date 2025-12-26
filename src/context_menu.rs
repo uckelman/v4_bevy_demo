@@ -4,7 +4,6 @@ use bevy::{
         palettes::tailwind::{GRAY_50, GRAY_200, GRAY_400}
     },
     ecs::{
-        bundle::Bundle,
         change_detection::{Res, ResMut},
         component::Component,
         event::{EntityEvent, Event},
@@ -22,10 +21,7 @@ use bevy::{
     prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, ChildOf, Display, Entity, FlexDirection, JustifySelf, NextState, Node, PositionType, px, Reflect, SpawnRelated, States, Text, TextColor, TextFont, trace, UiRect, Val}
 };
 use itertools::Itertools;
-use std::{
-    collections::HashSet,
-    fmt::Debug
-};
+use std::fmt::Debug;
 use tracing::instrument;
 
 use crate::{
@@ -113,7 +109,7 @@ pub fn open_context_menu(
     ))
     .with_children(|parent|
         actions.iter()
-            .for_each(|a| { 
+            .for_each(|a| {
                 make_context_item(
                     a,
                     font.clone(),
@@ -135,7 +131,7 @@ fn make_context_item(
     bg_color: Color,
     label_color: Color,
     key_color: Color,
-    mut commands: &mut RelatedSpawnerCommands<'_, ChildOf>
+    commands: &mut RelatedSpawnerCommands<'_, ChildOf>
 )
 {
     let mut item = commands.spawn((
@@ -144,7 +140,7 @@ fn make_context_item(
         Node {
             padding: UiRect::all(px(5)),
             flex_direction: FlexDirection::Row,
-            column_gap: Val::Px(font.font_size), 
+            column_gap: Val::Px(font.font_size),
             ..Default::default()
         },
         BackgroundColor(bg_color),
