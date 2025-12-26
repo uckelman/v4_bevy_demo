@@ -11,7 +11,7 @@ use bevy::{
 };
 
 use crate::{
-    actions::add_action_observer,
+    actions::add_action_observers,
     config::KeyConfig,
     piece::{Actions, add_observers},
     select::Selected
@@ -45,10 +45,8 @@ fn do_clone(
     let clone = ec.id();
     add_observers(&mut ec);
     
-    let actions =  query.get(entity)?;
-    for a in &actions.0 {
-        add_action_observer(a, &mut ec);
-    }
+    let actions = query.get(entity)?;
+    add_action_observers(actions.0.iter().map(|a| &a.action), &mut ec);
 
     Ok(())
 }
