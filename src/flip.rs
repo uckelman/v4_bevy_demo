@@ -67,8 +67,8 @@ fn do_flip(
 {
     let (faces, mut up, mut sprite) = query.get_mut(entity)?;
 
-// TODO: check this
-    up.0 = ((up.0 as i32 + delta) % faces.0.len() as i32) as usize;
+    let len = faces.0.len() as i32;
+    up.0 = (((up.0 as i32 + delta) % len + len) % len) as usize;
 
     set_face(&mut sprite, faces, &up);
 
