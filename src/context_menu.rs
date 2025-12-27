@@ -136,7 +136,7 @@ fn make_context_item(
 )
 {
     let mut item = commands.spawn((
-        ContextMenuItem(action.action.clone()),
+        ContextMenuItem(action.action),
         Button,
         Node {
             padding: UiRect::all(px(5)),

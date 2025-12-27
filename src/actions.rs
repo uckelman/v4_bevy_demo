@@ -3,7 +3,7 @@ use bevy::{
     prelude::{Entity, EntityCommands}
 };
 use itertools::Itertools;
-use std::mem::discriminant;
+use std::mem;
 
 use crate::{
     actionfunc::ActionFunc,
@@ -35,7 +35,7 @@ where
 {
     // add each type of action once
     actions.into_iter()
-        .unique_by(|a| discriminant(a))
+        .unique_by(mem::discriminant)
         .for_each(|a| add_action_observer(a, commands));
 }
 

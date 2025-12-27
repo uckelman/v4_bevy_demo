@@ -23,41 +23,42 @@ impl TryFrom<String> for ActionFunc {
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
         static FLIP: LazyLock<Regex> = LazyLock::new(||
-            Regex::new(r#"^flip\((-?\d+)\)$"#).expect("bad regex")
+            Regex::new(r#"^(-?\d+)\)$"#).expect("bad regex")
         );
 
         static ROTATE: LazyLock<Regex> = LazyLock::new(||
-            Regex::new(r#"^rotate\((-?\d+(\.\d+)?)\)$"#).expect("bad regex")
+            Regex::new(r#"^(-?\d+(\.\d+)?)\)$"#).expect("bad regex")
         );
 
-        match s.as_ref() {
+        let (fname, args) = s.split_once('(').unwrap_or((&s, ""));
+
+        match fname {
             "clone" => Ok(ActionFunc::Clone),
             "delete" => Ok(ActionFunc::Delete),
-            s if s.starts_with("flip(") => {
-                if let Some(c) = FLIP.captures(s) && let Some(m) = c.get(1) {
-                    m.as_str()
+            "flip" => {
+                FLIP.captures(args)
+                    .and_then(|c| c.get(1))
+                    .and_then(|m| m.as_str()
                         .parse::<i32>()
-                        .map(|n| ActionFunc::Flip(n))
-                        .map_err(|_| ActionFuncError(s.into()))
-                }
-                else {
-                    Err(ActionFuncError(s.into()))
-                }
+                        .ok()
+                        .map(ActionFunc::Flip)
+                    )
+                    .ok_or(ActionFuncError(s))
             },
-            s if s.starts_with("rotate(") => {
-                if let Some(c) = ROTATE.captures(s) && let Some(m) = c.get(1) {
+            "rotate" => {
+                if let Some(c) = ROTATE.captures(args) && let Some(m) = c.get(1) {
                     m.as_str()
                         .parse::<f32>()
                         .ok()
                         .and_then(Angle::new)
-                        .and_then(|a| Some(ActionFunc::Rotate(a)))
-                        .ok_or_else(|| ActionFuncError(s.into()))
+                        .map(ActionFunc::Rotate)
+                        .ok_or(ActionFuncError(s))
                 }
                 else {
-                    Err(ActionFuncError(s.into()))
+                    Err(ActionFuncError(s))
                 }
             },
-            _ => Err(ActionFuncError(s.into()))
+            _ => Err(ActionFuncError(s))
         }
     }
 }
