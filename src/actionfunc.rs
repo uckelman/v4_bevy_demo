@@ -35,29 +35,23 @@ impl TryFrom<String> for ActionFunc {
         match fname {
             "clone" => Ok(ActionFunc::Clone),
             "delete" => Ok(ActionFunc::Delete),
-            "flip" => {
-                FLIP.captures(args)
-                    .and_then(|c| c.get(1))
-                    .and_then(|m| m.as_str()
-                        .parse::<i32>()
-                        .ok()
-                        .map(ActionFunc::Flip)
-                    )
-                    .ok_or(ActionFuncError(s))
-            },
-            "rotate" => {
-                if let Some(c) = ROTATE.captures(args) && let Some(m) = c.get(1) {
-                    m.as_str()
-                        .parse::<f32>()
-                        .ok()
-                        .and_then(Angle::new)
-                        .map(ActionFunc::Rotate)
-                        .ok_or(ActionFuncError(s))
-                }
-                else {
-                    Err(ActionFuncError(s))
-                }
-            },
+            "flip" => FLIP.captures(args)
+                .and_then(|c| c.get(1))
+                .and_then(|m| m.as_str()
+                    .parse::<i32>()
+                    .ok()
+                    .map(ActionFunc::Flip)
+                )
+                .ok_or(ActionFuncError(s)),
+            "rotate" => ROTATE.captures(args)
+                .and_then(|c| c.get(1))
+                .and_then(|m| m.as_str()
+                    .parse::<f32>()
+                    .ok()
+                    .and_then(Angle::new)
+                    .map(ActionFunc::Rotate)
+                )
+                .ok_or(ActionFuncError(s)),
             _ => Err(ActionFuncError(s))
         }
     }
