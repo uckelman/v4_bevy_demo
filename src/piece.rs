@@ -12,7 +12,9 @@ use bevy::{
 };
 
 use crate::{
+    actionfunc::ActionFunc,
     actions::{add_action_observers},
+    angle::Angle,
     assets::{ImageSource, SpriteHandles},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::PieceType,
@@ -36,7 +38,7 @@ pub struct FaceUp(pub usize);
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Action {
     pub label: String,
-    pub action: String,
+    pub action: ActionFunc,
     pub key: Option<String>
 }
 
@@ -91,12 +93,12 @@ pub fn spawn_piece(
         t,
         Faces(faces),
         FaceUp(0),
-        Actions(p.actions.iter().map(|a| Action { label: a.label.clone(), action: a.action.clone(), key: a.key.clone() }).collect::<Vec<_>>()),
+        Actions(p.actions.iter().map(|a| Action { label: a.label.clone(), action: a.action, key: a.key.clone() }).collect::<Vec<_>>()),
         DespawnOnExit(GameState::Game)
     ));
 
     add_observers(&mut ec);
-    add_action_observers(p.actions.iter().map(|a| &a.action), &mut ec);
+    add_action_observers(p.actions.iter().map(|a| a.action), &mut ec);
 }
 
 fn recolor_on<E: EntityEvent>(

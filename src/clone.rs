@@ -46,7 +46,7 @@ fn do_clone(
     add_observers(&mut ec);
     
     let actions = query.get(entity)?;
-    add_action_observers(actions.0.iter().map(|a| &a.action), &mut ec);
+    add_action_observers(actions.0.iter().map(|a| a.action), &mut ec);
 
     Ok(())
 }

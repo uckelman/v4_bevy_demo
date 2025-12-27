@@ -35,7 +35,9 @@ use bevy::{
 use rand::Rng;
 use std::path::Path;
 
+mod actionfunc;
 mod actions;
+mod angle;
 mod assets;
 mod clone;
 mod config;

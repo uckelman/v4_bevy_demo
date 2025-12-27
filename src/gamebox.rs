@@ -3,6 +3,8 @@ use itertools::Itertools;
 use serde::Deserialize;
 use std::collections::HashMap;
 
+use crate::actionfunc::ActionFunc;
+
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(rename_all(deserialize = "kebab-case"))]
 pub enum Anchor {
@@ -171,7 +173,7 @@ pub enum ImageDefinition {
 #[derive(Clone, Debug, Deserialize)]
 pub struct Action {
     pub label: String,
-    pub action: String,
+    pub action: ActionFunc,
     pub key: Option<String>
 }
 

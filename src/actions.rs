@@ -2,61 +2,53 @@ use bevy::{
     ecs::prelude::Commands,
     prelude::{Entity, EntityCommands}
 };
-use std::collections::HashSet;
+use itertools::Itertools;
+use std::mem::discriminant;
 
 use crate::{
+    actionfunc::ActionFunc,
     clone::{CloneEvent, on_clone},
     delete::{DeleteEvent, on_delete},
     flip::{FlipEvent, on_flip},
     rotate::{RotateEvent, on_rotate}
 };
 
-pub fn add_action_observer<S: AsRef<str>>(
-    name: S,
+pub fn add_action_observer(
+    action: ActionFunc,
     ec: &mut EntityCommands<'_>
 )
 {
-    match name.as_ref() {
-        "clone" => ec.observe(on_clone),
-        "delete" => ec.observe(on_delete),
-        "flip" => ec.observe(on_flip),
-        "rotate" => ec.observe(on_rotate),
-        _ => todo!()
+    match action {
+        ActionFunc::Clone => ec.observe(on_clone),
+        ActionFunc::Delete => ec.observe(on_delete),
+        ActionFunc::Flip(_) => ec.observe(on_flip),
+        ActionFunc::Rotate(_) => ec.observe(on_rotate)
     };
 }
 
-pub fn add_action_observers<S, A>(
+pub fn add_action_observers<A>(
     actions: A,
     mut commands: &mut EntityCommands<'_>
 )
 where
-    S: Into<String> + AsRef<str>,
-    A: IntoIterator<Item = S>
+    A: IntoIterator<Item = ActionFunc>
 {
+    // add each type of action once
     actions.into_iter()
-        .map(|a| match a.as_ref() {
-            a if a.starts_with("flip(") => "flip".to_string(),
-            a if a.starts_with("rotate(") => "rotate".to_string(),
-            a => a.to_string()
-        })
-        .collect::<HashSet<_>>()
-        .into_iter()
+        .unique_by(|a| discriminant(a))
         .for_each(|a| add_action_observer(a, commands));
 }
 
 pub fn trigger_action(
     entity: Entity,
-    name: &str,
+    action: ActionFunc,
     commands: &mut Commands
 )
 {
-    match name {
-        "clone" => commands.trigger(CloneEvent { entity }),
-        "delete" => commands.trigger(DeleteEvent { entity }),
-        "flip(1)" => commands.trigger(FlipEvent { entity, delta: 1 }),
-        "flip(-1)" => commands.trigger(FlipEvent { entity, delta: -1 }),
-        "rotate(60)" => commands.trigger(RotateEvent { entity, dtheta: 60.0 }),
-        "rotate(-60)" => commands.trigger(RotateEvent { entity, dtheta: -60.0 }),
-        _ => todo!()
-    };
+    match action {
+        ActionFunc::Clone => commands.trigger(CloneEvent { entity }),
+        ActionFunc::Delete => commands.trigger(DeleteEvent { entity }),
+        ActionFunc::Flip(delta) => commands.trigger(FlipEvent { entity, delta }),
+        ActionFunc::Rotate(dtheta) => commands.trigger(RotateEvent { entity, dtheta: dtheta.0 })
+    }
 }

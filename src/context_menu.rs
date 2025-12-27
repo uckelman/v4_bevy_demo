@@ -25,6 +25,7 @@ use std::fmt::Debug;
 use tracing::instrument;
 
 use crate::{
+    actionfunc::ActionFunc,
     actions::trigger_action,
     piece::{Action, Actions},
     select::Selected
@@ -49,8 +50,8 @@ pub struct CloseContextMenus;
 #[derive(Component, Default)]
 pub struct ContextMenu;
 
-#[derive(Component, Default)]
-pub struct ContextMenuItem(String);
+#[derive(Component)]
+pub struct ContextMenuItem(ActionFunc);
 
 #[instrument(skip_all)]
 pub fn open_context_menu(
@@ -212,7 +213,7 @@ fn on_item_selection(
     {
         commands.trigger(CloseContextMenus);
         query.iter()
-            .for_each(|entity| trigger_action(entity, &item.0, &mut commands));
+            .for_each(|entity| trigger_action(entity, item.0, &mut commands));
     }
 
     press.propagate(false);
