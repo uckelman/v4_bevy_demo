@@ -61,7 +61,6 @@ use crate::{
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
     config::KeyConfig,
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
-    flip::{FlipForwardKey, FlipBackKey},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
     piece::spawn_piece,
@@ -172,9 +171,6 @@ fn load_input_settings(mut commands: Commands) {
 
     commands.insert_resource(RotateCCWKey(KeyCode::KeyZ));
     commands.insert_resource(RotateCWKey(KeyCode::KeyX));
-
-    commands.insert_resource(FlipBackKey(KeyCode::BracketLeft));
-    commands.insert_resource(FlipForwardKey(KeyCode::BracketRight));
 }
 
 fn cfg_input_pressed<T>(
@@ -401,13 +397,5 @@ Drag lag: im suspecting that the drag event is either being fired less often tha
 // TODO: undo/redo
 // TODO: grid
 // TODO: stacking
-
-// Actions
-// TODO: delete piece
-// TODO: clone piece
-// TODO: rotate piece
-// TODO: context menu text
-// TODO: context menu hotkeys
-
 
 // TODO: make states for lasso select, piece drag, etc

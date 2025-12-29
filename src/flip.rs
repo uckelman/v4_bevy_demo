@@ -5,35 +5,15 @@ use bevy::{
         observer::On,
         prelude::{Commands, Query, With}
     },
-    input::keyboard::KeyCode,
     prelude::{Entity, Resource, Sprite, trace}
 };
 use tracing::instrument;
 
 use crate::{
     assets::ImageSource,
-    config::KeyConfig,
     piece::{Faces, FaceUp},
     select::Selected,
 };
-
-#[derive(Resource)]
-pub struct FlipForwardKey(pub KeyCode);
-
-#[derive(Resource)]
-pub struct FlipBackKey(pub KeyCode);
-
-impl KeyConfig for FlipForwardKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-impl KeyConfig for FlipBackKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
 
 #[derive(EntityEvent)]
 pub struct FlipEvent {
