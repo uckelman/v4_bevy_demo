@@ -25,6 +25,11 @@ use bevy::{
 };
 use tracing::instrument;
 
+use crate::{
+    piece::Actions,
+    actions::trigger_action
+};
+
 #[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Selectable;
 
@@ -83,6 +88,10 @@ pub fn shift_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
 
 pub fn ctrl_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
     inputs.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
+}
+
+pub fn alt_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
+    inputs.any_pressed([KeyCode::AltLeft, KeyCode::AltRight])
 }
 
 pub fn toggle(
@@ -276,4 +285,43 @@ pub fn setup_selection_box(
     let (config, _) = config_store.config_mut::<DefaultGizmoConfigGroup>();
     config.line.width = 5.0;
     config.line.joints = GizmoLineJoint::Miter;
+}
+
+fn keys_for(s: &str) -> Option<(bool, bool, bool, KeyCode)> {
+    match s {
+        "]" => Some((false, false, false, KeyCode::BracketRight)),
+        "Ctrl+C" => Some((false, true, false, KeyCode::KeyC)),
+        "Del" => Some((false, false, false, KeyCode::Delete)),
+        "<" => Some((false, false, false, KeyCode::Comma)),
+        ">" => Some((false, false, false, KeyCode::Period)),
+        _ => None
+    }
+}
+
+#[instrument(skip_all)]
+pub fn handle_key_selection(
+    input: Res<ButtonInput<KeyCode>>,
+    query: Query<(Entity, &Actions), With<Selected>>,
+    mut commands: Commands
+)
+{
+    let shift = shift_pressed(&input);
+    let ctrl = ctrl_pressed(&input);
+    let alt = alt_pressed(&input);
+
+    for (entity, actions) in query.iter() {
+        for a in &actions.0 {
+            if let Some(ak) = &a.key && let Some(akeys) = keys_for(&ak) {
+                let (a_shift, a_ctrl, a_alt, a_key) = akeys;
+
+                if a_shift == shift &&
+                    a_ctrl == ctrl &&
+                    a_alt == alt &&
+                    input.just_pressed(a_key)
+                {
+                    trigger_action(entity, a.action, &mut commands);
+                }
+            }
+        }
+    }
 }

@@ -14,7 +14,7 @@ use bevy::{
         error::Result,
         name::Name,
         observer::On,
-        prelude::{Commands, not, Query, resource_changed, resource_equals, resource_exists, Single, SystemCondition, With}
+        prelude::{any_with_component, Commands, not, Query, resource_changed, resource_equals, resource_exists, Single, SystemCondition, With}
     },
     image::{ImagePlugin, ImageSamplerDescriptor},
     input::{
@@ -61,7 +61,7 @@ use crate::{
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
     config::KeyConfig,
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
-    flip::{FlipForwardKey, FlipBackKey, handle_flip_forward, handle_flip_back},
+    flip::{FlipForwardKey, FlipBackKey},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
     piece::spawn_piece,
@@ -76,7 +76,7 @@ use crate::{
         WheelScaleStep
     },
     raise::RaiseAnchor,
-    select::{clear_selection, draw_selection_rect, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, SelectionRect, setup_selection_box},
+    select::{clear_selection, draw_selection_rect, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selected, SelectionRect, setup_selection_box, handle_key_selection},
     state::GameState,
     title::{SplashScreenTimer, display_title}
 };
@@ -244,8 +244,7 @@ fn game_plugin(app: &mut App) {
                     )
                 ),
 
-                handle_flip_forward.run_if(cfg_input_just_pressed::<FlipForwardKey>),
-                handle_flip_back.run_if(cfg_input_just_pressed::<FlipBackKey>)
+                handle_key_selection.run_if(any_with_component::<Selected>)
             )
             .run_if(in_state(GameState::Game))
         )

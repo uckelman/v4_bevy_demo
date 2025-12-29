@@ -85,25 +85,3 @@ pub fn on_flip(
     let entity = flip.event().event_target();
     do_flip(entity, query, flip.delta)
 }
-
-#[instrument(skip_all)]
-pub fn handle_flip_forward(
-    query: Query<Entity, With<Selected>>,
-    mut commands: Commands
-)
-{
-    trace!("");
-    query.iter()
-        .for_each(|entity| commands.trigger(FlipEvent { entity, delta: 1 }));
-}
-
-#[instrument(skip_all)]
-pub fn handle_flip_back(
-    query: Query<Entity, With<Selected>>,
-    mut commands: Commands
-)
-{
-    trace!("");
-    query.iter()
-        .for_each(|entity| commands.trigger(FlipEvent { entity, delta: -1 }));
-}
