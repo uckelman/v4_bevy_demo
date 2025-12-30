@@ -11,7 +11,11 @@ use bevy::{
         prelude::{Commands, Query, With},
         relationship::RelatedSpawnerCommands
     },
-    input::mouse::AccumulatedMouseScroll,
+    input::{
+        ButtonInput,
+        keyboard::KeyCode,
+        mouse::AccumulatedMouseScroll
+    },
     math::Vec2,
     picking::{
         Pickable,
@@ -168,7 +172,7 @@ fn make_context_item(
                     ..Default::default()
                 },
                 Pickable::IGNORE,
-                Text::new(key.clone()),
+                Text::new(key.to_string()),
                 font.clone(),
                 TextColor(key_color)
             ));
@@ -217,6 +221,18 @@ fn on_item_selection(
     }
 
     press.propagate(false);
+}
+
+#[instrument(skip_all)]
+pub fn trigger_close_context_menus_key(
+    press: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands
+)
+{
+    trace!("");
+    if press.get_just_pressed().next().is_some() {
+        commands.trigger(CloseContextMenus);
+    }
 }
 
 #[instrument(skip_all)]

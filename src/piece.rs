@@ -12,6 +12,7 @@ use bevy::{
 };
 
 use crate::{
+    actionkey::ActionKey,
     actionfunc::ActionFunc,
     actions::{add_action_observers},
     angle::Angle,
@@ -39,7 +40,7 @@ pub struct FaceUp(pub usize);
 pub struct Action {
     pub label: String,
     pub action: ActionFunc,
-    pub key: Option<String>
+    pub key: Option<ActionKey>
 }
 
 #[derive(Clone, Component, Debug, Default)]
@@ -93,7 +94,14 @@ pub fn spawn_piece(
         t,
         Faces(faces),
         FaceUp(0),
-        Actions(p.actions.iter().map(|a| Action { label: a.label.clone(), action: a.action, key: a.key.clone() }).collect::<Vec<_>>()),
+        Actions(p.actions.iter()
+            .map(|a| Action {
+                label: a.label.clone(),
+                action: a.action,
+                key: a.key.clone()
+            })
+            .collect::<Vec<_>>()
+        ),
         DespawnOnExit(GameState::Game)
     ));
 

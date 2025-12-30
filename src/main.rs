@@ -36,6 +36,7 @@ use rand::Rng;
 use std::path::Path;
 
 mod actionfunc;
+mod actionkey;
 mod actions;
 mod angle;
 mod assets;
@@ -60,7 +61,7 @@ mod view_adjust;
 use crate::{
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
     config::KeyConfig,
-    context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
+    context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
     piece::spawn_piece,
@@ -237,6 +238,12 @@ fn game_plugin(app: &mut App) {
                         resource_changed::<AccumulatedMouseScroll>.and(
                             not(resource_equals(AccumulatedMouseScroll::default()))
                         )
+                    )
+                ),
+
+                trigger_close_context_menus_key.run_if(
+                    in_state(ContextMenuState::Open).and(
+                        resource_changed::<ButtonInput<KeyCode>>
                     )
                 ),
 
