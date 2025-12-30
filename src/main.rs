@@ -184,16 +184,6 @@ where
     inputs.pressed(key.code())
 }
 
-fn cfg_input_just_pressed<T>(
-    key: Res<T>,
-    inputs: Res<ButtonInput<KeyCode>>
-) -> bool
-where
-    T: Resource + KeyConfig
-{
-    inputs.just_pressed(key.code())
-}
-
 fn game_plugin(app: &mut App) {
     app
         .add_systems(

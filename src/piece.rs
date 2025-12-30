@@ -98,7 +98,7 @@ pub fn spawn_piece(
             .map(|a| Action {
                 label: a.label.clone(),
                 action: a.action,
-                key: a.key.clone()
+                key: a.key
             })
             .collect::<Vec<_>>()
         ),
