@@ -10,7 +10,7 @@ edition = "2024"
 #opt-level = 3
 
 [dependencies]
-bevy = { version = "0.17", features = ["debug", "gif", "jpeg", "png", "serialize", "webp"] }
+bevy = { version = "0.18", features = ["debug", "gif", "jpeg", "png", "serialize", "webp"] }
 itertools = "0.14.0"
 rand = "0.10"
 regex = "1"
