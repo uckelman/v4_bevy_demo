@@ -102,6 +102,7 @@ pub fn open_context_menu(
             flex_direction: FlexDirection::Column,
             padding: UiRect::all(px(4)),
             border: UiRect::all(px(1)),
+            border_radius: BorderRadius::all(px(4)),
             ..Default::default()
         },
         Pickable {
@@ -109,8 +110,7 @@ pub fn open_context_menu(
             is_hoverable: false
         },
         BorderColor::all(border_color),
-        BorderRadius::all(px(4)),
-        BackgroundColor(bg_color),
+        BackgroundColor(bg_color)
     ))
     .with_children(|parent|
         actions.iter()
@@ -146,10 +146,10 @@ fn make_context_item(
             padding: UiRect::all(px(5)),
             flex_direction: FlexDirection::Row,
             column_gap: Val::Px(font.font_size),
+            border_radius: BorderRadius::all(px(4)),
             ..Default::default()
         },
         BackgroundColor(bg_color),
-        BorderRadius::all(px(4)),
         Pickable::default(),
         children![(
             Node {
