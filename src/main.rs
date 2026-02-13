@@ -32,7 +32,7 @@ use bevy::{
     prelude::{AppExtStates, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
     sprite::Anchor,
 };
-use rand::Rng;
+use rand::RngExt;
 use std::path::Path;
 
 mod actionfunc;
