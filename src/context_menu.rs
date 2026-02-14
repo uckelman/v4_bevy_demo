@@ -22,7 +22,7 @@ use bevy::{
         events::{Out, Over, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, ChildOf, Display, Entity, FlexDirection, JustifySelf, NextState, Node, PositionType, px, Reflect, SpawnRelated, States, Text, TextColor, TextFont, trace, UiRect, Val}
+    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, ChildOf, Display, Entity, FlexDirection, JustifySelf, NextState, Node, PositionType, px, Reflect, States, Text, TextColor, TextFont, trace, UiRect, Val}
 };
 use itertools::Itertools;
 use std::fmt::Debug;
