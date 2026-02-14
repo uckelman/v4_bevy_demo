@@ -10,7 +10,7 @@ use bevy::{
     },
     image::Image,
     math::{URect, UVec2},
-    prelude::{debug, AssetId, Assets, Commands, Resource, TextureAtlas, TextureAtlasLayout}
+    prelude::{AssetId, Assets, Commands, Resource, TextureAtlas, TextureAtlasLayout}
 };
 use itertools::Itertools;
 use std::{
