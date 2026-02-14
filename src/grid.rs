@@ -368,7 +368,8 @@ pub fn on_piece_drop(
 
     if let Ok(mut src_t) = src_query.get_mut(src) {
         // snap piece to center
-        src_t.translation = dst_t.translation;
+        src_t.translation.x = dst_t.translation.x;
+        src_t.translation.y = dst_t.translation.y;
     }
 
     Ok(())
