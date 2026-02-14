@@ -362,8 +362,6 @@ pub fn on_piece_drop(
     let dst = drop.event().event_target();
     let src = drop.event().dropped;
 
-    debug!("{} {}", src, dst);
-
     let dst_t = dst_query.get(dst)?;
 
     if let Ok(mut src_t) = src_query.get_mut(src) {
