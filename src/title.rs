@@ -1,7 +1,7 @@
 use bevy::{
     camera::Camera2d,
     ecs::children,
-    prelude::{AlignItems, Commands, DespawnOnExit, FlexDirection, JustifyContent, Node, OrthographicProjection, Projection, Resource, SpawnRelated, Text, TextFont, Timer, TimerMode, Val}
+    prelude::{AlignItems, Commands, DespawnOnExit, FlexDirection, JustifyContent, Node, OrthographicProjection, Projection, Resource, Text, TextFont, Timer, TimerMode, Val}
 };
 
 use crate::state::GameState;
