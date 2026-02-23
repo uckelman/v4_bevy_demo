@@ -57,11 +57,11 @@ fn do_rotation(
 
 #[instrument(skip_all)]
 pub fn on_rotate(
-    rot: On<RotateEvent>,
+    evt: On<RotateEvent>,
     query: Query<&mut Transform>
 ) -> Result
 {
     trace!("");
-    let entity = rot.event().event_target();
-    do_rotation(entity, query, rot.dtheta)
+    let entity = evt.event().event_target();
+    do_rotation(entity, query, evt.dtheta)
 }

@@ -13,6 +13,7 @@ use bevy::{
 use crate::{
     actions::add_action_observers,
     config::KeyConfig,
+    object::ObjectId,
     piece::{Actions, add_observers},
     select::Selected
 };
@@ -30,19 +31,26 @@ impl KeyConfig for CloneKey {
 
 #[derive(EntityEvent)]
 pub struct CloneEvent {
-    pub entity: Entity
+    pub entity: Entity,
+    pub clone_id: u32
 }
 
 fn do_clone(
     entity: Entity,
+    clone_id: u32,
     query: Query<&Actions>,
     commands: &mut Commands
 ) -> Result
 {
     let mut ec = commands.entity(entity);
-    let mut ec = ec.clone_and_spawn();
 
-    let clone = ec.id();
+    // clone everything but the ObjectId
+    let mut ec = ec.clone_and_spawn_with_opt_out(
+        |builder| { builder.deny::<ObjectId>(); }
+    );
+    // assign the clone's ObjectId
+    ec.insert(ObjectId(clone_id));
+
     add_observers(&mut ec);
     
     let actions = query.get(entity)?;
@@ -53,12 +61,12 @@ fn do_clone(
 
 #[instrument(skip_all)]
 pub fn on_clone(
-    del: On<CloneEvent>,
+    evt: On<CloneEvent>,
     query: Query<&Actions>,
     mut commands: Commands
 ) -> Result
 {
     trace!("");
-    let entity = del.event().event_target();
-    do_clone(entity, query, &mut commands)
+    let entity = evt.event().event_target();
+    do_clone(entity, evt.clone_id, query, &mut commands)
 }

@@ -57,11 +57,12 @@ fn do_flip(
 
 #[instrument(skip_all)]
 pub fn on_flip(
-    flip: On<FlipEvent>,
+    evt: On<FlipEvent>,
     query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
     trace!("");
-    let entity = flip.event().event_target();
-    do_flip(entity, query, flip.delta)
+
+    let entity = evt.event().event_target();
+    do_flip(entity, query, evt.delta)
 }

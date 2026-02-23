@@ -35,6 +35,7 @@ use bevy::{
 use rand::RngExt;
 use std::path::Path;
 
+mod action;
 mod actionfunc;
 mod actionkey;
 mod actions;
@@ -48,6 +49,8 @@ mod drag;
 mod flip;
 mod gamebox;
 mod grid;
+mod log;
+mod object;
 mod piece;
 mod raise;
 mod rotate;
@@ -64,6 +67,8 @@ use crate::{
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
+    log::{handle_redo, handle_undo, ActionLog, RedoKey, UndoKey},
+    object::{NextObjectId, ObjectIdMap},
     piece::spawn_piece,
     view_adjust::{
         handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
@@ -132,7 +137,8 @@ fn splash_plugin(app: &mut App) {
                 display_title,
                 load_assets,
                 load_input_settings,
-                setup_selection_box
+                setup_selection_box,
+                setup_game_resources
             )
         )
         .add_systems(
@@ -170,8 +176,18 @@ fn load_input_settings(mut commands: Commands) {
     commands.insert_resource(ZoomInKey(KeyCode::Equal));
     commands.insert_resource(ZoomOutKey(KeyCode::Minus));
 
-    commands.insert_resource(RotateCCWKey(KeyCode::KeyZ));
-    commands.insert_resource(RotateCWKey(KeyCode::KeyX));
+    commands.insert_resource(RotateCCWKey(KeyCode::KeyC));
+    commands.insert_resource(RotateCWKey(KeyCode::KeyV));
+
+    commands.insert_resource(UndoKey(KeyCode::KeyZ));
+    commands.insert_resource(RedoKey(KeyCode::KeyX));
+}
+
+fn setup_game_resources(mut commands: Commands) {
+    commands.insert_resource(Surface { max_z: 0.0 });
+    commands.insert_resource(ObjectIdMap::default());
+    commands.insert_resource(NextObjectId::default());
+    commands.insert_resource(ActionLog::default());
 }
 
 fn cfg_input_pressed<T>(
@@ -182,6 +198,16 @@ where
     T: Resource + KeyConfig
 {
     inputs.pressed(key.code())
+}
+
+fn cfg_input_just_pressed<T>(
+    key: Res<T>,
+    inputs: Res<ButtonInput<KeyCode>>
+) -> bool
+where
+    T: Resource + KeyConfig
+{
+    inputs.just_pressed(key.code())
 }
 
 fn game_plugin(app: &mut App) {
@@ -237,7 +263,10 @@ fn game_plugin(app: &mut App) {
                     )
                 ),
 
-                handle_key_selection.run_if(any_with_component::<Selected>)
+                handle_key_selection.run_if(any_with_component::<Selected>),
+
+                handle_undo.run_if(cfg_input_just_pressed::<UndoKey>),
+                handle_redo.run_if(cfg_input_just_pressed::<RedoKey>)
             )
             .run_if(in_state(GameState::Game))
         )
@@ -307,6 +336,8 @@ fn display_game(
     sprite_handles: Res<SpriteHandles>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut surface: ResMut<Surface>,
+    mut next_object_id: ResMut<NextObjectId>,
     gamebox: Res<GameBox>,
 ) -> Result
 {
@@ -318,10 +349,7 @@ fn display_game(
         .observe(selection_rect_drag_end)
         .observe(trigger_close_context_menus_press);
 
-    let mut surface = Surface { max_z: 0.0 };
-
     // create surface
-
     let mut stack = vec![(&gamebox.surface, Transform::IDENTITY)];
 
     loop {
@@ -360,10 +388,9 @@ fn display_game(
 
         let t = Transform::from_xyz(x, y, surface.max_z);
 
-        spawn_piece(p, t, &sprite_handles, &mut commands);
+        spawn_piece(p, t, &sprite_handles, &mut next_object_id, &mut commands);
     }
 
-    commands.insert_resource(surface);
     commands.insert_resource(RaiseAnchor::default());
     commands.insert_resource(SelectionRect::default());
 

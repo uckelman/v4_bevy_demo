@@ -21,19 +21,23 @@ use bevy::{
         events::{Drag, DragEnd, DragStart, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{Color, debug, Entity, GlobalTransform, Isometry2d, trace, Transform, Resource, Vec3Swizzles}
+    prelude::{Color, Entity, GlobalTransform, Isometry2d, trace, Transform, Resource, Vec3Swizzles}
 };
 use tracing::instrument;
 
 use crate::{
-    piece::Actions,
-    actions::trigger_action
+    action::Action,
+    actionfunc::ActionFunc,
+    actions::make_action,
+    log::{ActionLog, handle_do},
+    object::{NextObjectId, ObjectId, ObjectIdMap},
+    piece::Actions
 };
 
 #[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Selectable;
 
-// FIXME: this breaks cloning somehow
+// FIXME: this messes with cloning because Selected gets cloned
 //#[derive(Clone, Component, Copy, Debug, Default)]
 #[derive(Component, Debug, Default)]
 pub struct Selected;
@@ -290,7 +294,10 @@ pub fn setup_selection_box(
 #[instrument(skip_all)]
 pub fn handle_key_selection(
     input: Res<ButtonInput<KeyCode>>,
-    query: Query<(Entity, &Actions), With<Selected>>,
+    query: Query<(Entity, &ObjectId, &Actions), With<Selected>>,
+    mut log: ResMut<ActionLog>,
+    objmap: Res<ObjectIdMap>,
+    mut next_object_id: ResMut<NextObjectId>,
     mut commands: Commands
 )
 {
@@ -298,7 +305,12 @@ pub fn handle_key_selection(
     let alt = alt_pressed(&input);
     let shift = shift_pressed(&input);
 
-    for (entity, actions) in query.iter() {
+
+//    let mut cmds = vec![]; 
+
+    let mut g = vec![];
+
+    for (entity, piece_id, actions) in query.iter() {
         for a in &actions.0 {
             if let Some(ak) = &a.key &&
                 ak.ctrl == ctrl &&
@@ -306,8 +318,46 @@ pub fn handle_key_selection(
                 ak.shift == shift &&
                 input.just_pressed(ak.key)
             {
-                trigger_action(entity, a.action, &mut commands);
+                g.push(make_action(
+                    entity,
+                    piece_id.0,
+                    a.action,
+                    &mut next_object_id
+                ));
             }
         }
     }
+
+    match g.len() {
+        0 => {},
+        1 => {
+            handle_do(&mut log, &objmap, g.pop().unwrap(), &mut commands);
+        },
+        _ => {
+            handle_do(&mut log, &objmap, Action::Group(g), &mut commands);
+        }
+    }
+
+/*
+// TODO: better to look up actions by key?
+
+    let events = query.iter()
+        .flat_map(|(entity, actions)| 
+            actions.0.iter()
+                .filter(|a| if let Some(ak) = &a.key &&
+                    ak.ctrl == ctrl &&
+                    ak.alt == alt &&
+                    ak.shift == shift &&
+                    input.just_pressed(ak.key) { true } else { false }
+                )
+                .map(move |a| make_event(entity, &a.action))
+        )
+        .collect::<Vec<_>>();
+
+    match events.len() {
+        0 => {},
+        1 => commands.trigger(events[0]),
+        _ => commands.trigger(GroupEvent(events))
+    }
+*/
 }

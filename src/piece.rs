@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{
-        change_detection::Res,
+        change_detection::{Res, ResMut},
         component::Component,
         event::EntityEvent,
         name::Name,
@@ -8,7 +8,7 @@ use bevy::{
         prelude::{Commands, EntityCommands, Query}
     },
     picking::Pickable,
-    prelude::{Color, DespawnOnExit, Sprite, trace, Transform}
+    prelude::{Color, DespawnOnExit, Resource, Sprite, trace, Transform}
 };
 
 use crate::{
@@ -19,6 +19,7 @@ use crate::{
     assets::{ImageSource, SpriteHandles},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::PieceType,
+    object::{NextObjectId, ObjectId},
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
     state::GameState,
@@ -65,6 +66,7 @@ pub fn spawn_piece(
     p: &PieceType,
     t: Transform,
     sprite_handles: &Res<SpriteHandles>,
+    next_object_id: &mut ResMut<NextObjectId>,
     commands: &mut Commands
 )
 {
@@ -84,8 +86,12 @@ pub fn spawn_piece(
 
     trace!("piece {}", t.translation.z);
 
+    let pid = next_object_id.0;
+    next_object_id.0 += 1;
+
     let mut ec = commands.spawn((
         Piece,
+        ObjectId(pid),
         Name::from(p.name.as_ref()),
         Pickable::default(),
         Selectable,

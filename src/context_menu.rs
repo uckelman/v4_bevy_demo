@@ -29,8 +29,11 @@ use std::fmt::Debug;
 use tracing::instrument;
 
 use crate::{
+    action,
     actionfunc::ActionFunc,
-    actions::trigger_action,
+    actions::make_action,
+    log::{ActionLog, handle_do},
+    object::{NextObjectId, ObjectId, ObjectIdMap},
     piece::{Action, Actions},
     select::Selected
 };
@@ -206,7 +209,10 @@ pub fn highlight_on_hover<T: Debug + Clone + Reflect>(
 fn on_item_selection(
     mut press: On<Pointer<Press>>,
     menu_items: Query<&ContextMenuItem>,
-    query: Query<Entity, With<Selected>>,
+    query: Query<(Entity, &ObjectId), With<Selected>>,
+    mut log: ResMut<ActionLog>,
+    objmap: Res<ObjectIdMap>,
+    mut next_object_id: ResMut<NextObjectId>,
     mut commands: Commands
 )
 {
@@ -216,8 +222,18 @@ fn on_item_selection(
         && press.button == PointerButton::Primary
     {
         commands.trigger(CloseContextMenus);
-        query.iter()
-            .for_each(|entity| trigger_action(entity, item.0, &mut commands));
+        let mut g = query.iter()
+            .map(|(entity, pid)| make_action(
+                entity,
+                pid.0,
+                item.0,
+                &mut next_object_id
+            ))
+            .collect::<Vec<_>>();
+
+        if !g.is_empty() {
+            handle_do(&mut log, &objmap, action::Action::Group(g).flatten(), &mut commands);
+        }
     }
 
     press.propagate(false);

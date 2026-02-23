@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{
-        event::EntityEvent,
+        event::{EntityEvent, Event},
         observer::On,
         prelude::Commands
     },
@@ -10,6 +10,7 @@ use bevy::{
 
 use crate::{
     config::KeyConfig,
+    action::PieceData
 };
 
 use tracing::instrument;
@@ -28,6 +29,11 @@ pub struct DeleteEvent {
     pub entity: Entity
 }
 
+#[derive(Event)]
+pub struct CreateEvent {
+    pub pd: PieceData
+}
+
 fn do_delete(
     entity: Entity,
     commands: &mut Commands
@@ -38,11 +44,11 @@ fn do_delete(
 
 #[instrument(skip_all)]
 pub fn on_delete(
-    del: On<DeleteEvent>,
+    evt: On<DeleteEvent>,
     mut commands: Commands
 )
 {
     trace!("");
-    let entity = del.event().event_target();
+    let entity = evt.event().event_target();
     do_delete(entity, &mut commands);
 }
