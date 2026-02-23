@@ -7,7 +7,7 @@ use bevy::{
 };
 
 use crate::{
-    clone::CloneEvent,
+    clone::{CloneEvent, DecloneEvent},
     delete::{CreateEvent, DeleteEvent},
     flip::FlipEvent,
     object::ObjectIdMap,
@@ -54,8 +54,9 @@ impl Action {
                 entity: *objmap.0.get(piece_id).unwrap(),
                 dtheta: *dtheta
             }),
-            Self::Create(pd) => commands.trigger(CreateEvent { pd: pd.clone() }),
-            // TODO
+            Self::Create(pd) => commands.trigger(CreateEvent {
+                pd: pd.clone()
+            }),
             Self::Delete(pd) => commands.trigger(DeleteEvent {
                 entity: *objmap.0.get(&pd.piece_id).unwrap()
             }),
@@ -86,8 +87,10 @@ impl Action {
             Self::Create(pd) => commands.trigger(DeleteEvent {
                 entity: *objmap.0.get(&pd.piece_id).unwrap()
             }),
-            Self::Delete(pd) => commands.trigger(CreateEvent { pd: pd.clone() }),
-            Self::Clone(piece_id, _) => commands.trigger(DeleteEvent {
+            Self::Delete(pd) => commands.trigger(CreateEvent {
+                pd: pd.clone()
+            }),
+            Self::Clone(piece_id, _) => commands.trigger(DecloneEvent {
                 entity: *objmap.0.get(piece_id).unwrap()
             }),
             Self::Group(v) => v.iter()

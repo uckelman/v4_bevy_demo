@@ -45,21 +45,6 @@ where
         .for_each(|a| add_action_observer(a, commands));
 }
 
-pub fn trigger_action(
-    entity: Entity,
-    action: ActionFunc,
-    commands: &mut Commands
-)
-{
-    match action {
-        ActionFunc::Clone => commands.trigger(CloneEvent { entity }),
-        ActionFunc::Delete => commands.trigger(DeleteEvent { entity }),
-        ActionFunc::Flip(delta) => commands.trigger(FlipEvent { entity, delta }),
-        ActionFunc::Rotate(dtheta) => commands.trigger(RotateEvent { entity, dtheta: dtheta.0 })
-    }
-}
-*/
-
 pub fn make_action(
     entity: Entity,
     pid: u32, 
@@ -73,9 +58,16 @@ pub fn make_action(
             next_object_id.0 += 1;
             Action::Clone(clone_id, pid)
         },
-        ActionFunc::Delete => Action::Delete(PieceData {
-            piece_id: pid
-        }),
+        ActionFunc::Delete => {
+            Action::Delete(PieceData {
+                piece_id: pid,
+/*
+                location:
+                angle:
+                face_up:
+*/
+            })
+        },
         ActionFunc::Flip(delta) => Action::Flip(pid, delta),
         ActionFunc::Rotate(dtheta) => Action::Rotate(pid, dtheta.0)
     }

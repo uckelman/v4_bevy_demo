@@ -337,27 +337,4 @@ pub fn handle_key_selection(
             handle_do(&mut log, &objmap, Action::Group(g), &mut commands);
         }
     }
-
-/*
-// TODO: better to look up actions by key?
-
-    let events = query.iter()
-        .flat_map(|(entity, actions)| 
-            actions.0.iter()
-                .filter(|a| if let Some(ak) = &a.key &&
-                    ak.ctrl == ctrl &&
-                    ak.alt == alt &&
-                    ak.shift == shift &&
-                    input.just_pressed(ak.key) { true } else { false }
-                )
-                .map(move |a| make_event(entity, &a.action))
-        )
-        .collect::<Vec<_>>();
-
-    match events.len() {
-        0 => {},
-        1 => commands.trigger(events[0]),
-        _ => commands.trigger(GroupEvent(events))
-    }
-*/
 }

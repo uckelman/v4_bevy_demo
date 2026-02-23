@@ -35,6 +35,11 @@ pub struct CloneEvent {
     pub clone_id: u32
 }
 
+#[derive(EntityEvent)]
+pub struct DecloneEvent {
+    pub entity: Entity
+}
+
 fn do_clone(
     entity: Entity,
     clone_id: u32,
@@ -69,4 +74,23 @@ pub fn on_clone(
     trace!("");
     let entity = evt.event().event_target();
     do_clone(entity, evt.clone_id, query, &mut commands)
+}
+
+fn do_declone(
+    entity: Entity,
+    commands: &mut Commands
+)
+{
+    commands.entity(entity).despawn();
+}
+
+#[instrument(skip_all)]
+pub fn on_declone(
+    evt: On<DecloneEvent>,
+    mut commands: Commands
+)
+{
+    trace!("");
+    let entity = evt.event().event_target();
+    do_declone(entity, &mut commands);
 }
