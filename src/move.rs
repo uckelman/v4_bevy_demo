@@ -85,7 +85,7 @@ pub fn on_move_undo(
     evt: On<UndoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<&mut Transform>
+    query: Query<&mut Transform>
 ) -> Result
 {
     apply_move(evt.entity, edit, objmap, query, -1.0)
@@ -96,7 +96,7 @@ pub fn on_move_redo(
     evt: On<RedoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<&mut Transform>
+    query: Query<&mut Transform>
 ) -> Result
 {
     apply_move(evt.entity, edit, objmap, query, 1.0)

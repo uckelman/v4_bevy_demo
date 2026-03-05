@@ -47,7 +47,7 @@ fn do_flip(
     let len = faces.0.len() as i32;
     up.0 = (((up.0 as i32 + delta) % len + len) % len) as usize;
 
-    set_face(sprite, faces, &up);
+    set_face(sprite, faces, up);
 }
 
 #[derive(Clone, Copy, EntityEvent)]

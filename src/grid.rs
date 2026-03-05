@@ -352,7 +352,7 @@ fn recolor_cell_on<E: EntityEvent>(
 
 #[instrument(skip_all)]
 pub fn on_piece_drop(
-    mut drop: On<Pointer<DragDrop>>,
+    drop: On<Pointer<DragDrop>>,
     dst_query: Query<&Transform, With<HexGridCell>>,
     mut src_query: Query<&mut Transform, (With<Piece>, Without<HexGridCell>)>,
 ) -> Result

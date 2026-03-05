@@ -8,7 +8,6 @@ use bevy::{
         prelude::{Commands, Query}
     },
     input::keyboard::KeyCode,
-    math::Vec2,
     prelude::{Entity, Resource, trace}
 };
 
@@ -17,8 +16,7 @@ use crate::{
     config::KeyConfig,
     log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoCloneEvent, UndoCloneEvent},
     object::{NextObjectId, ObjectId, ObjectIdMap},
-    piece::{Actions, add_observers},
-    select::Selected
+    piece::{Actions, add_observers}
 };
 
 use tracing::instrument;

@@ -106,7 +106,7 @@ pub fn on_rotate_undo(
     evt: On<UndoRotateEvent>,
     edit: Query<&RotateEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<&mut Transform>
+    query: Query<&mut Transform>
 ) -> Result
 {
     apply_rotate(evt.entity, edit, objmap, query, -1.0)
@@ -117,7 +117,7 @@ pub fn on_rotate_redo(
     evt: On<RedoRotateEvent>,
     edit: Query<&RotateEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<&mut Transform>
+    query: Query<&mut Transform>
 ) -> Result
 {
     apply_rotate(evt.entity, edit, objmap, query, 1.0)
