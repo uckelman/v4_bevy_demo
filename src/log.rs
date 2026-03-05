@@ -42,55 +42,6 @@ impl KeyConfig for UndoKey {
     }
 }
 
-/*
-#[instrument(skip_all)]
-pub fn handle_do(
-    mut log: &mut ResMut<ActionLog>,
-    objmap: &Res<ObjectIdMap>,
-    a: Action,
-    commands: &mut Commands
-)
-{
-    debug!("");
-
-    log.undone.clear();
-    a.commit(&objmap, commands);
-    log.done.push(a);
-}
-
-#[instrument(skip_all)]
-pub fn handle_undo(
-    mut log: ResMut<ActionLog>,
-    objmap: Res<ObjectIdMap>,
-    mut commands: Commands
-)
-{
-    debug!("");
-
-    if let Some(a) = log.done.pop() {
-        debug!("undoing");
-        a.revert(&objmap, &mut commands);
-        log.undone.push(a);
-    }
-}
-
-#[instrument(skip_all)]
-pub fn handle_redo(
-    mut log: ResMut<ActionLog>,
-    objmap: Res<ObjectIdMap>,
-    mut commands: Commands
-)
-{
-    debug!("");
-
-    if let Some(a) = log.undone.pop() {
-        debug!("redoing");
-        a.commit(&objmap, &mut commands);
-        log.done.push(a);
-    }
-}
-*/
-
 #[derive(EntityEvent)]
 pub struct UndoEvent {
     pub entity: Entity
