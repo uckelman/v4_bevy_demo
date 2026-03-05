@@ -20,6 +20,7 @@ use tracing::instrument;
 use crate::{
     Surface,
     context_menu::ContextMenuState,
+    r#move::MoveEvent,
     raise::raise_piece,
     select::Selected,
     util::AsOrthographicProjection
@@ -121,7 +122,7 @@ pub fn on_piece_drag(
 #[instrument(skip_all)]
 pub fn on_piece_drag_end(
     drag: On<Pointer<DragEnd>>,
-    query: Query<Entity, With<DragAnchor>>,
+    query: Query<(Entity, &Transform, &DragAnchor)>,
     context_menu_state: Res<State<ContextMenuState>>,
     mut commands: Commands
 )
@@ -135,7 +136,9 @@ pub fn on_piece_drag_end(
     if drag.button == PointerButton::Primary {
         // remove the drag anchor, make piece pickable again
         query.iter()
-            .for_each(|entity| {
+            .for_each(|(entity, t, anchor)| {
+                commands.trigger(MoveEvent { entity, delta: t.translation - anchor.pos });
+
                 commands.entity(entity)
                     .remove::<DragAnchor>()
                     .insert(Pickable::default());

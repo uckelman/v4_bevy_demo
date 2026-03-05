@@ -1,19 +1,27 @@
 use bevy::{
     ecs::{
+        change_detection::Res,
+        component::Component,
+        error::Result,
         event::{EntityEvent, Event},
+        name::Name,
         observer::On,
-        prelude::Commands
+        prelude::{Commands, Query, With}
     },
     input::keyboard::KeyCode,
-    prelude::{Entity, Resource, trace}
+    math::Vec3,
+    prelude::{Entity, Resource, trace, Transform}
 };
+use tracing::instrument;
 
 use crate::{
+    assets::SpriteHandles,
     config::KeyConfig,
-    action::PieceData
+    gamebox::GameBox,
+    log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoDeleteEvent, UndoDeleteEvent},
+    object::{ObjectId, ObjectIdMap},
+    piece::{Actions, Action, Faces, FaceUp, Piece, PieceTypeId, spawn_piece}
 };
-
-use tracing::instrument;
 
 #[derive(Resource)]
 pub struct DeleteKey(pub KeyCode);
@@ -24,16 +32,6 @@ impl KeyConfig for DeleteKey {
     }
 }
 
-#[derive(EntityEvent)]
-pub struct DeleteEvent {
-    pub entity: Entity
-}
-
-#[derive(Event)]
-pub struct CreateEvent {
-    pub pd: PieceData
-}
-
 fn do_delete(
     entity: Entity,
     commands: &mut Commands
@@ -42,13 +40,95 @@ fn do_delete(
     commands.entity(entity).despawn();
 }
 
+#[derive(Clone, Copy, EntityEvent)]
+pub struct DeleteEvent {
+    pub entity: Entity
+}
+
+#[derive(Component)]
+pub struct DeleteEdit {
+    pub object_id: u32,
+    pub ptype_id: u32,
+    pub location: Vec3,
+    pub angle: f32,
+    pub faceup: usize
+}
+
+// TODO: should pieces have an id for their piece type?
+// or should we be able to get the face images from the piece somehow?
+
 #[instrument(skip_all)]
 pub fn on_delete(
     evt: On<DeleteEvent>,
+    piece_query: Query<(&ObjectId, &PieceTypeId, &Transform, &FaceUp)>,
+    mut edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
     mut commands: Commands
-)
+) -> Result
 {
     trace!("");
+
     let entity = evt.event().event_target();
+    let (object_id, ptype_id, t, faceup) = piece_query.get(entity)?;
+
+    let (edits_entity, mut edits, mut edit_index) = edit_query.single_mut()?;
+    handle_do(&mut edits, &mut edit_index, &mut commands);
+
+    commands.spawn((
+        EditOf(edits_entity),
+        EditType::Delete,
+        DeleteEdit {
+            object_id: object_id.0,
+            ptype_id: ptype_id.0,
+            location: t.translation,
+            angle: t.rotation.to_axis_angle().1,
+            faceup: faceup.0
+        }
+    ));
+
     do_delete(entity, &mut commands);
+    Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn on_delete_undo(
+    evt: On<UndoDeleteEvent>,
+    edit: Query<&DeleteEdit>,
+    gamebox: Res<GameBox>,
+    sprite_handles: Res<SpriteHandles>,
+    mut commands: Commands
+) -> Result
+{
+    // get the edit
+    let Ok(del) = edit.get(evt.entity) else { return Ok(()); };
+
+    // apply the change
+    spawn_piece(
+        del.object_id,
+        del.ptype_id,
+        &gamebox.piece[del.ptype_id as usize],
+        del.location,
+        del.angle,
+        del.faceup,
+        &sprite_handles,
+        &mut commands
+    );
+
+    Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn on_delete_redo(
+    evt: On<RedoDeleteEvent>,
+    edit: Query<&DeleteEdit>,
+    objmap: Res<ObjectIdMap>,
+    mut commands: Commands
+) -> Result
+{
+    // get the edit
+    let Ok(del) = edit.get(evt.entity) else { return Ok(()); };
+    // get the source entity
+    let entity = *objmap.0.get(&del.object_id).unwrap();
+    // apply the change
+    do_delete(entity, &mut commands);
+    Ok(())
 }

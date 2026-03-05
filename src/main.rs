@@ -35,7 +35,6 @@ use bevy::{
 use rand::RngExt;
 use std::path::Path;
 
-mod action;
 mod actionfunc;
 mod actionkey;
 mod actions;
@@ -46,10 +45,12 @@ mod config;
 mod context_menu;
 mod delete;
 mod drag;
+mod edit;
 mod flip;
 mod gamebox;
 mod grid;
 mod log;
+mod r#move;
 mod object;
 mod piece;
 mod raise;
@@ -63,11 +64,16 @@ mod view_adjust;
 
 use crate::{
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
+    clone::{on_clone_redo, on_clone_undo},
     config::KeyConfig,
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
+    edit::on_edit,
+    delete::{on_delete_redo, on_delete_undo},
+    flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
-    log::{handle_redo, handle_undo, ActionLog, RedoKey, UndoKey},
+    log::{EditIndex, Edits, handle_redo, handle_undo, on_redo, on_undo, RedoKey, UndoKey},
+    r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
     piece::spawn_piece,
     view_adjust::{
@@ -81,6 +87,7 @@ use crate::{
         WheelScaleStep
     },
     raise::RaiseAnchor,
+    rotate::{on_rotate_redo, on_rotate_undo},
     select::{clear_selection, draw_selection_rect, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selected, SelectionRect, setup_selection_box, handle_key_selection},
     state::GameState,
     title::{SplashScreenTimer, display_title}
@@ -187,8 +194,14 @@ fn setup_game_resources(mut commands: Commands) {
     commands.insert_resource(Surface { max_z: 0.0 });
     commands.insert_resource(ObjectIdMap::default());
     commands.insert_resource(NextObjectId::default());
-    commands.insert_resource(ActionLog::default());
+
+    commands.spawn((
+        EditIndex::default(),
+        Edits::default()
+    ));
 }
+
+// TODO: check that there is no selection for view keys
 
 fn cfg_input_pressed<T>(
     key: Res<T>,
@@ -272,6 +285,21 @@ fn game_plugin(app: &mut App) {
         )
         .add_observer(open_context_menu)
         .add_observer(close_context_menus)
+        .add_observer(on_edit)
+        .add_observer(on_undo)
+        .add_observer(on_redo)
+        .add_observer(on_clone_undo)
+        .add_observer(on_clone_redo)
+        .add_observer(on_delete_undo)
+        .add_observer(on_delete_redo)
+        .add_observer(on_flip_undo)
+        .add_observer(on_flip_redo)
+//        .add_observer(on_group_undo)
+//        .add_observer(on_group_redo)
+        .add_observer(on_move_undo)
+        .add_observer(on_move_redo)
+        .add_observer(on_rotate_undo)
+        .add_observer(on_rotate_redo)
         .add_observer(pick_dbg);
 }
 
@@ -380,15 +408,25 @@ fn display_game(
     // create pieces
     let mut rng = rand::rng();
 
-    for p in &gamebox.piece {
+    for (i, p) in gamebox.piece.iter().enumerate() {
+        let oid = next_object_id.0;
+        next_object_id.0 += 1;
+
         let x = rng.random_range(-500.0..=500.0);
         let y = rng.random_range(-500.0..=500.0);
 
         surface.max_z += 1.0;
 
-        let t = Transform::from_xyz(x, y, surface.max_z);
-
-        spawn_piece(p, t, &sprite_handles, &mut next_object_id, &mut commands);
+        spawn_piece(
+            oid,
+            i as u32,
+            p,
+            Vec3::new(x, y, surface.max_z),
+            0.0,
+            0,
+            &sprite_handles,
+            &mut commands
+        );
     }
 
     commands.insert_resource(RaiseAnchor::default());

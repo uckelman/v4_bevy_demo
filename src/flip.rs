@@ -1,5 +1,7 @@
 use bevy::{
     ecs::{
+        change_detection::Res,
+        component::Component,
         error::Result,
         event::EntityEvent,
         observer::On,
@@ -11,15 +13,11 @@ use tracing::instrument;
 
 use crate::{
     assets::ImageSource,
+    log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoFlipEvent, UndoFlipEvent},
+    object::{ObjectId, ObjectIdMap},
     piece::{Faces, FaceUp},
     select::Selected,
 };
-
-#[derive(EntityEvent)]
-pub struct FlipEvent {
-    pub entity: Entity,
-    pub delta: i32
-}
 
 fn set_face(
     sprite: &mut Sprite,
@@ -40,29 +38,93 @@ fn set_face(
 }
 
 fn do_flip(
-    entity: Entity,
-    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>,
+    faces: &Faces,
+    up: &mut FaceUp,
+    sprite: &mut Sprite,
     delta: i32
-) -> Result
+)
 {
-    let (faces, mut up, mut sprite) = query.get_mut(entity)?;
-
     let len = faces.0.len() as i32;
     up.0 = (((up.0 as i32 + delta) % len + len) % len) as usize;
 
-    set_face(&mut sprite, faces, &up);
+    set_face(sprite, faces, &up);
+}
 
-    Ok(())
+#[derive(Clone, Copy, EntityEvent)]
+pub struct FlipEvent {
+    pub entity: Entity,
+    pub delta: i32
+}
+
+#[derive(Component)]
+pub struct FlipEdit {
+    pub object_id: u32,
+    pub delta: i32
 }
 
 #[instrument(skip_all)]
 pub fn on_flip(
     evt: On<FlipEvent>,
-    query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
+    mut piece_query: Query<(&ObjectId, &Faces, &mut FaceUp, &mut Sprite)>,
+    mut edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
+    mut commands: Commands
 ) -> Result
 {
     trace!("");
 
     let entity = evt.event().event_target();
-    do_flip(entity, query, evt.delta)
+    let (object_id, faces, mut up, mut sprite) = piece_query.get_mut(entity)?;
+
+    let (edits_entity, mut edits, mut edit_index) = edit_query.single_mut()?;
+    handle_do(&mut edits, &mut edit_index, &mut commands);
+
+    commands.spawn((
+        EditOf(edits_entity),
+        EditType::Flip,
+        FlipEdit { object_id: object_id.0, delta: evt.delta }
+    ));
+
+    do_flip(faces, &mut up, &mut sprite, evt.delta);
+    Ok(())
+}
+
+fn apply_flip(
+    event_target: Entity,
+    edit: Query<&FlipEdit>,
+    objmap: Res<ObjectIdMap>,
+    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>,
+    dir: i32
+) -> Result
+{
+    // get the edit
+    let Ok(flip) = edit.get(event_target) else { return Ok(()); };
+    // get the entity being edited
+    let entity = *objmap.0.get(&flip.object_id).unwrap();
+    // get the components of the entity being edited
+    let (faces, mut up, mut sprite) = query.get_mut(entity)?;
+    // apply the change to the entity
+    do_flip(faces, &mut up, &mut sprite, dir * flip.delta);
+    Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn on_flip_undo(
+    evt: On<UndoFlipEvent>,
+    edit: Query<&FlipEdit>,
+    objmap: Res<ObjectIdMap>,
+    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
+) -> Result
+{
+    apply_flip(evt.entity, edit, objmap, query, -1)
+}
+
+#[instrument(skip_all)]
+pub fn on_flip_redo(
+    evt: On<RedoFlipEvent>,
+    edit: Query<&FlipEdit>,
+    objmap: Res<ObjectIdMap>,
+    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
+) -> Result
+{
+    apply_flip(evt.entity, edit, objmap, query, 1)
 }

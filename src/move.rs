@@ -7,58 +7,36 @@ use bevy::{
         observer::On,
         prelude::{Commands, Query}
     },
-    input::keyboard::KeyCode,
-    prelude::{Entity, Resource, trace, Transform}
+    math::Vec3,
+    prelude::{Entity, trace, Transform}
 };
 use tracing::instrument;
 
 use crate::{
-    config::KeyConfig,
-    log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoRotateEvent, UndoRotateEvent},
+    log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoMoveEvent, UndoMoveEvent},
     object::{ObjectId, ObjectIdMap}
 };
 
-#[derive(Resource)]
-pub struct RotateCWKey(pub KeyCode);
-
-#[derive(Resource)]
-pub struct RotateCCWKey(pub KeyCode);
-
-impl KeyConfig for RotateCWKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-impl KeyConfig for RotateCCWKey {
-    fn code(&self) -> KeyCode {
-        self.0
-    }
-}
-
-fn do_rotate(t: &mut Transform, dtheta: f32)
+fn do_move(t: &mut Transform, delta: Vec3)
 {
-    use std::f32::consts::PI;
-    const DEG_TO_RAD: f32 = PI / 180.0;
-
-    t.rotate_local_z(dtheta * DEG_TO_RAD);
+    t.translation += delta;
 }
 
 #[derive(Clone, Copy, EntityEvent)]
-pub struct RotateEvent {
+pub struct MoveEvent {
     pub entity: Entity,
-    pub dtheta: f32
+    pub delta: Vec3
 }
 
 #[derive(Component)]
-pub struct RotateEdit {
+pub struct MoveEdit {
     pub object_id: u32,
-    pub dtheta: f32
+    pub delta: Vec3
 }
 
 #[instrument(skip_all)]
-pub fn on_rotate(
-    evt: On<RotateEvent>,
+pub fn on_move(
+    evt: On<MoveEvent>,
     mut piece_query: Query<(&ObjectId, &mut Transform)>,
     mut edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
     mut commands: Commands
@@ -74,51 +52,52 @@ pub fn on_rotate(
 
     commands.spawn((
         EditOf(edits_entity),
-        EditType::Rotate,
-        RotateEdit { object_id: object_id.0, dtheta: evt.dtheta }
+        EditType::Move,
+        MoveEdit { object_id: object_id.0, delta: evt.delta }
     ));
 
-    do_rotate(&mut t, evt.dtheta);
+// TODO: need separate listeners for post-drag, pure move
+//    do_move(&mut t, evt.delta);
     Ok(())
 }
 
-fn apply_rotate(
+fn apply_move(
     event_target: Entity,
-    edit: Query<&RotateEdit>,
+    edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
     mut query: Query<&mut Transform>,
     dir: f32
 ) -> Result
 {
     // get the edit
-    let Ok(rot) = edit.get(event_target) else { return Ok(()); };
+    let Ok(mov) = edit.get(event_target) else { return Ok(()); };
     // get the entity being edited
-    let entity = *objmap.0.get(&rot.object_id).unwrap();
+    let entity = *objmap.0.get(&mov.object_id).unwrap();
     // get the components of the entity being edited
     let mut t = query.get_mut(entity)?;
     // apply the change to the entity
-    do_rotate(&mut t, dir * rot.dtheta);
+    do_move(&mut t, dir * mov.delta);
     Ok(())
 }
 
 #[instrument(skip_all)]
-pub fn on_rotate_undo(
-    evt: On<UndoRotateEvent>,
-    edit: Query<&RotateEdit>,
+pub fn on_move_undo(
+    evt: On<UndoMoveEvent>,
+    edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
     mut query: Query<&mut Transform>
 ) -> Result
 {
-    apply_rotate(evt.entity, edit, objmap, query, -1.0)
+    apply_move(evt.entity, edit, objmap, query, -1.0)
 }
 
 #[instrument(skip_all)]
-pub fn on_rotate_redo(
-    evt: On<RedoRotateEvent>,
-    edit: Query<&RotateEdit>,
+pub fn on_move_redo(
+    evt: On<RedoMoveEvent>,
+    edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
     mut query: Query<&mut Transform>
 ) -> Result
 {
-    apply_rotate(evt.entity, edit, objmap, query, 1.0)
+    apply_move(evt.entity, edit, objmap, query, 1.0)
 }

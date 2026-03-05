@@ -7,6 +7,7 @@ use bevy::{
         observer::On,
         prelude::{Commands, EntityCommands, Query}
     },
+    math::{Quat, Vec3},
     picking::Pickable,
     prelude::{Color, DespawnOnExit, Resource, Sprite, trace, Transform}
 };
@@ -19,6 +20,7 @@ use crate::{
     assets::{ImageSource, SpriteHandles},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::PieceType,
+    r#move::on_move,
     object::{NextObjectId, ObjectId},
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
@@ -28,6 +30,9 @@ use crate::{
 
 #[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Piece;
+
+#[derive(Clone, Component, Debug, Default)]
+pub struct PieceTypeId(pub u32);
 
 // TODO: should this reference a piece type?
 #[derive(Clone, Component, Debug, Default)]
@@ -59,14 +64,18 @@ pub fn add_observers(commands: &mut EntityCommands<'_>) {
         .observe(on_piece_drag_end)
     //    .observe(on_piece_drop)
         .observe(on_selection)
-        .observe(on_deselection);
+        .observe(on_deselection)
+        .observe(on_move);
 }
 
 pub fn spawn_piece(
+    oid: u32,
+    pid: u32,
     p: &PieceType,
-    t: Transform,
+    location: Vec3,
+    angle: f32,
+    faceup: usize,
     sprite_handles: &Res<SpriteHandles>,
-    next_object_id: &mut ResMut<NextObjectId>,
     commands: &mut Commands
 )
 {
@@ -84,14 +93,20 @@ pub fn spawn_piece(
         )
     };
 
-    trace!("piece {}", t.translation.z);
+    use std::f32::consts::PI;
 
-    let pid = next_object_id.0;
-    next_object_id.0 += 1;
+    let t = Transform {
+        translation: location,
+        rotation: Quat::from_rotation_z(angle * PI / 180.0),
+        scale: Vec3::ONE
+    };
+
+    trace!("piece {}", t.translation.z);
 
     let mut ec = commands.spawn((
         Piece,
-        ObjectId(pid),
+        ObjectId(oid),
+        PieceTypeId(pid),
         Name::from(p.name.as_ref()),
         Pickable::default(),
         Selectable,
@@ -99,7 +114,7 @@ pub fn spawn_piece(
         sprite,
         t,
         Faces(faces),
-        FaceUp(0),
+        FaceUp(faceup),
         Actions(p.actions.iter()
             .map(|a| Action {
                 label: a.label.clone(),

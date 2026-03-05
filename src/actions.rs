@@ -1,22 +1,13 @@
-use bevy::{
-    ecs::{
-        change_detection::{Res, ResMut},
-        prelude::Commands
-    },
-    prelude::{Entity, EntityCommands, Query}
-};
+use bevy::prelude::EntityCommands;
 use itertools::Itertools;
 use std::mem;
 
 use crate::{
-    action::{Action, PieceData},
     actionfunc::ActionFunc,
-    clone::{CloneEvent, on_clone},
-    delete::{DeleteEvent, on_delete},
-    flip::{FlipEvent, on_flip},
-    log::{ActionLog, handle_do},
-    object::{NextObjectId, ObjectId, ObjectIdMap},
-    rotate::{RotateEvent, on_rotate}
+    clone::on_clone,
+    delete::on_delete,
+    flip::on_flip,
+    rotate::on_rotate
 };
 
 pub fn add_action_observer(
@@ -34,7 +25,7 @@ pub fn add_action_observer(
 
 pub fn add_action_observers<A>(
     actions: A,
-    mut commands: &mut EntityCommands<'_>
+    commands: &mut EntityCommands<'_>
 )
 where
     A: IntoIterator<Item = ActionFunc>
@@ -45,30 +36,4 @@ where
         .for_each(|a| add_action_observer(a, commands));
 }
 
-pub fn make_action(
-    entity: Entity,
-    pid: u32, 
-    action: ActionFunc,
-    mut next_object_id: &mut ResMut<NextObjectId>,
-) -> Action
-{
-    match action {
-        ActionFunc::Clone => {
-            let clone_id = next_object_id.0;
-            next_object_id.0 += 1;
-            Action::Clone(clone_id, pid)
-        },
-        ActionFunc::Delete => {
-            Action::Delete(PieceData {
-                piece_id: pid,
-/*
-                location:
-                angle:
-                face_up:
-*/
-            })
-        },
-        ActionFunc::Flip(delta) => Action::Flip(pid, delta),
-        ActionFunc::Rotate(dtheta) => Action::Rotate(pid, dtheta.0)
-    }
-}
+// TODO: insert edit components; for groups, make them children?

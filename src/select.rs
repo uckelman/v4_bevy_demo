@@ -26,11 +26,7 @@ use bevy::{
 use tracing::instrument;
 
 use crate::{
-    action::Action,
-    actionfunc::ActionFunc,
-    actions::make_action,
-    log::{ActionLog, handle_do},
-    object::{NextObjectId, ObjectId, ObjectIdMap},
+    edit::EditEvent,
     piece::Actions
 };
 
@@ -294,10 +290,7 @@ pub fn setup_selection_box(
 #[instrument(skip_all)]
 pub fn handle_key_selection(
     input: Res<ButtonInput<KeyCode>>,
-    query: Query<(Entity, &ObjectId, &Actions), With<Selected>>,
-    mut log: ResMut<ActionLog>,
-    objmap: Res<ObjectIdMap>,
-    mut next_object_id: ResMut<NextObjectId>,
+    query: Query<(Entity, &Actions), With<Selected>>,
     mut commands: Commands
 )
 {
@@ -305,36 +298,20 @@ pub fn handle_key_selection(
     let alt = alt_pressed(&input);
     let shift = shift_pressed(&input);
 
-
-//    let mut cmds = vec![]; 
-
-    let mut g = vec![];
-
-    for (entity, piece_id, actions) in query.iter() {
-        for a in &actions.0 {
-            if let Some(ak) = &a.key &&
-                ak.ctrl == ctrl &&
+    let g = query.iter()
+        .flat_map(|(entity, actions)| actions.0.iter().map(move |a| (entity, a)))
+        .filter_map(|(entity, a)| matches!(
+            a.key,
+            Some(ak) if ak.ctrl == ctrl &&
                 ak.alt == alt &&
                 ak.shift == shift &&
                 input.just_pressed(ak.key)
-            {
-                g.push(make_action(
-                    entity,
-                    piece_id.0,
-                    a.action,
-                    &mut next_object_id
-                ));
-            }
-        }
-    }
+            ).then_some((entity, a.action))
+        )
+        .map(EditEvent::from)
+        .collect::<Vec<_>>();
 
-    match g.len() {
-        0 => {},
-        1 => {
-            handle_do(&mut log, &objmap, g.pop().unwrap(), &mut commands);
-        },
-        _ => {
-            handle_do(&mut log, &objmap, Action::Group(g), &mut commands);
-        }
+    if !g.is_empty() {
+        commands.trigger(EditEvent::Group(g).collapse());
     }
 }
