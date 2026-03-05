@@ -4,7 +4,6 @@ use bevy::{
         component::Component,
         error::Result,
         event::EntityEvent,
-        name::Name,
         observer::On,
         prelude::{Commands, Query}
     },
