@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{
-        change_detection::{Res, ResMut},
+        change_detection::Res,
         component::Component,
         event::EntityEvent,
         name::Name,
@@ -9,19 +9,18 @@ use bevy::{
     },
     math::{Quat, Vec3},
     picking::Pickable,
-    prelude::{Color, DespawnOnExit, Resource, Sprite, trace, Transform}
+    prelude::{Color, DespawnOnExit, Sprite, trace, Transform}
 };
 
 use crate::{
     actionkey::ActionKey,
     actionfunc::ActionFunc,
     actions::{add_action_observers},
-    angle::Angle,
     assets::{ImageSource, SpriteHandles},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::PieceType,
     r#move::on_move,
-    object::{NextObjectId, ObjectId},
+    object::ObjectId,
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
     state::GameState,

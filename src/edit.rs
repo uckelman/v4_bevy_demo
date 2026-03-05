@@ -1,7 +1,7 @@
 use bevy::{
     ecs::{
         observer::On,
-        event::{EntityEvent, Event}
+        event::Event
     },
     prelude::{Commands, Entity, trace}
 };

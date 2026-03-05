@@ -3,10 +3,10 @@ use bevy::{
         change_detection::Res,
         component::Component,
         error::Result,
-        event::{EntityEvent, Event},
+        event::EntityEvent,
         name::Name,
         observer::On,
-        prelude::{Commands, Query, With}
+        prelude::{Commands, Query}
     },
     input::keyboard::KeyCode,
     math::Vec3,
@@ -20,7 +20,7 @@ use crate::{
     gamebox::GameBox,
     log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoDeleteEvent, UndoDeleteEvent},
     object::{ObjectId, ObjectIdMap},
-    piece::{Actions, Action, Faces, FaceUp, Piece, PieceTypeId, spawn_piece}
+    piece::{FaceUp, PieceTypeId, spawn_piece}
 };
 
 #[derive(Resource)]

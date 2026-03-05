@@ -5,9 +5,9 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{Commands, Query, With}
+        prelude::{Commands, Query}
     },
-    prelude::{Entity, Resource, Sprite, trace}
+    prelude::{Entity, Sprite, trace}
 };
 use tracing::instrument;
 
@@ -15,8 +15,7 @@ use crate::{
     assets::ImageSource,
     log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoFlipEvent, UndoFlipEvent},
     object::{ObjectId, ObjectIdMap},
-    piece::{Faces, FaceUp},
-    select::Selected,
+    piece::{Faces, FaceUp}
 };
 
 fn set_face(
@@ -112,7 +111,7 @@ pub fn on_flip_undo(
     evt: On<UndoFlipEvent>,
     edit: Query<&FlipEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
+    query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
     apply_flip(evt.entity, edit, objmap, query, -1)
@@ -123,7 +122,7 @@ pub fn on_flip_redo(
     evt: On<RedoFlipEvent>,
     edit: Query<&FlipEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
+    query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
     apply_flip(evt.entity, edit, objmap, query, 1)

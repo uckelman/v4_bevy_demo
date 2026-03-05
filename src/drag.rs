@@ -81,7 +81,7 @@ pub fn on_piece_drag_start(
 
 #[instrument(skip_all)]
 pub fn on_piece_drag(
-    mut drag: On<Pointer<Drag>>,
+    drag: On<Pointer<Drag>>,
     mut d_query: Query<(&mut Transform, &DragAnchor), Without<Camera>>,
     tp_query: Query<(&Transform, &Projection), With<Camera>>,
     context_menu_state: Res<State<ContextMenuState>>
