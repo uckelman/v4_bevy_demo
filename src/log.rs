@@ -53,6 +53,30 @@ pub enum EditType {
     Rotate
 }
 
+impl EditType {
+    fn dispatch_undo_trigger(&self, entity: Entity, commands: &mut Commands) {
+        match self {
+            EditType::Clone => commands.trigger(UndoCloneEvent { entity }),
+            EditType::Delete => commands.trigger(UndoDeleteEvent { entity }),
+            EditType::Flip => commands.trigger(UndoFlipEvent { entity }),
+            EditType::Group => commands.trigger(UndoGroupEvent { entity }),
+            EditType::Move => commands.trigger(UndoMoveEvent { entity }),
+            EditType::Rotate => commands.trigger(UndoRotateEvent { entity })
+        }
+    }
+
+    fn dispatch_redo_trigger(&self, entity: Entity, commands: &mut Commands) {
+        match self {
+            EditType::Clone => commands.trigger(RedoCloneEvent { entity }),
+            EditType::Delete => commands.trigger(RedoDeleteEvent { entity }),
+            EditType::Flip => commands.trigger(RedoFlipEvent { entity }),
+            EditType::Group => commands.trigger(RedoGroupEvent { entity }),
+            EditType::Move => commands.trigger(RedoMoveEvent { entity }),
+            EditType::Rotate => commands.trigger(RedoRotateEvent { entity })
+        }
+    }
+}
+
 #[derive(Event)]
 pub struct EditsComplete;
 
@@ -484,38 +508,6 @@ pub struct DoRotateEvent {
     pub dtheta: f32
 }
 
-fn trigger_specific_undo_event(
-    entity: Entity,
-    etype: EditType,
-    commands: &mut Commands
-)
-{
-    match etype {
-        EditType::Clone => commands.trigger(UndoCloneEvent { entity }),
-        EditType::Delete => commands.trigger(UndoDeleteEvent { entity }),
-        EditType::Flip => commands.trigger(UndoFlipEvent { entity }),
-        EditType::Group => commands.trigger(UndoGroupEvent { entity }),
-        EditType::Move => commands.trigger(UndoMoveEvent { entity }),
-        EditType::Rotate => commands.trigger(UndoRotateEvent { entity })
-    }
-}
-
-fn trigger_specific_redo_event(
-    entity: Entity,
-    etype: EditType,
-    commands: &mut Commands
-)
-{
-    match etype {
-        EditType::Clone => commands.trigger(RedoCloneEvent { entity }),
-        EditType::Delete => commands.trigger(RedoDeleteEvent { entity }),
-        EditType::Flip => commands.trigger(RedoFlipEvent { entity }),
-        EditType::Group => commands.trigger(RedoGroupEvent { entity }),
-        EditType::Move => commands.trigger(RedoMoveEvent { entity }),
-        EditType::Rotate => commands.trigger(RedoRotateEvent { entity })
-    }
-}
-
 #[derive(EntityEvent)]
 pub struct UndoCloneEvent {
     pub entity: Entity
@@ -553,8 +545,8 @@ pub fn on_undo(
      mut commands: Commands
 ) -> Result
 {
-    let entity = evt.entity;
-    trigger_specific_undo_event(entity, *query.get(entity)?, &mut commands);
+    query.get(evt.entity)?
+        .dispatch_undo_trigger(evt.entity, &mut commands);
     Ok(())
 }
 
@@ -595,8 +587,8 @@ pub fn on_redo(
      mut commands: Commands
 ) -> Result
 {
-    let entity = evt.entity;
-    trigger_specific_redo_event(entity, *query.get(entity)?, &mut commands);
+    query.get(evt.entity)?
+        .dispatch_redo_trigger(evt.entity, &mut commands);
     Ok(())
 }
 
@@ -639,7 +631,8 @@ pub fn on_group_undo(
     let Ok(edits) = edit_query.get(evt.entity) else { return Ok(()); };
 
     for &entity in &edits.0 {
-        trigger_specific_undo_event(entity, *c_query.get(entity)?, &mut commands);
+        c_query.get(entity)?
+            .dispatch_undo_trigger(entity, &mut commands);
     }
 
     Ok(())
@@ -657,7 +650,8 @@ pub fn on_group_redo(
     let Ok(edits) = edit_query.get(evt.entity) else { return Ok(()); };
 
     for &entity in &edits.0 {
-        trigger_specific_redo_event(entity, *c_query.get(entity)?, &mut commands);
+        c_query.get(entity)?
+            .dispatch_redo_trigger(entity, &mut commands);
     }
 
     Ok(())
