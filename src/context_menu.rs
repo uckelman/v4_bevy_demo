@@ -221,14 +221,10 @@ fn on_item_selection(
         let mut ei = query.iter();
         match ei.len() {
             0 => {},
-            1 => trigger_action_func(ei.next().unwrap(), item.0, &mut commands),
+            1 => ei.for_each(|e| trigger_action_func(e, item.0, &mut commands)),
             _ => {
-                // open a group
                 commands.trigger(OpenGroupEvent);
-
                 ei.for_each(|e| trigger_action_func(e, item.0, &mut commands));
-
-                // close a group
                 commands.trigger(CloseGroupEvent);
             }
         }

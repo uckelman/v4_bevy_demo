@@ -144,12 +144,8 @@ pub fn on_piece_drag_end(
                 move_and_deselect(e, t, a, &mut commands);
             },
             _ => {
-                // open a group
                 commands.trigger(OpenGroupEvent);
-
                 etai.for_each(|(e, t, a)| move_and_deselect(e, t, a, &mut commands));
-
-                // close a group
                 commands.trigger(CloseGroupEvent);
             }
         }

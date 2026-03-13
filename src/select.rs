@@ -313,15 +313,12 @@ pub fn handle_key_selection(
     if let Some(ea0) = eai.next() {
         if let Some(ea1) = eai.next() {
             // there are two or more actions
-
-            // open a group
             commands.trigger(OpenGroupEvent);
 
             [ea0, ea1].into_iter()
                 .chain(eai)
                 .for_each(|(e, a)| trigger_action_func(e, a, &mut commands));
 
-            // close a group
             commands.trigger(CloseGroupEvent);
         }
         else {
