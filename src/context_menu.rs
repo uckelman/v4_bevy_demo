@@ -218,7 +218,7 @@ fn on_item_selection(
     {
         commands.trigger(CloseContextMenus);
 
-        let mut ei = query.iter();
+        let ei = query.iter();
         match ei.len() {
             0 => {},
             1 => ei.for_each(|e| trigger_action_func(e, item.0, &mut commands)),
