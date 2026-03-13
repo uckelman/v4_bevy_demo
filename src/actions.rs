@@ -1,4 +1,7 @@
-use bevy::prelude::EntityCommands;
+use bevy::{
+    ecs::prelude::{EntityCommands, Commands},
+    prelude::Entity
+};
 use itertools::Itertools;
 use std::mem;
 
@@ -7,6 +10,7 @@ use crate::{
     clone::on_clone,
     delete::on_delete,
     flip::on_flip,
+    log::{DoCloneEvent, DoDeleteEvent, DoFlipEvent, DoRotateEvent},
     rotate::on_rotate
 };
 
@@ -36,4 +40,16 @@ where
         .for_each(|a| add_action_observer(a, commands));
 }
 
-// TODO: insert edit components; for groups, make them children?
+pub fn trigger_action_func(
+    entity: Entity,
+    action: ActionFunc,
+    commands: &mut Commands
+)
+{
+        match action {
+            ActionFunc::Clone => commands.trigger(DoCloneEvent { entity }),
+            ActionFunc::Delete => commands.trigger(DoDeleteEvent { entity } ),
+            ActionFunc::Flip(delta) => commands.trigger(DoFlipEvent { entity, delta } ),
+            ActionFunc::Rotate(dtheta) => commands.trigger(DoRotateEvent { entity, dtheta: dtheta.0 })
+        }
+}

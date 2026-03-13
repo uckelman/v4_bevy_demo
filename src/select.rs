@@ -26,7 +26,8 @@ use bevy::{
 use tracing::instrument;
 
 use crate::{
-    edit::EditEvent,
+    actions::trigger_action_func,
+    log::{OpenGroupEvent, CloseGroupEvent},
     piece::Actions
 };
 
@@ -298,7 +299,7 @@ pub fn handle_key_selection(
     let alt = alt_pressed(&input);
     let shift = shift_pressed(&input);
 
-    let g = query.iter()
+    let mut eai = query.iter()
         .flat_map(|(entity, actions)| actions.0.iter().map(move |a| (entity, a)))
         .filter_map(|(entity, a)| matches!(
             a.key,
@@ -307,11 +308,25 @@ pub fn handle_key_selection(
                 ak.shift == shift &&
                 input.just_pressed(ak.key)
             ).then_some((entity, a.action))
-        )
-        .map(EditEvent::from)
-        .collect::<Vec<_>>();
+        );
 
-    if !g.is_empty() {
-        commands.trigger(EditEvent::Group(g).collapse());
+    if let Some(ea0) = eai.next() {
+        if let Some(ea1) = eai.next() {
+            // there are two or more actions
+
+            // open a group
+            commands.trigger(OpenGroupEvent);
+
+            [ea0, ea1].into_iter()
+                .chain(eai)
+                .for_each(|(e, a)| trigger_action_func(e, a, &mut commands));
+
+            // close a group
+            commands.trigger(CloseGroupEvent);
+        }
+        else {
+            // there is only one action
+            trigger_action_func(ea0.0, ea0.1, &mut commands);
+        }
     }
 }

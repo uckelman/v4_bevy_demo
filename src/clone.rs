@@ -14,7 +14,7 @@ use bevy::{
 use crate::{
     actions::add_action_observers,
     config::KeyConfig,
-    log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoCloneEvent, UndoCloneEvent},
+    log::{DoCloneEvent, EditIndex, EditType, Edits, handle_do, RedoCloneEvent, UndoCloneEvent},
     object::{NextObjectId, ObjectId, ObjectIdMap},
     piece::{Actions, add_observers}
 };
@@ -50,11 +50,6 @@ fn do_clone(
     add_action_observers(actions.0.iter().map(|a| a.action), &mut ec);
 }
 
-#[derive(Clone, Copy, EntityEvent)]
-pub struct CloneEvent {
-    pub entity: Entity 
-}
-
 #[derive(Component)]
 pub struct CloneEdit {
     pub object_id: u32,
@@ -63,32 +58,27 @@ pub struct CloneEdit {
 
 #[instrument(skip_all)]
 pub fn on_clone(
-    evt: On<CloneEvent>,
-    piece_query: Query<(&ObjectId, &Actions)>,
-    mut edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
+    evt: On<DoCloneEvent>,
+    piece_query: Query<&ObjectId>,
     mut next_object_id: ResMut<NextObjectId>,
-    mut commands: Commands
+    edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
+    commands: Commands
 ) -> Result
 {
     trace!("");
 
     let entity = evt.event().event_target();
-    let (source_id, actions) = piece_query.get(entity)?;
+    let source_id = piece_query.get(entity)?;
 
     let object_id = next_object_id.0;
     next_object_id.0 += 1;
 
-    let (edits_entity, mut edits, mut edit_index) = edit_query.single_mut()?;
-    handle_do(&mut edits, &mut edit_index, &mut commands);
- 
-    commands.spawn((
-        EditOf(edits_entity),
+    handle_do(
+        edit_query,
         EditType::Clone,
-        CloneEdit { object_id, source_id: source_id.0 }
-    ));
-
-    do_clone(entity, object_id, actions, &mut commands);
-    Ok(())
+        CloneEdit { object_id, source_id: source_id.0 },
+        commands
+    )
 }
 
 #[instrument(skip_all)]

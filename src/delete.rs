@@ -17,7 +17,7 @@ use crate::{
     assets::SpriteHandles,
     config::KeyConfig,
     gamebox::GameBox,
-    log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoDeleteEvent, UndoDeleteEvent},
+    log::{DoDeleteEvent, EditIndex, EditType, Edits, handle_do, RedoDeleteEvent, UndoDeleteEvent},
     object::{ObjectId, ObjectIdMap},
     piece::{FaceUp, PieceTypeId, spawn_piece}
 };
@@ -39,11 +39,6 @@ fn do_delete(
     commands.entity(entity).despawn();
 }
 
-#[derive(Clone, Copy, EntityEvent)]
-pub struct DeleteEvent {
-    pub entity: Entity
-}
-
 #[derive(Component)]
 pub struct DeleteEdit {
     pub object_id: u32,
@@ -58,10 +53,10 @@ pub struct DeleteEdit {
 
 #[instrument(skip_all)]
 pub fn on_delete(
-    evt: On<DeleteEvent>,
+    evt: On<DoDeleteEvent>,
     piece_query: Query<(&ObjectId, &PieceTypeId, &Transform, &FaceUp)>,
-    mut edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
-    mut commands: Commands
+    edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
+    commands: Commands
 ) -> Result
 {
     trace!("");
@@ -69,11 +64,8 @@ pub fn on_delete(
     let entity = evt.event().event_target();
     let (object_id, ptype_id, t, faceup) = piece_query.get(entity)?;
 
-    let (edits_entity, mut edits, mut edit_index) = edit_query.single_mut()?;
-    handle_do(&mut edits, &mut edit_index, &mut commands);
-
-    commands.spawn((
-        EditOf(edits_entity),
+    handle_do(
+        edit_query,
         EditType::Delete,
         DeleteEdit {
             object_id: object_id.0,
@@ -81,11 +73,9 @@ pub fn on_delete(
             location: t.translation,
             angle: t.rotation.to_axis_angle().1,
             faceup: faceup.0
-        }
-    ));
-
-    do_delete(entity, &mut commands);
-    Ok(())
+        },
+        commands
+    )
 }
 
 #[instrument(skip_all)]

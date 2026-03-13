@@ -45,7 +45,6 @@ mod config;
 mod context_menu;
 mod delete;
 mod drag;
-mod edit;
 mod flip;
 mod gamebox;
 mod grid;
@@ -67,12 +66,11 @@ use crate::{
     clone::{on_clone_redo, on_clone_undo},
     config::KeyConfig,
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
-    edit::on_edit,
     delete::{on_delete_redo, on_delete_undo},
     flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
-    log::{EditIndex, Edits, handle_redo, handle_undo, on_redo, on_undo, RedoKey, UndoKey},
+    log::{dump_edits, EditIndex, Edits, handle_redo_over, handle_undo, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_undo, RedoKey, UndoKey},
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
     piece::spawn_piece,
@@ -279,13 +277,12 @@ fn game_plugin(app: &mut App) {
                 handle_key_selection.run_if(any_with_component::<Selected>),
 
                 handle_undo.run_if(cfg_input_just_pressed::<UndoKey>),
-                handle_redo.run_if(cfg_input_just_pressed::<RedoKey>)
+                handle_redo_over.run_if(cfg_input_just_pressed::<RedoKey>)
             )
             .run_if(in_state(GameState::Game))
         )
         .add_observer(open_context_menu)
         .add_observer(close_context_menus)
-        .add_observer(on_edit)
         .add_observer(on_undo)
         .add_observer(on_redo)
         .add_observer(on_clone_undo)
@@ -294,12 +291,15 @@ fn game_plugin(app: &mut App) {
         .add_observer(on_delete_redo)
         .add_observer(on_flip_undo)
         .add_observer(on_flip_redo)
-//        .add_observer(on_group_undo)
-//        .add_observer(on_group_redo)
+        .add_observer(on_group_open)
+        .add_observer(on_group_close)
+        .add_observer(on_group_undo)
+        .add_observer(on_group_redo)
         .add_observer(on_move_undo)
         .add_observer(on_move_redo)
         .add_observer(on_rotate_undo)
         .add_observer(on_rotate_redo)
+        .add_observer(dump_edits)
         .add_observer(pick_dbg);
 }
 

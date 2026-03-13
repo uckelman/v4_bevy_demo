@@ -13,7 +13,7 @@ use tracing::instrument;
 
 use crate::{
     assets::ImageSource,
-    log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoFlipEvent, UndoFlipEvent},
+    log::{DoFlipEvent, EditIndex, EditType, Edits, handle_do, RedoFlipEvent, UndoFlipEvent},
     object::{ObjectId, ObjectIdMap},
     piece::{Faces, FaceUp}
 };
@@ -49,12 +49,6 @@ fn do_flip(
     set_face(sprite, faces, up);
 }
 
-#[derive(Clone, Copy, EntityEvent)]
-pub struct FlipEvent {
-    pub entity: Entity,
-    pub delta: i32
-}
-
 #[derive(Component)]
 pub struct FlipEdit {
     pub object_id: u32,
@@ -63,28 +57,23 @@ pub struct FlipEdit {
 
 #[instrument(skip_all)]
 pub fn on_flip(
-    evt: On<FlipEvent>,
-    mut piece_query: Query<(&ObjectId, &Faces, &mut FaceUp, &mut Sprite)>,
-    mut edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
-    mut commands: Commands
+    evt: On<DoFlipEvent>,
+    piece_query: Query<&ObjectId>,
+    edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
+    commands: Commands
 ) -> Result
 {
     trace!("");
 
     let entity = evt.event().event_target();
-    let (object_id, faces, mut up, mut sprite) = piece_query.get_mut(entity)?;
+    let object_id = piece_query.get(entity)?;
 
-    let (edits_entity, mut edits, mut edit_index) = edit_query.single_mut()?;
-    handle_do(&mut edits, &mut edit_index, &mut commands);
-
-    commands.spawn((
-        EditOf(edits_entity),
+    handle_do(
+        edit_query,
         EditType::Flip,
-        FlipEdit { object_id: object_id.0, delta: evt.delta }
-    ));
-
-    do_flip(faces, &mut up, &mut sprite, evt.delta);
-    Ok(())
+        FlipEdit { object_id: object_id.0, delta: evt.delta },
+        commands
+    )
 }
 
 fn apply_flip(

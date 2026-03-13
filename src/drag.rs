@@ -20,7 +20,7 @@ use tracing::instrument;
 use crate::{
     Surface,
     context_menu::ContextMenuState,
-    r#move::MoveEvent,
+    log::{DoMoveEvent, OpenGroupEvent, CloseGroupEvent},
     raise::raise_piece,
     select::Selected,
     util::AsOrthographicProjection
@@ -135,13 +135,37 @@ pub fn on_piece_drag_end(
 
     if drag.button == PointerButton::Primary {
         // remove the drag anchor, make piece pickable again
-        query.iter()
-            .for_each(|(entity, t, anchor)| {
-                commands.trigger(MoveEvent { entity, delta: t.translation - anchor.pos });
 
-                commands.entity(entity)
-                    .remove::<DragAnchor>()
-                    .insert(Pickable::default());
-            });
+        let mut etai = query.iter();
+        match etai.len() {
+            0 => {},
+            1 => {
+                let (e, t, a) = etai.next().unwrap();
+                move_and_deselect(e, t, a, &mut commands);
+            },
+            _ => {
+                // open a group
+                commands.trigger(OpenGroupEvent);
+
+                etai.for_each(|(e, t, a)| move_and_deselect(e, t, a, &mut commands));
+
+                // close a group
+                commands.trigger(CloseGroupEvent);
+            }
+        }
     }
+}
+
+fn move_and_deselect(
+    entity: Entity,
+    t: &Transform,
+    anchor: &DragAnchor,
+    commands: &mut Commands
+)
+{
+    commands.trigger(DoMoveEvent { entity, src: anchor.pos, dst: t.translation });
+
+    commands.entity(entity)
+        .remove::<DragAnchor>()
+        .insert(Pickable::default());
 }

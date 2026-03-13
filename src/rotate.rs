@@ -14,7 +14,7 @@ use tracing::instrument;
 
 use crate::{
     config::KeyConfig,
-    log::{EditIndex, EditOf, EditType, Edits, handle_do, RedoRotateEvent, UndoRotateEvent},
+    log::{DoRotateEvent, EditIndex, EditType, Edits, handle_do, RedoRotateEvent, UndoRotateEvent},
     object::{ObjectId, ObjectIdMap}
 };
 
@@ -44,12 +44,6 @@ fn do_rotate(t: &mut Transform, dtheta: f32)
     t.rotate_local_z(dtheta * DEG_TO_RAD);
 }
 
-#[derive(Clone, Copy, EntityEvent)]
-pub struct RotateEvent {
-    pub entity: Entity,
-    pub dtheta: f32
-}
-
 #[derive(Component)]
 pub struct RotateEdit {
     pub object_id: u32,
@@ -58,28 +52,23 @@ pub struct RotateEdit {
 
 #[instrument(skip_all)]
 pub fn on_rotate(
-    evt: On<RotateEvent>,
-    mut piece_query: Query<(&ObjectId, &mut Transform)>,
-    mut edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
-    mut commands: Commands
+    evt: On<DoRotateEvent>,
+    piece_query: Query<&ObjectId>,
+    edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
+    commands: Commands
 ) -> Result
 {
     trace!("");
 
     let entity = evt.event().event_target();
-    let (object_id, mut t) = piece_query.get_mut(entity)?;
+    let object_id = piece_query.get(entity)?;
 
-    let (edits_entity, mut edits, mut edit_index) = edit_query.single_mut()?;
-    handle_do(&mut edits, &mut edit_index, &mut commands);
-
-    commands.spawn((
-        EditOf(edits_entity),
+    handle_do(
+        edit_query,
         EditType::Rotate,
-        RotateEdit { object_id: object_id.0, dtheta: evt.dtheta }
-    ));
-
-    do_rotate(&mut t, evt.dtheta);
-    Ok(())
+        RotateEdit { object_id: object_id.0, dtheta: evt.dtheta },
+        commands
+    )
 }
 
 fn apply_rotate(

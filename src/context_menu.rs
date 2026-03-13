@@ -30,7 +30,8 @@ use tracing::instrument;
 
 use crate::{
     actionfunc::ActionFunc,
-    edit::EditEvent,
+    actions::trigger_action_func,
+    log::{OpenGroupEvent, CloseGroupEvent},
     piece::{Action, Actions},
     select::Selected
 };
@@ -216,13 +217,20 @@ fn on_item_selection(
         && press.button == PointerButton::Primary
     {
         commands.trigger(CloseContextMenus);
-        let g = query.iter()
-            .map(|entity| (entity, item.0))
-            .map(EditEvent::from)
-            .collect::<Vec<_>>();
 
-        if !g.is_empty() {
-            commands.trigger(EditEvent::Group(g).collapse());
+        let mut ei = query.iter();
+        match ei.len() {
+            0 => {},
+            1 => trigger_action_func(ei.next().unwrap(), item.0, &mut commands),
+            _ => {
+                // open a group
+                commands.trigger(OpenGroupEvent);
+
+                ei.for_each(|e| trigger_action_func(e, item.0, &mut commands));
+
+                // close a group
+                commands.trigger(CloseGroupEvent);
+            }
         }
     }
 
