@@ -41,6 +41,7 @@ fn do_delete(
 }
 
 #[derive(Component, Serialize)]
+#[serde(rename = "delete", tag = "type")]
 pub struct DeleteEdit {
     pub object_id: u32,
     pub ptype_id: u32,

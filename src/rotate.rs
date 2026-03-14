@@ -46,6 +46,7 @@ fn do_rotate(t: &mut Transform, dtheta: f32)
 }
 
 #[derive(Component, Serialize)]
+#[serde(rename = "rotate", tag = "type")]
 pub struct RotateEdit {
     pub object_id: u32,
     pub dtheta: f32

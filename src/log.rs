@@ -9,8 +9,8 @@ use bevy::{
     math::Vec3,
     prelude::{debug, Entity, EntityRef, Query, Resource, Result}
 };
-use itertools::Itertools;
 use std::io::{Stdout, Write};
+use serde::Serialize;
 use tracing::instrument;
 
 use crate::{
@@ -673,7 +673,9 @@ pub fn write_edits(
     edit_index_query: Query<(Entity, &EditIndex)>
 ) -> Result
 {
-    eprintln!();
+    let mut writer = std::io::stdout();
+
+    writeln!(&mut writer)?;
 
     let (cur_entity, cur_idx) = edit_index_query.single()?;
     let (root_entity, root_edits) = root_query.single()?;
@@ -684,8 +686,24 @@ pub fn write_edits(
         cur_idx.0,
         &edit_query,
         &edits_query,
-        &mut std::io::stdout()
-    )
+        &mut writer
+    )?;
+
+    writer.flush()?;
+
+    Ok(())
+}
+
+fn write_edit<E, W>(
+    eref: EntityRef,
+    writer: &mut W
+) -> Result
+where
+    W: Write,
+    E: Component + Serialize
+{
+    let ed = eref.get::<E>().expect("edit type mismatch");
+    Ok(serde_json::to_writer(&mut *writer, ed)?)
 }
 
 fn write_group<W>(
@@ -702,45 +720,34 @@ where
 {
     write!(writer, "[")?;
 
-    // don't go beyond the edit cursor 
-    let mut itr = edits.0.iter()
-        .take(if cur_entity == entity { cur_idx } else { edits.0.len() });
+    for (i, &e) in edits.0.iter()
+        // don't go beyond the edit cursor
+        .take(if cur_entity == entity { cur_idx } else { edits.0.len() })
+        // we need to know which element is first
+        .enumerate()
+    {
+        if i > 0 {
+            // ya gotta keep 'em separated
+            write!(writer, ", ")?;
+        }
 
-    for &e in itr {
         let (eref, etype) = edit_query.get(e)?;
 
         match etype {
-            EditType::Clone => { 
-                let ed = eref.get::<CloneEdit>().unwrap();
-                serde_json::to_writer(&mut *writer, ed)?;
-            },
-            EditType::Delete => { 
-                let ed = eref.get::<DeleteEdit>().unwrap();
-                serde_json::to_writer(&mut *writer, ed)?;
-            },
-            EditType::Flip => {
-                let ed = eref.get::<FlipEdit>().unwrap();
-                serde_json::to_writer(&mut *writer, ed)?;
-            },
-            EditType::Group => {
-                write_group(
-                    e,
-                    edits_query.get(e)?,
-                    cur_entity,
-                    cur_idx,
-                    edit_query,
-                    edits_query,
-                    writer
-                )?;
-            },
-            EditType::Move => {
-                let ed = eref.get::<MoveEdit>().unwrap();
-                serde_json::to_writer(&mut *writer, ed)?;
-            },
-            EditType::Rotate => {
-                let ed = eref.get::<RotateEdit>().unwrap();
-                serde_json::to_writer(&mut *writer, ed)?;
-            }
+            EditType::Clone => write_edit::<CloneEdit, W>(eref, &mut *writer)?,
+            EditType::Delete => write_edit::<DeleteEdit, W>(eref, &mut *writer)?,
+            EditType::Flip => write_edit::<FlipEdit, W>(eref, &mut *writer)?,
+            EditType::Group => write_group(
+                e,
+                edits_query.get(e)?,
+                cur_entity,
+                cur_idx,
+                edit_query,
+                edits_query,
+                writer
+            )?,
+            EditType::Move => write_edit::<MoveEdit, W>(eref, &mut *writer)?,
+            EditType::Rotate => write_edit::<RotateEdit, W>(eref, &mut *writer)?
         }
     }
 

@@ -24,6 +24,7 @@ fn do_move(t: &mut Transform, to: Vec3)
 }
 
 #[derive(Component, Serialize)]
+#[serde(rename = "move", tag = "type")]
 pub struct MoveEdit {
     pub object_id: u32,
     pub src: Vec3,

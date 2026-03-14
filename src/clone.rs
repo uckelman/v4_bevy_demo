@@ -52,6 +52,7 @@ fn do_clone(
 }
 
 #[derive(Component, Serialize)]
+#[serde(rename = "clone", tag = "type")]
 pub struct CloneEdit {
     pub object_id: u32,
     pub source_id: u32

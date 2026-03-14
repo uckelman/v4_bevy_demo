@@ -51,6 +51,7 @@ fn do_flip(
 }
 
 #[derive(Component, Serialize)]
+#[serde(rename = "flip", tag = "type")]
 pub struct FlipEdit {
     pub object_id: u32,
     pub delta: i32
