@@ -54,7 +54,7 @@ pub enum EditType {
 }
 
 impl EditType {
-    fn dispatch_undo_trigger(&self, entity: Entity, commands: &mut Commands) {
+    fn dispatch_undo_event(&self, entity: Entity, commands: &mut Commands) {
         match self {
             EditType::Clone => commands.trigger(UndoCloneEvent { entity }),
             EditType::Delete => commands.trigger(UndoDeleteEvent { entity }),
@@ -65,7 +65,7 @@ impl EditType {
         }
     }
 
-    fn dispatch_redo_trigger(&self, entity: Entity, commands: &mut Commands) {
+    fn dispatch_redo_event(&self, entity: Entity, commands: &mut Commands) {
         match self {
             EditType::Clone => commands.trigger(RedoCloneEvent { entity }),
             EditType::Delete => commands.trigger(RedoDeleteEvent { entity }),
@@ -476,7 +476,7 @@ pub fn on_undo(
 ) -> Result
 {
     query.get(evt.entity)?
-        .dispatch_undo_trigger(evt.entity, &mut commands);
+        .dispatch_undo_event(evt.entity, &mut commands);
     Ok(())
 }
 
@@ -518,7 +518,7 @@ pub fn on_redo(
 ) -> Result
 {
     query.get(evt.entity)?
-        .dispatch_redo_trigger(evt.entity, &mut commands);
+        .dispatch_redo_event(evt.entity, &mut commands);
     Ok(())
 }
 
@@ -562,7 +562,7 @@ pub fn on_group_undo(
 
     for &entity in &edits.0 {
         c_query.get(entity)?
-            .dispatch_undo_trigger(entity, &mut commands);
+            .dispatch_undo_event(entity, &mut commands);
     }
 
     Ok(())
@@ -581,7 +581,7 @@ pub fn on_group_redo(
 
     for &entity in &edits.0 {
         c_query.get(entity)?
-            .dispatch_redo_trigger(entity, &mut commands);
+            .dispatch_redo_event(entity, &mut commands);
     }
 
     Ok(())
