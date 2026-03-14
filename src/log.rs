@@ -9,7 +9,10 @@ use bevy::{
     math::Vec3,
     prelude::{debug, Entity, EntityRef, Query, Resource, Result}
 };
-use std::io::Write;
+use std::{
+    io::Write,
+    ops::ControlFlow
+};
 use serde::Serialize;
 use tracing::instrument;
 
@@ -679,7 +682,7 @@ pub fn write_edits(
 
     let (cur_entity, cur_idx) = edit_index_query.single()?;
     let (root_entity, root_edits) = root_query.single()?;
-    write_group(
+    let _ = write_group(
         root_entity,
         root_edits,
         cur_entity,
@@ -714,18 +717,22 @@ fn write_group<W>(
     edit_query: &Query<(EntityRef, &EditType)>,
     edits_query: &Query<&Edits>,
     writer: &mut W
-) -> Result
+) -> Result<ControlFlow<()>>
 where
     W: Write
 {
     write!(writer, "[")?;
 
-    for (i, &e) in edits.0.iter()
-        // don't go beyond the edit cursor
-        .take(if cur_entity == entity { cur_idx } else { edits.0.len() })
-        // we need to know which element is first
-        .enumerate()
-    {
+    let mut itr = edits.0.iter().enumerate();
+
+    let ctrl = loop {
+        let Some((i ,&e)) = itr.next() else { break ControlFlow::Continue(()); };
+
+        if cur_entity == entity && cur_idx == i {
+            // don't go beyond the edit cursor
+            break ControlFlow::Break(());
+        }
+
         if i > 0 {
             // ya gotta keep 'em separated
             write!(writer, ",")?;
@@ -737,7 +744,7 @@ where
             EditType::Clone => write_edit::<CloneEdit, W>(eref, &mut *writer)?,
             EditType::Delete => write_edit::<DeleteEdit, W>(eref, &mut *writer)?,
             EditType::Flip => write_edit::<FlipEdit, W>(eref, &mut *writer)?,
-            EditType::Group => write_group(
+            EditType::Group => if write_group(
                 e,
                 edits_query.get(e)?,
                 cur_entity,
@@ -745,12 +752,15 @@ where
                 edit_query,
                 edits_query,
                 writer
-            )?,
+            )? == ControlFlow::Break(()) {
+                // don't go beyond the edit cursor
+                break ControlFlow::Break(());
+            },
             EditType::Move => write_edit::<MoveEdit, W>(eref, &mut *writer)?,
             EditType::Rotate => write_edit::<RotateEdit, W>(eref, &mut *writer)?
         }
-    }
+    };
 
     write!(writer, "]")?;
-    Ok(())
+    Ok(ctrl)
 }
