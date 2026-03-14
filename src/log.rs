@@ -728,7 +728,7 @@ where
     {
         if i > 0 {
             // ya gotta keep 'em separated
-            write!(writer, ", ")?;
+            write!(writer, ",")?;
         }
 
         let (eref, etype) = edit_query.get(e)?;
