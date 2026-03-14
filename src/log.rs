@@ -7,11 +7,18 @@ use bevy::{
     },
     input::keyboard::KeyCode,
     math::Vec3,
-    prelude::{debug, Entity, Query, Resource, Result}
+    prelude::{debug, Entity, EntityRef, Query, Resource, Result}
 };
 use tracing::instrument;
 
-use crate::config::KeyConfig;
+use crate::{
+    clone::CloneEdit,
+    delete::DeleteEdit,
+    flip::FlipEdit,
+    r#move::MoveEdit,
+    rotate::RotateEdit,
+    config::KeyConfig
+};
 
 #[derive(Resource)]
 pub struct RedoKey(pub KeyCode);
@@ -654,5 +661,82 @@ fn dump_group(
         }
     }
 
+    Ok(())
+}
+
+pub fn write_edits(
+    root_query: Query<(Entity, &Edits), Without<EditOf>>,
+    edit_query: Query<(EntityRef, &EditType)>,
+    edits_query: Query<&Edits>,
+    edit_index_query: Query<(Entity, &EditIndex)>
+) -> Result
+{
+    eprintln!();
+
+    let (cur_entity, cur_idx) = edit_index_query.single()?;
+    let (root_entity, root_edits) = root_query.single()?;
+    write_group(
+        root_entity,
+        root_edits,
+        cur_entity,
+        cur_idx.0,
+        &edit_query,
+        &edits_query
+    )
+}
+
+fn write_group(
+    entity: Entity,
+    edits: &Edits,
+    cur_entity: Entity,
+    cur_idx: usize,
+    edit_query: &Query<(EntityRef, &EditType)>,
+    edits_query: &Query<&Edits>
+) -> Result
+{
+    eprintln!("[");
+
+    for (i, &e) in edits.0.iter().enumerate() {
+        if cur_entity == entity && cur_idx == i {
+            return Ok(());
+        }
+
+        let (eref, etype) = edit_query.get(e)?;
+
+        match etype {
+            EditType::Clone => { 
+                let ed = eref.get::<CloneEdit>().unwrap();
+                eprintln!("{}", serde_json::to_string(ed).unwrap());
+            },
+            EditType::Delete => { 
+                let ed = eref.get::<DeleteEdit>().unwrap();
+                eprintln!("{}", serde_json::to_string(ed).unwrap());
+            },
+            EditType::Flip => {
+                let ed = eref.get::<FlipEdit>().unwrap();
+                eprintln!("{}", serde_json::to_string(ed).unwrap());
+            },
+            EditType::Group => {
+                write_group(
+                    e,
+                    edits_query.get(e)?,
+                    cur_entity,
+                    cur_idx,
+                    edit_query,
+                    edits_query
+                )?;
+            },
+            EditType::Move => {
+                let ed = eref.get::<MoveEdit>().unwrap();
+                eprintln!("{}", serde_json::to_string(ed).unwrap());
+            },
+            EditType::Rotate => {
+                let ed = eref.get::<RotateEdit>().unwrap();
+                eprintln!("{}", serde_json::to_string(ed).unwrap());
+            }
+        }
+    }
+
+    eprintln!("]");
     Ok(())
 }

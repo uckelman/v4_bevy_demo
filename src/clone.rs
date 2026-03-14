@@ -10,6 +10,7 @@ use bevy::{
     input::keyboard::KeyCode,
     prelude::{Entity, Resource, trace}
 };
+use serde::Serialize;
 
 use crate::{
     actions::add_action_observers,
@@ -50,7 +51,7 @@ fn do_clone(
     add_action_observers(actions.0.iter().map(|a| a.action), &mut ec);
 }
 
-#[derive(Component)]
+#[derive(Component, Serialize)]
 pub struct CloneEdit {
     pub object_id: u32,
     pub source_id: u32

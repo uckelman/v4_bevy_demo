@@ -10,6 +10,7 @@ use bevy::{
     input::keyboard::KeyCode,
     prelude::{Entity, Resource, trace, Transform}
 };
+use serde::Serialize;
 use tracing::instrument;
 
 use crate::{
@@ -44,7 +45,7 @@ fn do_rotate(t: &mut Transform, dtheta: f32)
     t.rotate_local_z(dtheta * DEG_TO_RAD);
 }
 
-#[derive(Component)]
+#[derive(Component, Serialize)]
 pub struct RotateEdit {
     pub object_id: u32,
     pub dtheta: f32

@@ -11,6 +11,7 @@ use bevy::{
     math::Vec3,
     prelude::{Entity, Resource, trace, Transform}
 };
+use serde::Serialize;
 use tracing::instrument;
 
 use crate::{
@@ -39,7 +40,7 @@ fn do_delete(
     commands.entity(entity).despawn();
 }
 
-#[derive(Component)]
+#[derive(Component, Serialize)]
 pub struct DeleteEdit {
     pub object_id: u32,
     pub ptype_id: u32,

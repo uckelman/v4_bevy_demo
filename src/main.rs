@@ -19,7 +19,7 @@ use bevy::{
     image::{ImagePlugin, ImageSamplerDescriptor},
     input::{
         ButtonInput,
-        common_conditions::input_pressed,
+        common_conditions::{input_pressed, input_just_pressed},
         keyboard::KeyCode,
         mouse::AccumulatedMouseScroll
     },
@@ -70,7 +70,7 @@ use crate::{
     flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
-    log::{dump_edits, EditIndex, Edits, handle_redo_over, handle_undo, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_undo, RedoKey, UndoKey},
+    log::{dump_edits, EditIndex, Edits, handle_redo_over, handle_undo, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_undo, RedoKey, UndoKey, write_edits},
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
     piece::spawn_piece,
@@ -277,7 +277,9 @@ fn game_plugin(app: &mut App) {
                 handle_key_selection.run_if(any_with_component::<Selected>),
 
                 handle_undo.run_if(cfg_input_just_pressed::<UndoKey>),
-                handle_redo_over.run_if(cfg_input_just_pressed::<RedoKey>)
+                handle_redo_over.run_if(cfg_input_just_pressed::<RedoKey>),
+
+                write_edits.run_if(input_just_pressed(KeyCode::KeyL))
             )
             .run_if(in_state(GameState::Game))
         )

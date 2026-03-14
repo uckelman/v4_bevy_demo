@@ -10,6 +10,7 @@ use bevy::{
     math::Vec3,
     prelude::{Entity, trace, Transform}
 };
+use serde::Serialize;
 use tracing::instrument;
 
 use crate::{
@@ -22,7 +23,7 @@ fn do_move(t: &mut Transform, to: Vec3)
     t.translation = to;
 }
 
-#[derive(Component)]
+#[derive(Component, Serialize)]
 pub struct MoveEdit {
     pub object_id: u32,
     pub src: Vec3,
