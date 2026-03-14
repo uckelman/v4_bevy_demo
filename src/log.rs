@@ -9,7 +9,7 @@ use bevy::{
     math::Vec3,
     prelude::{debug, Entity, EntityRef, Query, Resource, Result}
 };
-use std::io::{Stdout, Write};
+use std::io::Write;
 use serde::Serialize;
 use tracing::instrument;
 
