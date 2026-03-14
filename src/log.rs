@@ -9,6 +9,8 @@ use bevy::{
     math::Vec3,
     prelude::{debug, Entity, EntityRef, Query, Resource, Result}
 };
+use itertools::Itertools;
+use std::io::{Stdout, Write};
 use tracing::instrument;
 
 use crate::{
@@ -681,40 +683,44 @@ pub fn write_edits(
         cur_entity,
         cur_idx.0,
         &edit_query,
-        &edits_query
+        &edits_query,
+        &mut std::io::stdout()
     )
 }
 
-fn write_group(
+fn write_group<W>(
     entity: Entity,
     edits: &Edits,
     cur_entity: Entity,
     cur_idx: usize,
     edit_query: &Query<(EntityRef, &EditType)>,
-    edits_query: &Query<&Edits>
+    edits_query: &Query<&Edits>,
+    writer: &mut W
 ) -> Result
+where
+    W: Write
 {
-    eprintln!("[");
+    write!(writer, "[")?;
 
-    for (i, &e) in edits.0.iter().enumerate() {
-        if cur_entity == entity && cur_idx == i {
-            return Ok(());
-        }
+    // don't go beyond the edit cursor 
+    let mut itr = edits.0.iter()
+        .take(if cur_entity == entity { cur_idx } else { edits.0.len() });
 
+    for &e in itr {
         let (eref, etype) = edit_query.get(e)?;
 
         match etype {
             EditType::Clone => { 
                 let ed = eref.get::<CloneEdit>().unwrap();
-                eprintln!("{}", serde_json::to_string(ed).unwrap());
+                serde_json::to_writer(&mut *writer, ed)?;
             },
             EditType::Delete => { 
                 let ed = eref.get::<DeleteEdit>().unwrap();
-                eprintln!("{}", serde_json::to_string(ed).unwrap());
+                serde_json::to_writer(&mut *writer, ed)?;
             },
             EditType::Flip => {
                 let ed = eref.get::<FlipEdit>().unwrap();
-                eprintln!("{}", serde_json::to_string(ed).unwrap());
+                serde_json::to_writer(&mut *writer, ed)?;
             },
             EditType::Group => {
                 write_group(
@@ -723,20 +729,21 @@ fn write_group(
                     cur_entity,
                     cur_idx,
                     edit_query,
-                    edits_query
+                    edits_query,
+                    writer
                 )?;
             },
             EditType::Move => {
                 let ed = eref.get::<MoveEdit>().unwrap();
-                eprintln!("{}", serde_json::to_string(ed).unwrap());
+                serde_json::to_writer(&mut *writer, ed)?;
             },
             EditType::Rotate => {
                 let ed = eref.get::<RotateEdit>().unwrap();
-                eprintln!("{}", serde_json::to_string(ed).unwrap());
+                serde_json::to_writer(&mut *writer, ed)?;
             }
         }
     }
 
-    eprintln!("]");
+    write!(writer, "]")?;
     Ok(())
 }
