@@ -677,7 +677,6 @@ pub fn write_edits(
 ) -> Result
 {
     let mut writer = std::io::stdout();
-
     writeln!(&mut writer)?;
 
     let (cur_entity, cur_idx) = edit_index_query.single()?;
@@ -693,7 +692,6 @@ pub fn write_edits(
     )?;
 
     writer.flush()?;
-
     Ok(())
 }
 
