@@ -3,7 +3,8 @@ use bevy::{
         component::Component,
         event::{EntityEvent, Event},
         observer::On,
-        prelude::{Commands, RelationshipTarget, With, Without}
+        prelude::{Commands, RelationshipTarget, With, Without},
+        world::DeferredWorld
     },
     input::keyboard::KeyCode,
     math::Vec3,
@@ -13,7 +14,10 @@ use std::{
     io::Write,
     ops::ControlFlow
 };
-use serde::Serialize;
+use serde::{
+    Serialize, Serializer,
+    ser::{self, SerializeSeq, SerializeStruct}
+};
 use tracing::instrument;
 
 use crate::{
@@ -669,96 +673,101 @@ fn dump_group(
     Ok(())
 }
 
-pub fn write_edits(
-    root_query: Query<(Entity, &Edits), Without<EditOf>>,
-    edit_query: Query<(EntityRef, &EditType)>,
-    edits_query: Query<&Edits>,
-    edit_index_query: Query<(Entity, &EditIndex)>
-) -> Result
+fn serialize_edit<E, S>(
+    eref: EntityRef,
+    seq: &mut S
+) -> Result<(), S::Error>
+where
+    E: Component + Serialize,
+    S: SerializeSeq
+{
+    let ed = eref.get::<E>().expect("edit type mismatch");
+    seq.serialize_element(ed)
+}
+
+struct LogGroup<'e, 's, 'w>(Entity, &'e Edits, &'s [(Entity, usize)], &'w DeferredWorld<'w>);
+
+impl Serialize for LogGroup<'_, '_, '_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+    {
+        let LogGroup(entity, edits, stops, world) = &self;
+
+        let mut edit_query = world.try_query::<(EntityRef, &EditType)>()
+            .expect("no query");
+
+        let stop = stops.last();
+        let len = if let Some((stop_entity, stop_idx)) = stop && stop_entity == entity { *stop_idx } else { edits.0.len() };
+
+        let mut seq = serializer.serialize_seq(Some(len))?;
+
+        for (i, &e) in edits.0.iter().enumerate() {
+            if let Some((stop_entity, stop_idx)) = stop && stop_entity == entity && *stop_idx == i {
+                // don't go beyond the edit cursor
+                break;
+            }
+
+            let (eref, etype) = edit_query.get(&world, e)
+                .map_err(|e| ser::Error::custom(e))?;
+
+            match etype {
+                EditType::Clone => serialize_edit::<CloneEdit, S::SerializeSeq>(eref, &mut seq)?,
+                EditType::Delete => serialize_edit::<DeleteEdit, S::SerializeSeq>(eref, &mut seq)?,
+                EditType::Flip => serialize_edit::<FlipEdit, S::SerializeSeq>(eref, &mut seq)?,
+                EditType::Group => {
+                    let ed = eref.get::<Edits>().expect("edit type mismatch");
+// FIXME: will panic when stops is already empty
+                    let g = LogGroup(e, ed, &stops[..stops.len() - 1], &world);
+                    seq.serialize_element(&g)?;
+                },
+                EditType::Move => serialize_edit::<MoveEdit, S::SerializeSeq>(eref, &mut seq)?,
+                EditType::Rotate => serialize_edit::<MoveEdit, S::SerializeSeq>(eref, &mut seq)?
+            }
+        };
+
+        seq.end()
+    }
+}
+
+pub fn serialize_edits(world: DeferredWorld) -> Result
 {
     let mut writer = std::io::stdout();
     writeln!(&mut writer)?;
 
-    let (cur_entity, cur_idx) = edit_index_query.single()?;
-    let (root_entity, root_edits) = root_query.single()?;
-    let _ = write_group(
-        root_entity,
-        root_edits,
-        cur_entity,
-        cur_idx.0,
-        &edit_query,
-        &edits_query,
-        &mut writer
-    )?;
+    // find the root
+    let mut root_query = world.try_query_filtered::<(Entity, &Edits), Without<EditOf>>().expect("no query");
 
-    writer.flush()?;
+    let (root_entity, root_edits) = root_query.single(&world)?;
+
+    // find the edit cursor
+    let mut edit_index_query = world.try_query::<(Entity, &EditIndex)>()
+        .expect("no query");
+
+    let (cur_entity, cur_idx) = edit_index_query.single(&world)?;
+
+    // find the stop chain for the edit cursor
+    let mut parent_query = world.try_query::<&EditOf>()
+        .expect("no query");
+    let mut parent_edits_query = world.try_query::<&Edits>()
+        .expect("no query");
+
+    let mut stops = vec![ (cur_entity, cur_idx.0) ];
+    let mut e = cur_entity;
+    while e != root_entity {
+        e = parent_query.get(&world, e)?.0;
+        let edits = parent_edits_query.get(&world, e)?;
+
+        let idx = edits.0.iter()
+            .position(|&ed| e == ed)
+            .expect("child must exist in parent") + 1;
+
+        stops.push((e, idx));
+    }
+
+    let g = LogGroup(root_entity, root_edits, &stops, &world);
+
+    serde_json::to_writer(&mut writer, &g)?;
+    writeln!(&mut writer)?;
     Ok(())
-}
-
-fn write_edit<E, W>(
-    eref: EntityRef,
-    writer: &mut W
-) -> Result
-where
-    W: Write,
-    E: Component + Serialize
-{
-    let ed = eref.get::<E>().expect("edit type mismatch");
-    Ok(serde_json::to_writer(&mut *writer, ed)?)
-}
-
-fn write_group<W>(
-    entity: Entity,
-    edits: &Edits,
-    cur_entity: Entity,
-    cur_idx: usize,
-    edit_query: &Query<(EntityRef, &EditType)>,
-    edits_query: &Query<&Edits>,
-    writer: &mut W
-) -> Result<ControlFlow<()>>
-where
-    W: Write
-{
-    write!(writer, "[")?;
-
-    let mut itr = edits.0.iter().enumerate();
-
-    let ctrl = loop {
-        let Some((i ,&e)) = itr.next() else { break ControlFlow::Continue(()); };
-
-        if cur_entity == entity && cur_idx == i {
-            // don't go beyond the edit cursor
-            break ControlFlow::Break(());
-        }
-
-        if i > 0 {
-            // ya gotta keep 'em separated
-            write!(writer, ",")?;
-        }
-
-        let (eref, etype) = edit_query.get(e)?;
-
-        match etype {
-            EditType::Clone => write_edit::<CloneEdit, W>(eref, &mut *writer)?,
-            EditType::Delete => write_edit::<DeleteEdit, W>(eref, &mut *writer)?,
-            EditType::Flip => write_edit::<FlipEdit, W>(eref, &mut *writer)?,
-            EditType::Group => if write_group(
-                e,
-                edits_query.get(e)?,
-                cur_entity,
-                cur_idx,
-                edit_query,
-                edits_query,
-                writer
-            )? == ControlFlow::Break(()) {
-                // don't go beyond the edit cursor
-                break ControlFlow::Break(());
-            },
-            EditType::Move => write_edit::<MoveEdit, W>(eref, &mut *writer)?,
-            EditType::Rotate => write_edit::<RotateEdit, W>(eref, &mut *writer)?
-        }
-    };
-
-    write!(writer, "]")?;
-    Ok(ctrl)
 }
