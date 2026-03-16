@@ -94,13 +94,19 @@ use crate::{
 #[derive(Resource)]
 pub struct GameBoxPath(pub PathBuf);
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = std::env::args().collect::<Vec<_>>();
+#[derive(Resource)]
+pub struct LogPath(pub Option<PathBuf>);
 
-    let gamebox_path = GameBoxPath(PathBuf::from(&args[1]));
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut args = std::env::args().skip(1);
 
 // FIXME: unwrap
-    let base = gamebox_path.0
+    let gamebox_path = GameBoxPath(PathBuf::from(args.next().unwrap()));
+
+    let log_path = LogPath(args.next().map(PathBuf::from));
+
+// FIXME: unwrap
+    let base_path = gamebox_path.0
         .parent()
         .unwrap()
         .to_str()
@@ -109,9 +115,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     App::new()
         .insert_resource(gamebox_path)
+        .insert_resource(log_path)
         .register_asset_source(
-            base.clone(),
-            AssetSourceBuilder::platform_default(&base, None)
+            base_path.clone(),
+            AssetSourceBuilder::platform_default(&base_path, None)
         )
         .add_plugins((DefaultPlugins
             .set(WindowPlugin {
