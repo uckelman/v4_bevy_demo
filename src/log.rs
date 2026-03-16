@@ -714,17 +714,13 @@ impl Serialize for LogGroup<'_, '_, '_> {
         let mut edit_query = world.try_query::<(EntityRef, &EditType)>()
             .expect("no query");
 
-        let stop = stops.last();
-        let len = if let Some((stop_entity, stop_idx)) = stop && stop_entity == entity { *stop_idx } else { edits.0.len() };
+        // don't go beyond the edit cursor
+        let len = if let Some((stop_entity, stop_idx)) = stops.last()
+            && entity == stop_entity { *stop_idx } else { edits.0.len() };
 
         let mut seq = serializer.serialize_seq(Some(len))?;
 
-        for (i, &e) in edits.0.iter().enumerate() {
-            if let Some((stop_entity, stop_idx)) = stop && stop_entity == entity && *stop_idx == i {
-                // don't go beyond the edit cursor
-                break;
-            }
-
+        for &e in edits.0.iter().take(len) {
             let (eref, etype) = edit_query.get(&world, e)
                 .map_err(|e| ser::Error::custom(e))?;
 
@@ -738,7 +734,7 @@ impl Serialize for LogGroup<'_, '_, '_> {
                     seq.serialize_element(&g)?;
                 },
                 EditType::Move => seq.serialize_edit::<MoveEdit>(eref)?,
-                EditType::Rotate => seq.serialize_edit::<MoveEdit>(eref)?
+                EditType::Rotate => seq.serialize_edit::<RotateEdit>(eref)?
             }
         };
 
