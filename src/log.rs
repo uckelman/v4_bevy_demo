@@ -699,14 +699,15 @@ where
     }
 }
 
-struct LogGroup<'e, 's, 'w>(Entity, &'e Edits, &'s [(Entity, usize)], &'w DeferredWorld<'w>);
+// TODO: would it make sense to implement PartialOrd for the stop point?
+struct GroupProxy<'e, 's, 'w>(Entity, &'e Edits, &'s [(Entity, usize)], &'w DeferredWorld<'w>);
 
-impl Serialize for LogGroup<'_, '_, '_> {
+impl Serialize for GroupProxy<'_, '_, '_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer
     {
-        let LogGroup(entity, edits, stops, world) = &self;
+        let GroupProxy(entity, edits, stops, world) = &self;
 
         let mut edit_query = world.try_query::<(EntityRef, &EditType)>()
             .expect("no query");
@@ -726,7 +727,7 @@ impl Serialize for LogGroup<'_, '_, '_> {
                 EditType::Delete => seq.serialize_edit::<DeleteEdit>(eref)?,
                 EditType::Flip => seq.serialize_edit::<FlipEdit>(eref)?,
                 EditType::Group => seq.serialize_element(
-                    &LogGroup(
+                    &GroupProxy(
                         e,
                         eref.get::<Edits>().expect("edit type mismatch"),
                         // peel off this level for the redo boundary
@@ -778,7 +779,7 @@ pub fn serialize_edits(world: DeferredWorld) -> Result
         stops.push((e, idx));
     }
 
-    let g = LogGroup(root_entity, root_edits, &stops, &world);
+    let g = GroupProxy(root_entity, root_edits, &stops, &world);
 
     serde_json::to_writer(&mut writer, &g)?;
     writeln!(&mut writer)?;
