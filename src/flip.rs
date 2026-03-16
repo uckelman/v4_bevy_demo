@@ -9,7 +9,7 @@ use bevy::{
     },
     prelude::{Entity, Sprite, trace}
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
@@ -50,7 +50,7 @@ fn do_flip(
     set_face(sprite, faces, up);
 }
 
-#[derive(Component, Serialize)]
+#[derive(Component, Deserialize, Serialize)]
 #[serde(rename = "flip", tag = "type")]
 pub struct FlipEdit {
     pub object_id: u32,
