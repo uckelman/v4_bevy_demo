@@ -711,7 +711,7 @@ impl Serialize for LogGroup<'_, '_, '_> {
         let mut edit_query = world.try_query::<(EntityRef, &EditType)>()
             .expect("no query");
 
-        // don't go beyond the edit cursor
+        // don't go beyond the redo boundary
         let len = if let Some((stop_entity, stop_idx)) = stops.last()
             && entity == stop_entity { *stop_idx } else { edits.0.len() };
 
@@ -725,11 +725,15 @@ impl Serialize for LogGroup<'_, '_, '_> {
                 EditType::Clone => seq.serialize_edit::<CloneEdit>(eref)?,
                 EditType::Delete => seq.serialize_edit::<DeleteEdit>(eref)?,
                 EditType::Flip => seq.serialize_edit::<FlipEdit>(eref)?,
-                EditType::Group => {
-                    let ed = eref.get::<Edits>().expect("edit type mismatch");
-                    let g = LogGroup(e, ed, &stops[..stops.len().saturating_sub(1)], world);
-                    seq.serialize_element(&g)?;
-                },
+                EditType::Group => seq.serialize_element(
+                    &LogGroup(
+                        e,
+                        eref.get::<Edits>().expect("edit type mismatch"),
+                        // peel off this level for the redo boundary
+                        &stops[..stops.len().saturating_sub(1)],
+                        world
+                    )
+                )?,
                 EditType::Move => seq.serialize_edit::<MoveEdit>(eref)?,
                 EditType::Rotate => seq.serialize_edit::<RotateEdit>(eref)?
             }
