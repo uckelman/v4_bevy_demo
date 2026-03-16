@@ -199,6 +199,7 @@ fn setup_game_resources(mut commands: Commands) {
     commands.insert_resource(ObjectIdMap::default());
     commands.insert_resource(NextObjectId::default());
 
+    // log root
     commands.spawn((
         EditIndex::default(),
         Edits::default()
@@ -464,7 +465,6 @@ Drag lag: im suspecting that the drag event is either being fired less often tha
 // TODO: load pdf
 // TODO: load avif
 // TODO: log
-// TODO: undo/redo
 // TODO: grid
 // TODO: stacking
 
