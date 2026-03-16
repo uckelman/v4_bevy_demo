@@ -13,7 +13,7 @@ use bevy::{
 use std::io::Write;
 use serde::{
     Serialize, Serializer,
-    ser::{self, SerializeSeq}
+    ser::SerializeSeq
 };
 use tracing::instrument;
 
@@ -719,7 +719,7 @@ impl Serialize for LogGroup<'_, '_, '_> {
 
         for &e in edits.0.iter().take(len) {
             let (eref, etype) = edit_query.get(world, e)
-                .map_err(ser::Error::custom)?;
+                .map_err(serde::ser::Error::custom)?;
 
             match etype {
                 EditType::Clone => seq.serialize_edit::<CloneEdit>(eref)?,
