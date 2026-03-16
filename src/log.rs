@@ -673,16 +673,33 @@ fn dump_group(
     Ok(())
 }
 
-fn serialize_edit<E, S>(
-    eref: EntityRef,
-    seq: &mut S
-) -> Result<(), S::Error>
+trait SerializeEdit {
+    type Error: serde::ser::Error;
+
+    fn serialize_edit<E>(
+        &mut self,
+        eref: EntityRef
+    ) ->  Result<(), Self::Error>
+    where
+        E: Component + Serialize;
+}
+
+impl <S> SerializeEdit for S
 where
-    E: Component + Serialize,
     S: SerializeSeq
 {
-    let ed = eref.get::<E>().expect("edit type mismatch");
-    seq.serialize_element(ed)
+    type Error = S::Error; 
+
+    fn serialize_edit<E>(
+        &mut self,
+        eref: EntityRef
+    ) ->  Result<(), Self::Error>
+    where
+        E: Component + Serialize
+    {
+        let ed = eref.get::<E>().expect("edit type mismatch");
+        self.serialize_element(ed)
+    }
 }
 
 struct LogGroup<'e, 's, 'w>(Entity, &'e Edits, &'s [(Entity, usize)], &'w DeferredWorld<'w>);
@@ -712,17 +729,16 @@ impl Serialize for LogGroup<'_, '_, '_> {
                 .map_err(|e| ser::Error::custom(e))?;
 
             match etype {
-                EditType::Clone => serialize_edit::<CloneEdit, S::SerializeSeq>(eref, &mut seq)?,
-                EditType::Delete => serialize_edit::<DeleteEdit, S::SerializeSeq>(eref, &mut seq)?,
-                EditType::Flip => serialize_edit::<FlipEdit, S::SerializeSeq>(eref, &mut seq)?,
+                EditType::Clone => seq.serialize_edit::<CloneEdit>(eref)?,
+                EditType::Delete => seq.serialize_edit::<DeleteEdit>(eref)?,
+                EditType::Flip => seq.serialize_edit::<FlipEdit>(eref)?,
                 EditType::Group => {
                     let ed = eref.get::<Edits>().expect("edit type mismatch");
-// FIXME: will panic when stops is already empty
-                    let g = LogGroup(e, ed, &stops[..stops.len() - 1], &world);
+                    let g = LogGroup(e, ed, &stops[..stops.len().saturating_sub(1)], &world);
                     seq.serialize_element(&g)?;
                 },
-                EditType::Move => serialize_edit::<MoveEdit, S::SerializeSeq>(eref, &mut seq)?,
-                EditType::Rotate => serialize_edit::<MoveEdit, S::SerializeSeq>(eref, &mut seq)?
+                EditType::Move => seq.serialize_edit::<MoveEdit>(eref)?,
+                EditType::Rotate => seq.serialize_edit::<MoveEdit>(eref)?
             }
         };
 
