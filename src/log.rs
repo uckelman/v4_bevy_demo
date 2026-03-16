@@ -10,13 +10,10 @@ use bevy::{
     math::Vec3,
     prelude::{debug, Entity, EntityRef, Query, Resource, Result}
 };
-use std::{
-    io::Write,
-    ops::ControlFlow
-};
+use std::io::Write;
 use serde::{
     Serialize, Serializer,
-    ser::{self, SerializeSeq, SerializeStruct}
+    ser::{self, SerializeSeq}
 };
 use tracing::instrument;
 
@@ -721,8 +718,8 @@ impl Serialize for LogGroup<'_, '_, '_> {
         let mut seq = serializer.serialize_seq(Some(len))?;
 
         for &e in edits.0.iter().take(len) {
-            let (eref, etype) = edit_query.get(&world, e)
-                .map_err(|e| ser::Error::custom(e))?;
+            let (eref, etype) = edit_query.get(world, e)
+                .map_err(ser::Error::custom)?;
 
             match etype {
                 EditType::Clone => seq.serialize_edit::<CloneEdit>(eref)?,
@@ -730,7 +727,7 @@ impl Serialize for LogGroup<'_, '_, '_> {
                 EditType::Flip => seq.serialize_edit::<FlipEdit>(eref)?,
                 EditType::Group => {
                     let ed = eref.get::<Edits>().expect("edit type mismatch");
-                    let g = LogGroup(e, ed, &stops[..stops.len().saturating_sub(1)], &world);
+                    let g = LogGroup(e, ed, &stops[..stops.len().saturating_sub(1)], world);
                     seq.serialize_element(&g)?;
                 },
                 EditType::Move => seq.serialize_edit::<MoveEdit>(eref)?,
