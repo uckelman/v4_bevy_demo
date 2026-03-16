@@ -688,7 +688,7 @@ impl <S> SerializeEdit for S
 where
     S: SerializeSeq
 {
-    type Error = S::Error; 
+    type Error = S::Error;
 
     fn serialize_edit<E>(
         &mut self,
