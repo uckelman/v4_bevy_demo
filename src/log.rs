@@ -755,7 +755,7 @@ pub fn serialize_edits(world: DeferredWorld) -> Result
 
     let (cur_entity, cur_idx) = edit_index_query.single(&world)?;
 
-    // find the stop chain for the edit cursor
+    // find the redo boundary for the edit cursor
     let mut parent_query = world.try_query::<&EditOf>()
         .expect("no query");
     let mut parent_edits_query = world.try_query::<&Edits>()
