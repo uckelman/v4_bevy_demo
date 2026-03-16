@@ -18,9 +18,9 @@ use std::{
     path::Path
 };
 
-use crate::gamebox::{
-    GameBox,
-    ImageDefinition
+use crate::{
+    GameBoxPath,
+    gamebox::{GameBox, ImageDefinition}
 };
 
 #[derive(Clone, Debug)]
@@ -38,18 +38,23 @@ pub struct SpriteHandles(pub HashMap<String, ImageSource>);
 #[derive(Resource)]
 pub struct LoadingHandles(pub HashSet<AssetId<Image>>);
 
+// TODO: make our own error type for this
+fn load_gamebox(path: &Path) -> Result<GameBox> {
+    let gbs = std::fs::read_to_string(path)?;
+    Ok(toml::from_str(&gbs)?)
+}
+
 pub fn load_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    gamebox_path: Res<GameBoxPath>
 ) -> Result
 {
-    let args = std::env::args().collect::<Vec<_>>();
-
-    let game: GameBox = toml::from_str(&std::fs::read_to_string(&args[1])?)?;
+    let game = load_gamebox(&gamebox_path.0)?;
 
 // FIXME: unwrap
-    let base = Path::new(&args[1])
+    let base = gamebox_path.0
         .parent()
         .unwrap()
         .to_str()

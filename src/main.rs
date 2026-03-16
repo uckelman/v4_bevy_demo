@@ -33,7 +33,7 @@ use bevy::{
     sprite::Anchor,
 };
 use rand::RngExt;
-use std::path::Path;
+use std::path::PathBuf;
 
 mod actionfunc;
 mod actionkey;
@@ -91,11 +91,16 @@ use crate::{
     title::{SplashScreenTimer, display_title}
 };
 
+#[derive(Resource)]
+pub struct GameBoxPath(pub PathBuf);
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().collect::<Vec<_>>();
 
+    let gamebox_path = GameBoxPath(PathBuf::from(&args[1]));
+
 // FIXME: unwrap
-    let base = Path::new(&args[1])
+    let base = gamebox_path.0
         .parent()
         .unwrap()
         .to_str()
@@ -103,6 +108,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .to_owned();
 
     App::new()
+        .insert_resource(gamebox_path)
         .register_asset_source(
             base.clone(),
             AssetSourceBuilder::platform_default(&base, None)
