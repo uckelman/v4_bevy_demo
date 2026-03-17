@@ -468,7 +468,6 @@ pub fn handle_redo_all(
         let Some(pe) = parent_entity else { break; };
 
         // we're not at the root yet, go up to our parent
-
         let (parent_edits, parent_parent_entity) = parent_query.get(pe)?;
 
         redo_index = parent_edits.iter()
