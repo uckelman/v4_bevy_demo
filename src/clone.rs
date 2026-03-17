@@ -11,6 +11,7 @@ use bevy::{
     prelude::{Entity, Resource, trace}
 };
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::{
     actions::add_action_observers,
@@ -19,8 +20,6 @@ use crate::{
     object::{NextObjectId, ObjectId, ObjectIdMap},
     piece::{Actions, add_observers}
 };
-
-use tracing::instrument;
 
 #[derive(Resource)]
 pub struct CloneKey(pub KeyCode);
