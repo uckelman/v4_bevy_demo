@@ -852,7 +852,7 @@ fn add_edit_proxy(
             EditType::Delete,
             ed
         )).id(),
-        EditProxyIn::Flip(ed) => commands.spawn(( 
+        EditProxyIn::Flip(ed) => commands.spawn((
             EditOf(parent_entity),
             EditType::Flip,
             ed
@@ -870,12 +870,12 @@ fn add_edit_proxy(
 
             group_entity
         },
-        EditProxyIn::Move(ed) => commands.spawn(( 
+        EditProxyIn::Move(ed) => commands.spawn((
             EditOf(parent_entity),
             EditType::Move,
             ed
         )).id(),
-        EditProxyIn::Rotate(ed) => commands.spawn(( 
+        EditProxyIn::Rotate(ed) => commands.spawn((
             EditOf(parent_entity),
             EditType::Rotate,
             ed
@@ -889,7 +889,7 @@ pub fn load_log(
     mut commands: Commands
 ) -> Result {
     debug!("");
-    
+
     // create the log root
     let root_entity = commands.spawn((
         Edits::default(),
@@ -908,12 +908,12 @@ pub fn load_log(
             .collect::<Vec<_>>();
 
 //        commands.trigger(EditsComplete);
-/*        
-        for e in entities { 
+/*
+        for e in entities {
             commands.trigger(RedoEvent { entity: e });
         }
 */
     }
- 
+
     Ok(())
 }
