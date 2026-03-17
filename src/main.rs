@@ -32,7 +32,6 @@ use bevy::{
     prelude::{AppExtStates, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
     sprite::Anchor,
 };
-use rand::RngExt;
 use std::path::PathBuf;
 
 mod actionfunc;
@@ -380,9 +379,7 @@ fn display_game(
     sprite_handles: Res<SpriteHandles>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut surface: ResMut<Surface>,
-    mut next_object_id: ResMut<NextObjectId>,
-    gamebox: Res<GameBox>,
+    gamebox: Res<GameBox>
 ) -> Result
 {
     commands.entity(*window)

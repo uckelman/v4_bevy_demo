@@ -7,7 +7,7 @@ use bevy::{
         prelude::{Commands, Query}
     },
     math::Vec3,
-    prelude::{Entity, Resource, trace}
+    prelude::{Entity, trace}
 };
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
@@ -52,7 +52,7 @@ fn do_create(
     spawn_piece(
         object_id,
         type_id,
-        &piece_type,
+        piece_type,
         Vec3::new(x, y, surface.max_z),
         0.0,
         0,
