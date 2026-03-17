@@ -381,7 +381,7 @@ pub fn handle_redo_in(
 }
 
 pub fn handle_redo_out(
-    mut edits_query: Query<(Entity, &EditType, &Edits, &mut EditIndex, &EditOf)>,
+    mut edits_query: Query<(Entity, &EditType, &Edits, &mut EditIndex, Option<&EditOf>)>,
     parent_query: Query<&Edits, Without<EditIndex>>,
     mut commands: Commands
 ) -> Result
@@ -389,12 +389,11 @@ pub fn handle_redo_out(
     debug!("handle_redo_out");
 
     // there must be a unique edit cursor
-    let Ok((edits_entity, edit_type, edits, mut edit_index, parent_entity)) = edits_query.single_mut() else {
-        // the edit cursor is on the root group, which has no EditOf
-        return Ok(());
-    };
+    let (edits_entity, &edit_type, edits, mut edit_index, parent_entity) = edits_query.single_mut()?;
 
-    if *edit_type == EditType::Group {
+    if let Some(parent_entity) = parent_entity &&
+        edit_type == EditType::Group
+    {
         // redo everything in this group to the end
         edits.0[edit_index.0..]
         .iter()
@@ -415,7 +414,7 @@ pub fn handle_redo_out(
             .insert(EditIndex(pos));
     }
     else {
-        // this is not a group, just step forward
+        // this is the root or not a group, just step forward
         commands.trigger(RedoEvent { entity: edits.0[edit_index.0] });
         edit_index.0 += 1;
     }
