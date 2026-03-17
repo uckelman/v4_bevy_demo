@@ -457,6 +457,11 @@ pub struct UndoCloneEvent {
 }
 
 #[derive(EntityEvent)]
+pub struct UndoCreateEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
 pub struct UndoDeleteEvent {
     pub entity: Entity
 }
@@ -495,6 +500,11 @@ pub fn on_undo(
 
 #[derive(EntityEvent)]
 pub struct RedoCloneEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct RedoCreateEvent {
     pub entity: Entity
 }
 
