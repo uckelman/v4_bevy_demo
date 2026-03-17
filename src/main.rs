@@ -71,7 +71,7 @@ use crate::{
     flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
-    log::{dump_edits, EditIndex, Edits, handle_redo_over, handle_undo, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_undo, RedoKey, UndoKey, serialize_edits},
+    log::{dump_edits, handle_redo_over, handle_undo, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_undo, RedoKey, UndoKey, serialize_edits},
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
     piece::spawn_piece,
@@ -157,7 +157,8 @@ fn splash_plugin(app: &mut App) {
                 load_assets,
                 load_input_settings,
                 setup_selection_box,
-                setup_game_resources
+                setup_game_resources,
+                load_log
             )
         )
         .add_systems(
@@ -206,12 +207,6 @@ fn setup_game_resources(mut commands: Commands) {
     commands.insert_resource(Surface { max_z: 0.0 });
     commands.insert_resource(ObjectIdMap::default());
     commands.insert_resource(NextObjectId::default());
-
-    // log root
-    commands.spawn((
-        EditIndex::default(),
-        Edits::default()
-    ));
 }
 
 // TODO: check that there is no selection for view keys

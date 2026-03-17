@@ -1,5 +1,6 @@
 use bevy::{
     ecs::{
+        change_detection::Res,
         component::Component,
         event::{EntityEvent, Event},
         observer::On,
@@ -10,7 +11,11 @@ use bevy::{
     math::Vec3,
     prelude::{debug, Entity, EntityRef, Query, Resource, Result}
 };
-use std::io::Write;
+use std::{
+    fmt,
+    fs::File,
+    io::{BufReader, Write}
+};
 use serde::{
     Serialize, Serializer,
     ser::SerializeSeq
@@ -18,6 +23,7 @@ use serde::{
 use tracing::instrument;
 
 use crate::{
+    LogPath,
     clone::CloneEdit,
     create::CreateEdit,
     delete::DeleteEdit,
@@ -803,5 +809,106 @@ pub fn serialize_edits(world: DeferredWorld) -> Result
 
     serde_json::to_writer(&mut writer, &g)?;
     writeln!(&mut writer)?;
+    Ok(())
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "lowercase", tag = "type")]
+enum EditProxyIn {
+    Clone(CloneEdit),
+    Create(CreateEdit),
+    Delete(DeleteEdit),
+    Flip(FlipEdit),
+    Move(MoveEdit),
+    Rotate(RotateEdit),
+    #[serde(untagged)]
+    Group(Vec<EditProxyIn>)
+}
+
+fn add_edit_proxy(
+    parent_entity: Entity,
+    ep: EditProxyIn,
+    commands: &mut Commands
+) -> Entity
+{
+    match ep {
+        EditProxyIn::Clone(ed) => commands.spawn((
+            EditOf(parent_entity),
+            EditType::Clone,
+            ed
+        )).id(),
+        EditProxyIn::Create(ed) => commands.spawn((
+            EditOf(parent_entity),
+            EditType::Create,
+            ed
+        )).id(),
+        EditProxyIn::Delete(ed) => commands.spawn((
+            EditOf(parent_entity),
+            EditType::Delete,
+            ed
+        )).id(),
+        EditProxyIn::Flip(ed) => commands.spawn(( 
+            EditOf(parent_entity),
+            EditType::Flip,
+            ed
+        )).id(),
+        EditProxyIn::Group(g) => {
+            let group_entity = commands.spawn((
+                EditOf(parent_entity),
+                EditType::Group,
+                Edits::default()
+            )).id();
+
+            for ed in g {
+                add_edit_proxy(group_entity, ed, commands);
+            }
+
+            group_entity
+        },
+        EditProxyIn::Move(ed) => commands.spawn(( 
+            EditOf(parent_entity),
+            EditType::Move,
+            ed
+        )).id(),
+        EditProxyIn::Rotate(ed) => commands.spawn(( 
+            EditOf(parent_entity),
+            EditType::Rotate,
+            ed
+        )).id()
+    }
+}
+
+#[instrument(skip_all)]
+pub fn load_log(
+    log_path: Res<LogPath>,
+    mut commands: Commands
+) -> Result {
+    debug!("");
+    
+    // create the log root
+    let root_entity = commands.spawn((
+        Edits::default(),
+        EditIndex::default()
+    )).id();
+
+    if let Some(path) = log_path.0.as_ref() {
+        // there is a log to load
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+
+        let g: Vec<EditProxyIn> = serde_json::from_reader(reader)?;
+
+        let entities = g.into_iter()
+            .map(|ep| add_edit_proxy(root_entity, ep, &mut commands))
+            .collect::<Vec<_>>();
+
+//        commands.trigger(EditsComplete);
+/*        
+        for e in entities { 
+            commands.trigger(RedoEvent { entity: e });
+        }
+*/
+    }
+ 
     Ok(())
 }
