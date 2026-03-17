@@ -318,11 +318,11 @@ pub struct RedoAllEvent;
 
 #[instrument(skip_all)]
 pub fn on_redo_all(
-    evt: On<RedoAllEvent>,
+    _evt: On<RedoAllEvent>,
     root_query: Query<(Entity, &Edits), Without<EditOf>>,
     edits_query: Query<(Entity, &Edits, &EditIndex, Option<&EditOf>)>,
     parent_query: Query<(&Edits, Option<&EditOf>), Without<EditIndex>>,
-    mut commands: Commands
+    commands: Commands
 ) -> Result
 {
     handle_redo_all(root_query, edits_query, parent_query, commands)
@@ -896,33 +896,62 @@ enum EditProxyIn {
     Group(Vec<EditProxyIn>)
 }
 
+/*
+impl<'de> Deserialize<'de> for GroupProxyIn {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>
+    {
+        deserializer.deserialize_unit(GroupProxyInVisitor)
+    }
+}
+
+struct GroupProxyInVisitor;
+
+impl<'de> Visitor<'de> for GroupProxyInVisitor {
+    type Value = GroupProxyIn;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "!")
+    }
+}
+*/
+
 fn add_edit_proxy(
     parent_entity: Entity,
     ep: EditProxyIn,
     commands: &mut Commands
-) -> Entity
+)
 {
     match ep {
-        EditProxyIn::Clone(ed) => commands.spawn((
-            EditOf(parent_entity),
-            EditType::Clone,
-            ed
-        )).id(),
-        EditProxyIn::Create(ed) => commands.spawn((
-            EditOf(parent_entity),
-            EditType::Create,
-            ed
-        )).id(),
-        EditProxyIn::Delete(ed) => commands.spawn((
-            EditOf(parent_entity),
-            EditType::Delete,
-            ed
-        )).id(),
-        EditProxyIn::Flip(ed) => commands.spawn((
-            EditOf(parent_entity),
-            EditType::Flip,
-            ed
-        )).id(),
+        EditProxyIn::Clone(ed) => {
+            commands.spawn((
+                EditOf(parent_entity),
+                EditType::Clone,
+                ed
+            ));
+        },
+        EditProxyIn::Create(ed) => {
+            commands.spawn((
+                EditOf(parent_entity),
+                EditType::Create,
+                ed
+            ));
+        },
+        EditProxyIn::Delete(ed) => {
+            commands.spawn((
+                EditOf(parent_entity),
+                EditType::Delete,
+                ed
+            ));
+        },
+        EditProxyIn::Flip(ed) => {
+            commands.spawn((
+                EditOf(parent_entity),
+                EditType::Flip,
+                ed
+            ));
+        },
         EditProxyIn::Group(g) => {
             let group_entity = commands.spawn((
                 EditOf(parent_entity),
@@ -933,19 +962,21 @@ fn add_edit_proxy(
             for ed in g {
                 add_edit_proxy(group_entity, ed, commands);
             }
-
-            group_entity
         },
-        EditProxyIn::Move(ed) => commands.spawn((
-            EditOf(parent_entity),
-            EditType::Move,
-            ed
-        )).id(),
-        EditProxyIn::Rotate(ed) => commands.spawn((
-            EditOf(parent_entity),
-            EditType::Rotate,
-            ed
-        )).id()
+        EditProxyIn::Move(ed) => {
+            commands.spawn((
+                EditOf(parent_entity),
+                EditType::Move,
+                ed
+            ));
+        },
+        EditProxyIn::Rotate(ed) => {
+            commands.spawn((
+                EditOf(parent_entity),
+                EditType::Rotate,
+                ed
+            ));
+        }
     }
 }
 
@@ -969,17 +1000,10 @@ pub fn load_log(
 
         let g: Vec<EditProxyIn> = serde_json::from_reader(reader)?;
 
-        let entities = g.into_iter()
-            .map(|ep| add_edit_proxy(root_entity, ep, &mut commands))
-            .collect::<Vec<_>>();
-
-//        commands.trigger(EditsComplete);
-/*
-        for e in entities {
-            commands.trigger(RedoEvent { entity: e });
-        }
-*/
+        g.into_iter()
+            .for_each(|ep| add_edit_proxy(root_entity, ep, &mut commands));
     }
 
+    commands.trigger(EditsComplete);
     Ok(())
 }
