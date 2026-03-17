@@ -43,6 +43,7 @@ mod assets;
 mod clone;
 mod config;
 mod context_menu;
+mod create;
 mod delete;
 mod drag;
 mod flip;

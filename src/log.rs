@@ -19,6 +19,7 @@ use tracing::instrument;
 
 use crate::{
     clone::CloneEdit,
+    create::CreateEdit,
     delete::DeleteEdit,
     flip::FlipEdit,
     r#move::MoveEdit,
@@ -59,6 +60,7 @@ pub struct Edits(Vec<Entity>);
 #[derive(Clone, Component, Copy, Debug, Eq, PartialEq)]
 pub enum EditType {
     Clone,
+    Create,
     Delete,
     Flip,
     Group,
@@ -70,6 +72,7 @@ impl EditType {
     fn dispatch_undo_event(&self, entity: Entity, commands: &mut Commands) {
         match self {
             EditType::Clone => commands.trigger(UndoCloneEvent { entity }),
+            EditType::Create => commands.trigger(UndoCreateEvent { entity }),
             EditType::Delete => commands.trigger(UndoDeleteEvent { entity }),
             EditType::Flip => commands.trigger(UndoFlipEvent { entity }),
             EditType::Group => commands.trigger(UndoGroupEvent { entity }),
@@ -81,6 +84,7 @@ impl EditType {
     fn dispatch_redo_event(&self, entity: Entity, commands: &mut Commands) {
         match self {
             EditType::Clone => commands.trigger(RedoCloneEvent { entity }),
+            EditType::Create => commands.trigger(RedoCreateEvent { entity }),
             EditType::Delete => commands.trigger(RedoDeleteEvent { entity }),
             EditType::Flip => commands.trigger(RedoFlipEvent { entity }),
             EditType::Group => commands.trigger(RedoGroupEvent { entity }),
@@ -739,6 +743,7 @@ impl Serialize for GroupProxyOut<'_, '_, '_> {
 
             match etype {
                 EditType::Clone => seq.serialize_edit::<CloneEdit>(eref)?,
+                EditType::Create => seq.serialize_edit::<CreateEdit>(eref)?,
                 EditType::Delete => seq.serialize_edit::<DeleteEdit>(eref)?,
                 EditType::Flip => seq.serialize_edit::<FlipEdit>(eref)?,
                 EditType::Group => seq.serialize_element(
