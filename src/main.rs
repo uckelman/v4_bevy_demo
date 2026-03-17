@@ -32,7 +32,6 @@ use bevy::{
     prelude::{AppExtStates, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
     sprite::Anchor,
 };
-use rand::RngExt;
 use std::path::PathBuf;
 
 mod actionfunc;
@@ -72,7 +71,7 @@ use crate::{
     flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
-    log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_undo, RedoKey, UndoKey, serialize_edits},
+    log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey, serialize_edits},
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
     view_adjust::{
@@ -154,11 +153,11 @@ fn splash_plugin(app: &mut App) {
             OnEnter(GameState::Splash),
             (
                 display_title,
-                load_assets,
                 load_input_settings,
                 setup_selection_box,
                 setup_game_resources,
-                load_log
+                load_assets,
+                load_log.after(load_assets)
             )
         )
         .add_systems(
@@ -297,6 +296,7 @@ fn game_plugin(app: &mut App) {
         .add_observer(close_context_menus)
         .add_observer(on_undo)
         .add_observer(on_redo)
+        .add_observer(on_redo_all)
         .add_observer(on_clone_undo)
         .add_observer(on_clone_redo)
         .add_observer(on_create)
@@ -374,13 +374,12 @@ fn pick_dbg(ev: On<Pointer<Click>>, names: Query<&Name>) {
 }
 
 fn display_game(
-    mut commands: Commands,
     window: Single<Entity, With<Window>>,
     sprite_handles: Res<SpriteHandles>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     gamebox: Res<GameBox>,
-    mut surface: ResMut<Surface>
+    mut commands: Commands
 ) -> Result
 {
     commands.entity(*window)
@@ -422,20 +421,7 @@ fn display_game(
     commands.insert_resource(RaiseAnchor::default());
     commands.insert_resource(SelectionRect::default());
 
-// TODO: stop making pieces here, load from a log
-    // create pieces
-    let mut rng = rand::rng();
-
-    for &type_id in gamebox.piece.keys() {
-        let x = rng.random_range(-500.0..=500.0);
-        let y = rng.random_range(-500.0..=500.0);
-
-        surface.max_z += 1.0;
-
-        let dst = Vec3::new(x, y, surface.max_z);
-
-        commands.trigger(DoCreateEvent { type_id, dst });
-    }
+    commands.trigger(RedoAllEvent);
 
     Ok(())
 }

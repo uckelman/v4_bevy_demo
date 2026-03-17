@@ -313,6 +313,21 @@ pub fn handle_undo_up(
     Ok(())
 }
 
+#[derive(Event)]
+pub struct RedoAllEvent;
+
+#[instrument(skip_all)]
+pub fn on_redo_all(
+    evt: On<RedoAllEvent>,
+    root_query: Query<(Entity, &Edits), Without<EditOf>>,
+    edits_query: Query<(Entity, &Edits, &EditIndex, Option<&EditOf>)>,
+    parent_query: Query<(&Edits, Option<&EditOf>), Without<EditIndex>>,
+    mut commands: Commands
+) -> Result
+{
+    handle_redo_all(root_query, edits_query, parent_query, commands)
+}
+
 #[derive(EntityEvent)]
 pub struct RedoEvent {
     pub entity: Entity
@@ -381,7 +396,7 @@ pub fn handle_redo_in(
 }
 
 pub fn handle_redo_out(
-    mut edits_query: Query<(Entity, &EditType, &Edits, &mut EditIndex, Option<&EditOf>)>,
+    mut edits_query: Query<(Entity, &Edits, &mut EditIndex, Option<&EditOf>)>,
     parent_query: Query<&Edits, Without<EditIndex>>,
     mut commands: Commands
 ) -> Result
@@ -389,15 +404,13 @@ pub fn handle_redo_out(
     debug!("handle_redo_out");
 
     // there must be a unique edit cursor
-    let (edits_entity, &edit_type, edits, mut edit_index, parent_entity) = edits_query.single_mut()?;
+    let (edits_entity, edits, mut edit_index, parent_entity) = edits_query.single_mut()?;
 
-    if let Some(parent_entity) = parent_entity &&
-        edit_type == EditType::Group
-    {
+    if let Some(parent_entity) = parent_entity { 
         // redo everything in this group to the end
         edits.0[edit_index.0..]
-        .iter()
-        .for_each(|&e| commands.trigger(RedoEvent { entity: e }));
+            .iter()
+            .for_each(|&e| commands.trigger(RedoEvent { entity: e }));
 
         // remove edit cursor from this group
         commands.get_entity(edits_entity)?
@@ -414,10 +427,64 @@ pub fn handle_redo_out(
             .insert(EditIndex(pos));
     }
     else {
-        // this is the root or not a group, just step forward
+        // this is the root, just step forward
         commands.trigger(RedoEvent { entity: edits.0[edit_index.0] });
         edit_index.0 += 1;
     }
+
+    commands.trigger(EditsComplete);
+
+    Ok(())
+}
+
+pub fn handle_redo_all(
+    root_query: Query<(Entity, &Edits), Without<EditOf>>,
+    edits_query: Query<(Entity, &Edits, &EditIndex, Option<&EditOf>)>,
+    parent_query: Query<(&Edits, Option<&EditOf>), Without<EditIndex>>,
+    mut commands: Commands
+) -> Result
+{
+    debug!("handle_redo_all");
+
+    // there must be a unique edit cursor
+    let (edits_entity, edits, edit_index, parent_entity) = edits_query.single()?;
+
+    let mut redo_index = edit_index.0;
+
+    // remove the old edit cursor
+    commands.get_entity(edits_entity)?
+        .remove::<EditIndex>();
+
+    let mut edits_entity = edits_entity;
+    let mut edits = edits;
+    let mut parent_entity = parent_entity.map(|e| e.0);
+
+    loop {
+        // redo everything in this group to the end
+        edits.0[redo_index..]
+            .iter()
+            .for_each(|&e| commands.trigger(RedoEvent { entity: e }));
+
+        let Some(pe) = parent_entity else { break; };
+
+        // we're not at the root yet, go up to our parent
+
+        let (parent_edits, parent_parent_entity) = parent_query.get(pe)?;
+
+        redo_index = parent_edits.iter()
+            .position(|e| e == edits_entity)
+            .expect("child must exist in parent") + 1;
+
+        edits_entity = pe;
+        parent_entity = parent_parent_entity.map(|e| e.0);
+        edits = parent_edits;
+    }
+
+    // set the edit cursor to the end 
+    let (root_entity, root_edits) = root_query.single()?;
+
+    commands.get_entity(root_entity)?
+            .insert(EditIndex(root_edits.0.len()));
 
     commands.trigger(EditsComplete);
 
