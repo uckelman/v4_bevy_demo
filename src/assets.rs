@@ -51,7 +51,7 @@ pub fn load_assets(
     gamebox_path: Res<GameBoxPath>
 ) -> Result
 {
-    let game = load_gamebox(&gamebox_path.0)?;
+    let gamebox = load_gamebox(&gamebox_path.0)?;
 
 // FIXME: unwrap
     let base = gamebox_path.0
@@ -64,7 +64,7 @@ pub fn load_assets(
     let src = AssetSourceId::from(base);
 
     // begin loading the file-source images
-    let files = game.images.iter()
+    let files = gamebox.images.iter()
         .filter_map(|(k, v)| match v {
             ImageDefinition::File(f) => Some(
                 (
@@ -87,7 +87,7 @@ pub fn load_assets(
 
 // TODO: handle nesting of grid and crop
     // make texture atlas layouts for the grids
-    let layouts = game.images.iter()
+    let layouts = gamebox.images.iter()
         .filter_map(|(k, v)| match v {
             ImageDefinition::Grid { src, x, y, cols, rows, cw, rh, cgap, rgap } => {
                 let x = *x as i32;
@@ -122,7 +122,7 @@ pub fn load_assets(
         .collect::<HashMap<_, _>>();
 
     // add the derived assets to the image sources
-    let derived = game.images.iter()
+    let derived = gamebox.images.iter()
         .flat_map(|(k, v)| match v {
             ImageDefinition::Crop { src, x, y, w, h } => {
                 let tal = TextureAtlasLayout {
@@ -167,7 +167,7 @@ pub fn load_assets(
         .collect::<HashMap<_, _>>();
 
     commands.insert_resource(SpriteHandles(sh));
-    commands.insert_resource(game);
+    commands.insert_resource(gamebox);
 
     Ok(())
 }
