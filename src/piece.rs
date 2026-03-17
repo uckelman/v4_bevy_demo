@@ -1,6 +1,5 @@
 use bevy::{
     ecs::{
-        change_detection::Res,
         component::Component,
         event::EntityEvent,
         name::Name,

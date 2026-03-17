@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    Surface,
     assets::SpriteHandles,
     gamebox::GameBox,
     log::{DoCreateEvent, EditIndex, EditType, Edits, handle_do, RedoCreateEvent, UndoCreateEvent},

@@ -75,7 +75,6 @@ use crate::{
     log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_undo, RedoKey, UndoKey, serialize_edits},
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
-    piece::spawn_piece,
     view_adjust::{
         handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
         handle_rotate_ccw, handle_rotate_cw,
