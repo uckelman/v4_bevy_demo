@@ -32,6 +32,7 @@ use bevy::{
     prelude::{AppExtStates, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
     sprite::Anchor,
 };
+use rand::RngExt;
 use std::path::PathBuf;
 
 mod actionfunc;
@@ -379,7 +380,8 @@ fn display_game(
     sprite_handles: Res<SpriteHandles>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    gamebox: Res<GameBox>
+    gamebox: Res<GameBox>,
+    mut surface: ResMut<Surface>
 ) -> Result
 {
     commands.entity(*window)
@@ -423,8 +425,17 @@ fn display_game(
 
 // TODO: stop making pieces here, load from a log
     // create pieces
+    let mut rng = rand::rng();
+
     for &type_id in gamebox.piece.keys() {
-        commands.trigger(DoCreateEvent { type_id });
+        let x = rng.random_range(-500.0..=500.0);
+        let y = rng.random_range(-500.0..=500.0);
+
+        surface.max_z += 1.0;
+
+        let dst = Vec3::new(x, y, surface.max_z);
+
+        commands.trigger(DoCreateEvent { type_id, dst });
     }
 
     Ok(())

@@ -9,7 +9,6 @@ use bevy::{
     math::Vec3,
     prelude::{Entity, trace}
 };
-use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -26,39 +25,8 @@ use crate::{
 #[serde(rename = "create", tag = "type")]
 pub struct CreateEdit {
     pub object_id: u32,
-    pub type_id: u32
-}
-
-
-// TODO: add initial location
-fn do_create(
-    object_id: u32,
-    type_id: u32,
-    gamebox: &GameBox,
-    sprite_handles: &SpriteHandles,
-    surface: &mut Surface,
-    commands: &mut Commands
-)
-{
-    let piece_type = &gamebox.piece[&type_id];
-
-    let mut rng = rand::rng();
-
-    let x = rng.random_range(-500.0..=500.0);
-    let y = rng.random_range(-500.0..=500.0);
-
-    surface.max_z += 1.0;
-
-    spawn_piece(
-        object_id,
-        type_id,
-        piece_type,
-        Vec3::new(x, y, surface.max_z),
-        0.0,
-        0,
-        sprite_handles,
-        commands
-    );
+    pub type_id: u32,
+    pub dst: Vec3
 }
 
 #[instrument(skip_all)]
@@ -77,7 +45,7 @@ pub fn on_create(
     handle_do(
         edit_query,
         EditType::Create,
-        CreateEdit { object_id, type_id: evt.type_id },
+        CreateEdit { object_id, type_id: evt.type_id, dst: evt.dst },
         commands
     )
 }
@@ -105,19 +73,20 @@ pub fn on_create_redo(
     edit: Query<&CreateEdit>,
     gamebox: Res<GameBox>,
     sprite_handles: Res<SpriteHandles>,
-    mut surface: ResMut<Surface>,
     mut commands: Commands
 ) -> Result
 {
     // get the edit
     let Ok(cr) = edit.get(evt.entity) else { return Ok(()); };
     // apply the change
-    do_create(
+    spawn_piece(
         cr.object_id,
         cr.type_id,
-        &gamebox,
+        &gamebox.piece[&cr.type_id],
+        cr.dst,
+        0.0,
+        0,
         &sprite_handles,
-        &mut surface,
         &mut commands
     );
     Ok(())

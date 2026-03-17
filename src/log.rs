@@ -432,7 +432,8 @@ pub struct DoCloneEvent {
 
 #[derive(Clone, Event)]
 pub struct DoCreateEvent {
-    pub type_id: u32
+    pub type_id: u32,
+    pub dst: Vec3
 }
 
 #[derive(Clone, EntityEvent)]
