@@ -681,7 +681,7 @@ trait SerializeEdit {
         E: Component + Serialize;
 }
 
-impl <S> SerializeEdit for S
+impl<S> SerializeEdit for S
 where
     S: SerializeSeq
 {
