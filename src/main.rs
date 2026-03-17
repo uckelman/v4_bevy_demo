@@ -67,11 +67,12 @@ use crate::{
     clone::{on_clone_redo, on_clone_undo},
     config::KeyConfig,
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
+    create::{on_create, on_create_redo, on_create_undo},
     delete::{on_delete_redo, on_delete_undo},
     flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
-    log::{dump_edits, handle_redo_over, handle_undo, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_undo, RedoKey, UndoKey, serialize_edits},
+    log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_undo, RedoKey, UndoKey, serialize_edits},
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
     piece::spawn_piece,
@@ -299,6 +300,9 @@ fn game_plugin(app: &mut App) {
         .add_observer(on_redo)
         .add_observer(on_clone_undo)
         .add_observer(on_clone_redo)
+        .add_observer(on_create)
+        .add_observer(on_create_undo)
+        .add_observer(on_create_redo)
         .add_observer(on_delete_undo)
         .add_observer(on_delete_redo)
         .add_observer(on_flip_undo)
@@ -340,7 +344,7 @@ fn spawn_map(
 )
 {
     let Some(src) = sprite_handles.0.get(&m.image) else { return; };
-    
+
     let sprite = match src {
         ImageSource::Single(handle) => Sprite::from_image(handle.clone()),
         _ => todo!()
@@ -417,32 +421,14 @@ fn display_game(
         }
     }
 
-    // create pieces
-    let mut rng = rand::rng();
-
-    for p in gamebox.piece.values() {
-        let oid = next_object_id.0;
-        next_object_id.0 += 1;
-
-        let x = rng.random_range(-500.0..=500.0);
-        let y = rng.random_range(-500.0..=500.0);
-
-        surface.max_z += 1.0;
-
-        spawn_piece(
-            oid,
-            p.id,
-            p,
-            Vec3::new(x, y, surface.max_z),
-            0.0,
-            0,
-            &sprite_handles,
-            &mut commands
-        );
-    }
-
     commands.insert_resource(RaiseAnchor::default());
     commands.insert_resource(SelectionRect::default());
+
+// TODO: stop making pieces here, load from a log
+    // create pieces
+    for &type_id in gamebox.piece.keys() {
+        commands.trigger(DoCreateEvent { type_id });
+    }
 
     Ok(())
 }

@@ -74,7 +74,7 @@ pub fn spawn_piece(
     location: Vec3,
     angle: f32,
     faceup: usize,
-    sprite_handles: &Res<SpriteHandles>,
+    sprite_handles: &SpriteHandles,
     commands: &mut Commands
 )
 {
