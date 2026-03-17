@@ -96,7 +96,7 @@ pub fn on_delete_undo(
     spawn_piece(
         del.object_id,
         del.ptype_id,
-        &gamebox.piece[del.ptype_id as usize],
+        &gamebox.piece[&del.ptype_id],
         del.location,
         del.angle,
         del.faceup,

@@ -424,7 +424,7 @@ fn display_game(
     // create pieces
     let mut rng = rand::rng();
 
-    for (i, p) in gamebox.piece.iter().enumerate() {
+    for p in gamebox.piece.values() {
         let oid = next_object_id.0;
         next_object_id.0 += 1;
 
@@ -435,7 +435,7 @@ fn display_game(
 
         spawn_piece(
             oid,
-            i as u32,
+            p.id,
             p,
             Vec3::new(x, y, surface.max_z),
             0.0,

@@ -181,8 +181,11 @@ pub struct Action {
     pub key: Option<ActionKey>
 }
 
+// TODO: should faces have ids in additon to names?
+
 #[derive(Debug, Deserialize)]
 pub struct PieceType {
+    pub id: u32,
     pub name: String,
     #[serde(default)]
     pub faces: Vec<String>,
@@ -204,7 +207,7 @@ struct MaybeGameBox {
 #[serde(try_from = "MaybeGameBox")]
 pub struct GameBox {
     pub images: HashMap<String, ImageDefinition>,
-    pub piece: Vec<PieceType>,
+    pub piece: HashMap<u32, PieceType>,
     pub surface: SurfaceItem
 }
 
@@ -242,9 +245,16 @@ impl TryFrom<MaybeGameBox> for GameBox {
             return Err(GameBoxError);
         }
 
+        let mut piece = HashMap::new();
+        for p in m.piece {
+            // fail on duplicate piece type ids
+            piece.insert(p.id, p)
+                .map_or(Ok(()), |_| Err(GameBoxError))?;
+        }
+
         Ok(GameBox {
             images: m.images,
-            piece: m.piece,
+            piece,
             surface: m.surface
         })
     }
