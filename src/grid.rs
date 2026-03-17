@@ -12,7 +12,7 @@ use bevy::{
         prelude::{Commands, Query, Single, With, Without}
     },
     math::{
-        Quat, Vec2, Vec3,
+        Vec2, Vec3,
         prelude::{ConvexPolygon, Polyline2d, Rectangle}
     },
     mesh::{Mesh, Mesh2d},
