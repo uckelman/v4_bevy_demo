@@ -45,7 +45,7 @@ fn do_rotate(t: &mut Transform, dtheta: f32)
     t.rotate_local_z(dtheta * DEG_TO_RAD);
 }
 
-#[derive(Component, Deserialize, Serialize)]
+#[derive(Component, Debug, Deserialize, Serialize)]
 #[serde(rename = "rotate", tag = "type")]
 pub struct RotateEdit {
     pub object_id: u32,

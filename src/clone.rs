@@ -50,7 +50,7 @@ fn do_clone(
     add_action_observers(actions.0.iter().map(|a| a.action), &mut ec);
 }
 
-#[derive(Component, Deserialize, Serialize)]
+#[derive(Component, Debug, Deserialize, Serialize)]
 #[serde(rename = "clone", tag = "type")]
 pub struct CloneEdit {
     pub object_id: u32,

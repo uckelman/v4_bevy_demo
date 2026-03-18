@@ -40,7 +40,7 @@ fn do_delete(
     commands.entity(entity).despawn();
 }
 
-#[derive(Component, Deserialize, Serialize)]
+#[derive(Component, Debug, Deserialize, Serialize)]
 #[serde(rename = "delete", tag = "type")]
 pub struct DeleteEdit {
     pub object_id: u32,

@@ -50,7 +50,7 @@ fn do_flip(
     set_face(sprite, faces, up);
 }
 
-#[derive(Component, Deserialize, Serialize)]
+#[derive(Component, Debug, Deserialize, Serialize)]
 #[serde(rename = "flip", tag = "type")]
 pub struct FlipEdit {
     pub object_id: u32,

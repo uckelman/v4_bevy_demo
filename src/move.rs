@@ -23,7 +23,7 @@ fn do_move(t: &mut Transform, to: Vec3)
     t.translation = to;
 }
 
-#[derive(Component, Deserialize, Serialize)]
+#[derive(Component, Debug, Deserialize, Serialize)]
 #[serde(rename = "move", tag = "type")]
 pub struct MoveEdit {
     pub object_id: u32,

@@ -20,7 +20,7 @@ use crate::{
     piece::spawn_piece
 };
 
-#[derive(Component, Deserialize, Serialize)]
+#[derive(Component, Debug, Deserialize, Serialize)]
 #[serde(rename = "create", tag = "type")]
 pub struct CreateEdit {
     pub object_id: u32,
