@@ -446,7 +446,6 @@ Drag lag: im suspecting that the drag event is either being fired less often tha
 // TODO: load svg
 // TODO: load pdf
 // TODO: load avif
-// TODO: log
 // TODO: grid
 // TODO: stacking
 
