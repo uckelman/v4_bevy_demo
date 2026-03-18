@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    config::KeyConfig,
+    keys::KeyConfig,
     log::{DoRotateEvent, EditIndex, EditType, Edits, handle_do, RedoRotateEvent, UndoRotateEvent},
     object::{ObjectId, ObjectIdMap}
 };

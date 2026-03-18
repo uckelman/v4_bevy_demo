@@ -28,9 +28,9 @@ use crate::{
     create::CreateEdit,
     delete::DeleteEdit,
     flip::FlipEdit,
+    keys::KeyConfig,
     r#move::MoveEdit,
-    rotate::RotateEdit,
-    config::KeyConfig
+    rotate::RotateEdit
 };
 
 #[derive(Resource)]

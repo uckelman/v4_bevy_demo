@@ -40,7 +40,6 @@ mod actions;
 mod angle;
 mod assets;
 mod clone;
-mod config;
 mod context_menu;
 mod create;
 mod delete;
@@ -48,6 +47,7 @@ mod drag;
 mod flip;
 mod gamebox;
 mod grid;
+mod keys;
 mod log;
 mod r#move;
 mod object;
@@ -64,13 +64,13 @@ mod view_adjust;
 use crate::{
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
     clone::{on_clone_redo, on_clone_undo},
-    config::KeyConfig,
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     create::{on_create, on_create_redo, on_create_undo},
     delete::{on_delete_redo, on_delete_undo},
     flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
+    keys::KeyConfig,
     log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey, serialize_edits},
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},

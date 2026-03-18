@@ -16,8 +16,8 @@ use tracing::instrument;
 
 use crate::{
     assets::SpriteHandles,
-    config::KeyConfig,
     gamebox::GameBox,
+    keys::KeyConfig,
     log::{DoDeleteEvent, EditIndex, EditType, Edits, handle_do, RedoDeleteEvent, UndoDeleteEvent},
     object::{ObjectId, ObjectIdMap},
     piece::{FaceUp, PieceTypeId, spawn_piece}

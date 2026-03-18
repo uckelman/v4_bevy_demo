@@ -27,6 +27,7 @@ use tracing::instrument;
 
 use crate::{
     actions::trigger_action_func,
+    keys::{alt_pressed, ctrl_pressed, shift_pressed},
     log::{OpenGroupEvent, CloseGroupEvent},
     piece::Actions
 };
@@ -81,18 +82,6 @@ pub fn on_deselection(
     commands.entity(entity).remove::<Selected>();
 
     trace!("deselected {}", entity);
-}
-
-pub fn shift_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
-    inputs.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight])
-}
-
-pub fn ctrl_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
-    inputs.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
-}
-
-pub fn alt_pressed(inputs: &Res<ButtonInput<KeyCode>>) -> bool {
-    inputs.any_pressed([KeyCode::AltLeft, KeyCode::AltRight])
 }
 
 pub fn toggle(

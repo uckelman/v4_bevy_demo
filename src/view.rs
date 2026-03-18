@@ -18,7 +18,8 @@ use tracing::instrument;
 
 use crate::{
     context_menu::{CloseContextMenus, ContextMenuState, OpenContextMenu},
-    select::{Selected, toggle, select, set_selection_if_not_selected, ctrl_pressed, shift_pressed}
+    keys::{ctrl_pressed, shift_pressed},
+    select::{Selected, toggle, select, set_selection_if_not_selected}
 };
 
 #[instrument(skip_all)]

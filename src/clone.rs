@@ -15,7 +15,7 @@ use tracing::instrument;
 
 use crate::{
     actions::add_action_observers,
-    config::KeyConfig,
+    keys::KeyConfig,
     log::{DoCloneEvent, EditIndex, EditType, Edits, handle_do, RedoCloneEvent, UndoCloneEvent},
     object::{NextObjectId, ObjectId, ObjectIdMap},
     piece::{Actions, add_observers}

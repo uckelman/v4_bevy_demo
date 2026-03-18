@@ -17,9 +17,9 @@ use bevy::{
 use tracing::instrument;
 
 use crate::{
-    config::KeyConfig,
     context_menu::ContextMenuState,
     drag::Draggable,
+    keys::KeyConfig,
     select::Selectable,
     util::AsOrthographicProjection
 };
