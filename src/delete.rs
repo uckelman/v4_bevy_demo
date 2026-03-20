@@ -17,20 +17,25 @@ use tracing::instrument;
 use crate::{
     assets::SpriteHandles,
     gamebox::GameBox,
-    keys::KeyConfig,
     log::{DoDeleteEvent, EditIndex, EditType, Edits, handle_do, RedoDeleteEvent, UndoDeleteEvent},
     object::{ObjectId, ObjectIdMap},
     piece::{FaceUp, PieceTypeId, spawn_piece}
 };
 
+/*
 #[derive(Resource)]
 pub struct DeleteKey(pub KeyCode);
 
 impl KeyConfig for DeleteKey {
-    fn code(&self) -> KeyCode {
-        self.0
+    fn singles(&self) -> &[KeyCode] {
+        &self.0.singles
+    }
+
+     fn eithers(&self) -> &[[KeyCode; 2]] {
+        &self.0.eithers
     }
 }
+*/
 
 fn do_delete(
     entity: Entity,

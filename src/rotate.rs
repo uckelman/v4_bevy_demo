@@ -14,11 +14,11 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    keys::KeyConfig,
     log::{DoRotateEvent, EditIndex, EditType, Edits, handle_do, RedoRotateEvent, UndoRotateEvent},
     object::{ObjectId, ObjectIdMap}
 };
 
+/*
 #[derive(Resource)]
 pub struct RotateCWKey(pub KeyCode);
 
@@ -26,16 +26,25 @@ pub struct RotateCWKey(pub KeyCode);
 pub struct RotateCCWKey(pub KeyCode);
 
 impl KeyConfig for RotateCWKey {
-    fn code(&self) -> KeyCode {
-        self.0
+    fn singles(&self) -> &[KeyCode] {
+        self.0.singles
+    }
+
+    fn eithers(&self) -> &[[KeyCode; 2]] {
+        self.0.eithers
     }
 }
 
 impl KeyConfig for RotateCCWKey {
-    fn code(&self) -> KeyCode {
-        self.0
+    fn singles(&self) -> &[KeyCode] {
+        self.0.singles
+    }
+
+    fn eithers(&self) -> &[[KeyCode; 2]] {
+        self.0.eithers
     }
 }
+*/
 
 fn do_rotate(t: &mut Transform, dtheta: f32)
 {

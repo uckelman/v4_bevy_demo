@@ -19,7 +19,7 @@ use tracing::instrument;
 use crate::{
     context_menu::ContextMenuState,
     drag::Draggable,
-    keys::KeyConfig,
+    keys::KeyBinding,
     select::Selectable,
     util::AsOrthographicProjection
 };
@@ -37,74 +37,74 @@ pub struct KeyScaleStep(pub f32);
 pub struct WheelScaleStep(pub f32);
 
 #[derive(Resource)]
-pub struct PanLeftKey(pub KeyCode);
+pub struct PanLeftKey(pub KeyBinding);
 
 #[derive(Resource)]
-pub struct PanRightKey(pub KeyCode);
+pub struct PanRightKey(pub KeyBinding);
 
 #[derive(Resource)]
-pub struct PanUpKey(pub KeyCode);
+pub struct PanUpKey(pub KeyBinding);
 
 #[derive(Resource)]
-pub struct PanDownKey(pub KeyCode);
+pub struct PanDownKey(pub KeyBinding);
 
 #[derive(Resource)]
-pub struct ZoomInKey(pub KeyCode);
+pub struct ZoomInKey(pub KeyBinding);
 
 #[derive(Resource)]
-pub struct ZoomOutKey(pub KeyCode);
+pub struct ZoomOutKey(pub KeyBinding);
 
 #[derive(Resource)]
-pub struct RotateCCWKey(pub KeyCode);
+pub struct RotateCCWKey(pub KeyBinding);
 
 #[derive(Resource)]
-pub struct RotateCWKey(pub KeyCode);
+pub struct RotateCWKey(pub KeyBinding);
 
-impl KeyConfig for PanLeftKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for PanLeftKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 
-impl KeyConfig for PanRightKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for PanRightKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 
-impl KeyConfig for PanUpKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for PanUpKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 
-impl KeyConfig for PanDownKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for PanDownKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 
-impl KeyConfig for ZoomInKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for ZoomInKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 
-impl KeyConfig for ZoomOutKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for ZoomOutKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 
-impl KeyConfig for RotateCCWKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for RotateCCWKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 
-impl KeyConfig for RotateCWKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for RotateCWKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 

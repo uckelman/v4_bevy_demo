@@ -70,7 +70,7 @@ use crate::{
     flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
-    keys::KeyConfig,
+    keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
     log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey, serialize_edits},
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
@@ -153,7 +153,9 @@ fn splash_plugin(app: &mut App) {
             OnEnter(GameState::Splash),
             (
                 display_title,
-                load_input_settings,
+                load_config,
+                load_input_settings
+                    .after(load_config),
                 setup_selection_box,
                 setup_game_resources,
                 load_assets,
@@ -181,25 +183,69 @@ fn switch_to_game(
     }
 }
 
-fn load_input_settings(mut commands: Commands) {
-    commands.insert_resource(KeyPanStep(5.0));
-    commands.insert_resource(KeyRotateStep(1.0f32.to_radians()));
-    commands.insert_resource(KeyScaleStep(0.1));
-    commands.insert_resource(WheelScaleStep(0.1));
+#[derive(Debug, Deserialize)]
+struct Steps {
+    pan_step: f32,
+    rotate_step: f32,
+    key_scale_step: f32,
+    wheel_scale_step: f32
+}
 
-    commands.insert_resource(PanLeftKey(KeyCode::KeyA));
-    commands.insert_resource(PanRightKey(KeyCode::KeyD));
-    commands.insert_resource(PanUpKey(KeyCode::KeyW));
-    commands.insert_resource(PanDownKey(KeyCode::KeyS));
+#[derive(Clone, Debug, Deserialize)]
+struct Keys {
+    pan_left: KeyBinding,
+    pan_right: KeyBinding,
+    pan_up: KeyBinding,
+    pan_down: KeyBinding,
+    zoom_in: KeyBinding,
+    zoom_out: KeyBinding,
+    rotate_ccw: KeyBinding,
+    rotate_cw: KeyBinding,
+    undo: KeyBinding,
+    redo: KeyBinding
+}
 
-    commands.insert_resource(ZoomInKey(KeyCode::Equal));
-    commands.insert_resource(ZoomOutKey(KeyCode::Minus));
+#[derive(Debug, Deserialize, Resource)]
+struct Config {
+    steps: Steps,
+    keys: Keys
+}
 
-    commands.insert_resource(RotateCCWKey(KeyCode::KeyC));
-    commands.insert_resource(RotateCWKey(KeyCode::KeyV));
+fn load_config(mut commands: Commands) -> Result {
+    let config_str = std::fs::read_to_string("config.toml")?;
+    let config: Config = toml::from_str(&config_str)?;
 
-    commands.insert_resource(UndoKey(KeyCode::KeyZ));
-    commands.insert_resource(RedoKey(KeyCode::KeyX));
+    commands.insert_resource(config);
+
+    Ok(())
+}
+
+fn load_input_settings(
+    config: Res<Config>,
+    mut commands: Commands
+)
+{
+    let steps = &config.steps;
+    let keys = config.keys.clone();
+
+    commands.insert_resource(KeyPanStep(steps.pan_step));
+    commands.insert_resource(KeyRotateStep(steps.rotate_step.to_radians()));
+    commands.insert_resource(KeyScaleStep(steps.key_scale_step));
+    commands.insert_resource(WheelScaleStep(steps.wheel_scale_step));
+
+    commands.insert_resource(PanLeftKey(keys.pan_left));
+    commands.insert_resource(PanRightKey(keys.pan_right));
+    commands.insert_resource(PanUpKey(keys.pan_up));
+    commands.insert_resource(PanDownKey(keys.pan_down));
+
+    commands.insert_resource(ZoomInKey(keys.zoom_in));
+    commands.insert_resource(ZoomOutKey(keys.zoom_out));
+
+    commands.insert_resource(RotateCCWKey(keys.rotate_ccw));
+    commands.insert_resource(RotateCWKey(keys.rotate_cw));
+
+    commands.insert_resource(UndoKey(keys.undo));
+    commands.insert_resource(RedoKey(keys.redo));
 }
 
 fn setup_game_resources(mut commands: Commands) {
@@ -209,26 +255,6 @@ fn setup_game_resources(mut commands: Commands) {
 }
 
 // TODO: check that there is no selection for view keys
-
-fn cfg_input_pressed<T>(
-    key: Res<T>,
-    inputs: Res<ButtonInput<KeyCode>>
-) -> bool
-where
-    T: Resource + KeyConfig
-{
-    inputs.pressed(key.code())
-}
-
-fn cfg_input_just_pressed<T>(
-    key: Res<T>,
-    inputs: Res<ButtonInput<KeyCode>>
-) -> bool
-where
-    T: Resource + KeyConfig
-{
-    inputs.just_pressed(key.code())
-}
 
 fn game_plugin(app: &mut App) {
     app

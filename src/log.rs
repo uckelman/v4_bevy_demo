@@ -28,26 +28,26 @@ use crate::{
     create::CreateEdit,
     delete::DeleteEdit,
     flip::FlipEdit,
-    keys::KeyConfig,
+    keys::KeyBinding,
     r#move::MoveEdit,
     rotate::RotateEdit
 };
 
 #[derive(Resource)]
-pub struct RedoKey(pub KeyCode);
+pub struct RedoKey(pub KeyBinding);
 
 #[derive(Resource)]
-pub struct UndoKey(pub KeyCode);
+pub struct UndoKey(pub KeyBinding);
 
-impl KeyConfig for RedoKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for RedoKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 
-impl KeyConfig for UndoKey {
-    fn code(&self) -> KeyCode {
-        self.0
+impl AsRef<KeyBinding> for UndoKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
     }
 }
 

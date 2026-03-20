@@ -15,20 +15,25 @@ use tracing::instrument;
 
 use crate::{
     actions::add_action_observers,
-    keys::KeyConfig,
     log::{DoCloneEvent, EditIndex, EditType, Edits, handle_do, RedoCloneEvent, UndoCloneEvent},
     object::{NextObjectId, ObjectId, ObjectIdMap},
     piece::{Actions, add_observers}
 };
 
+/*
 #[derive(Resource)]
-pub struct CloneKey(pub KeyCode);
+pub struct CloneKey(pub KeyBinding);
 
 impl KeyConfig for CloneKey {
-    fn code(&self) -> KeyCode {
-        self.0
+    fn singles(&self) -> &[KeyCode] {
+        &self.0.singles
+    }
+
+    fn eithers(&self) -> &[[KeyCode; 2]] {
+        &self.0.eithers
     }
 }
+*/
 
 fn do_clone(
     entity: Entity,
