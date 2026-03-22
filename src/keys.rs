@@ -125,7 +125,7 @@ impl ModifiersExt for ButtonInput<KeyCode> {
 #[error("invalid data {0:?}")]
 pub struct KeyError(String);
 
-impl<'c> TryFrom<String> for Key {
+impl TryFrom<String> for Key {
     type Error = KeyError;
 
     fn try_from(m: String) -> Result<Self, Self::Error> {
@@ -228,8 +228,6 @@ impl<'c> TryFrom<String> for Key {
     }
 }
 
-
-// TODO: could this be try_from &str? we don't keep the strings
 #[derive(Debug, Deserialize)]
 #[serde(try_from = "String")]
 enum Key {
