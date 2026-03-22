@@ -223,7 +223,7 @@ impl TryFrom<MaybeGameBox> for GameBox {
     fn try_from(m: MaybeGameBox) -> Result<Self, Self::Error> {
 // TODO: check that grid keys are formatted name@c,r
 
-        // check that face keys exist 
+        // check that face keys exist
         if !m.piece.iter()
             .flat_map(|p| &p.faces)
             .unique()
@@ -234,7 +234,7 @@ impl TryFrom<MaybeGameBox> for GameBox {
         }
 
         // TODO: follow chains to reject loops
-        // check that crop source keys exist 
+        // check that crop source keys exist
         if !m.images.iter()
             .all(|(k, v)| match v {
                 ImageDefinition::Crop { src, .. } => m.images.contains_key(src),
