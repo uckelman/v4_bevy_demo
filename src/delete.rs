@@ -7,9 +7,8 @@ use bevy::{
         observer::On,
         prelude::{Commands, Query}
     },
-    input::keyboard::KeyCode,
     math::Vec3,
-    prelude::{Entity, Resource, trace, Transform}
+    prelude::{Entity, trace, Transform}
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -21,21 +20,6 @@ use crate::{
     object::{ObjectId, ObjectIdMap},
     piece::{FaceUp, PieceTypeId, spawn_piece}
 };
-
-/*
-#[derive(Resource)]
-pub struct DeleteKey(pub KeyCode);
-
-impl KeyConfig for DeleteKey {
-    fn singles(&self) -> &[KeyCode] {
-        &self.0.singles
-    }
-
-     fn eithers(&self) -> &[[KeyCode; 2]] {
-        &self.0.eithers
-    }
-}
-*/
 
 fn do_delete(
     entity: Entity,

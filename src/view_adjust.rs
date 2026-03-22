@@ -6,10 +6,7 @@ use bevy::{
         observer::On,
         prelude::{Or, Query, Single, With}
     },
-    input::{
-        keyboard::KeyCode,
-        mouse::{AccumulatedMouseScroll, MouseScrollUnit}
-    },
+    input::mouse::{AccumulatedMouseScroll, MouseScrollUnit},
     math::Vec2,
     picking::events::{Drag, Pointer},
     prelude::{Entity, GlobalTransform, OrthographicProjection, PointerButton, Projection, State, Time, trace, Transform, Resource}

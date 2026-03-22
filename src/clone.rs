@@ -7,8 +7,7 @@ use bevy::{
         observer::On,
         prelude::{Commands, Query}
     },
-    input::keyboard::KeyCode,
-    prelude::{Entity, Resource, trace}
+    prelude::{Entity, trace}
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -19,21 +18,6 @@ use crate::{
     object::{NextObjectId, ObjectId, ObjectIdMap},
     piece::{Actions, add_observers}
 };
-
-/*
-#[derive(Resource)]
-pub struct CloneKey(pub KeyBinding);
-
-impl KeyConfig for CloneKey {
-    fn singles(&self) -> &[KeyCode] {
-        &self.0.singles
-    }
-
-    fn eithers(&self) -> &[[KeyCode; 2]] {
-        &self.0.eithers
-    }
-}
-*/
 
 fn do_clone(
     entity: Entity,

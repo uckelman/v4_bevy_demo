@@ -7,8 +7,7 @@ use bevy::{
         observer::On,
         prelude::{Commands, Query}
     },
-    input::keyboard::KeyCode,
-    prelude::{Entity, Resource, trace, Transform}
+    prelude::{Entity, trace, Transform}
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -17,34 +16,6 @@ use crate::{
     log::{DoRotateEvent, EditIndex, EditType, Edits, handle_do, RedoRotateEvent, UndoRotateEvent},
     object::{ObjectId, ObjectIdMap}
 };
-
-/*
-#[derive(Resource)]
-pub struct RotateCWKey(pub KeyCode);
-
-#[derive(Resource)]
-pub struct RotateCCWKey(pub KeyCode);
-
-impl KeyConfig for RotateCWKey {
-    fn singles(&self) -> &[KeyCode] {
-        self.0.singles
-    }
-
-    fn eithers(&self) -> &[[KeyCode; 2]] {
-        self.0.eithers
-    }
-}
-
-impl KeyConfig for RotateCCWKey {
-    fn singles(&self) -> &[KeyCode] {
-        self.0.singles
-    }
-
-    fn eithers(&self) -> &[[KeyCode; 2]] {
-        self.0.eithers
-    }
-}
-*/
 
 fn do_rotate(t: &mut Transform, dtheta: f32)
 {
