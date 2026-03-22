@@ -70,7 +70,7 @@ use crate::{
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
-    log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey, serialize_edits},
+    log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, init_log, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey, serialize_edits},
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
     view_adjust::{
@@ -158,7 +158,10 @@ fn splash_plugin(app: &mut App) {
                 setup_selection_box,
                 setup_game_resources,
                 load_assets,
-                load_log.after(load_assets)
+                init_log,
+                load_log
+                    .after(load_assets)
+                    .after(init_log),
             )
         )
         .add_systems(

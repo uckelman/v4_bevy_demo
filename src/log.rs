@@ -760,6 +760,15 @@ fn dump_group(
     Ok(())
 }
 
+pub fn init_log(mut commands: Commands)
+{
+    // create the log root
+    commands.spawn((
+        Edits::default(),
+        EditIndex::default()
+    ));
+}
+
 trait SerializeEdit {
     type Error: serde::ser::Error;
 
