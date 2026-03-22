@@ -405,7 +405,7 @@ pub fn handle_redo_out(
     // there must be a unique edit cursor
     let (edits_entity, edits, mut edit_index, parent_entity) = edits_query.single_mut()?;
 
-    if let Some(parent_entity) = parent_entity { 
+    if let Some(parent_entity) = parent_entity {
         // redo everything in this group to the end
         edits.0[edit_index.0..]
             .iter()
@@ -478,7 +478,7 @@ pub fn handle_redo_all(
         edits = parent_edits;
     }
 
-    // set the edit cursor to the end 
+    // set the edit cursor to the end
     let (root_entity, root_edits) = root_query.single()?;
 
     commands.get_entity(root_entity)?
@@ -891,7 +891,7 @@ pub fn serialize_edits(world: DeferredWorld) -> Result
     Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type")]
 enum EditProxyIn {
     Clone(CloneEdit),
@@ -903,27 +903,6 @@ enum EditProxyIn {
     #[serde(untagged)]
     Group(Vec<EditProxyIn>)
 }
-
-/*
-impl<'de> Deserialize<'de> for GroupProxyIn {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>
-    {
-        deserializer.deserialize_unit(GroupProxyInVisitor)
-    }
-}
-
-struct GroupProxyInVisitor;
-
-impl<'de> Visitor<'de> for GroupProxyInVisitor {
-    type Value = GroupProxyIn;
-
-    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "!")
-    }
-}
-*/
 
 fn add_edit_proxy(
     parent_entity: Entity,
@@ -991,26 +970,23 @@ fn add_edit_proxy(
 #[instrument(skip_all)]
 pub fn load_log(
     log_path: Res<LogPath>,
+    root_query: Query<Entity, (With<Edits>, Without<EditOf>)>,
     mut commands: Commands
 ) -> Result {
     debug!("");
 
-    // create the log root
-    let root_entity = commands.spawn((
-        Edits::default(),
-        EditIndex::default()
-    )).id();
+    let Some(path) = log_path.0.as_ref() else { return Ok(()); };
 
-    if let Some(path) = log_path.0.as_ref() {
-        // there is a log to load
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
+    // there is a log to load
+    let file = File::open(path)?;
+    let reader = BufReader::new(file);
 
-        let g: Vec<EditProxyIn> = serde_json::from_reader(reader)?;
+    let g: Vec<EditProxyIn> = serde_json::from_reader(reader)?;
 
-        g.into_iter()
-            .for_each(|ep| add_edit_proxy(root_entity, ep, &mut commands));
-    }
+    let root_entity = root_query.single()?;
+
+    g.into_iter()
+        .for_each(|ep| add_edit_proxy(root_entity, ep, &mut commands));
 
     commands.trigger(EditsComplete);
     Ok(())

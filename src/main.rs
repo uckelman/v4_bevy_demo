@@ -39,6 +39,7 @@ mod actions;
 mod angle;
 mod assets;
 mod clone;
+mod config;
 mod context_menu;
 mod create;
 mod delete;
@@ -63,6 +64,7 @@ mod view_adjust;
 use crate::{
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
     clone::{on_clone_redo, on_clone_undo},
+    config::{Config, load_config},
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     create::{on_create, on_create_redo, on_create_undo},
     delete::{on_delete_redo, on_delete_undo},
@@ -183,43 +185,6 @@ fn switch_to_game(
     {
         next.set(GameState::Game);
     }
-}
-
-#[derive(Debug, Deserialize)]
-struct Steps {
-    pan_step: f32,
-    rotate_step: f32,
-    key_scale_step: f32,
-    wheel_scale_step: f32
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct Keys {
-    pan_left: KeyBinding,
-    pan_right: KeyBinding,
-    pan_up: KeyBinding,
-    pan_down: KeyBinding,
-    zoom_in: KeyBinding,
-    zoom_out: KeyBinding,
-    rotate_ccw: KeyBinding,
-    rotate_cw: KeyBinding,
-    undo: KeyBinding,
-    redo: KeyBinding
-}
-
-#[derive(Debug, Deserialize, Resource)]
-struct Config {
-    steps: Steps,
-    keys: Keys
-}
-
-fn load_config(mut commands: Commands) -> Result {
-    let config_str = std::fs::read_to_string("config.toml")?;
-    let config: Config = toml::from_str(&config_str)?;
-
-    commands.insert_resource(config);
-
-    Ok(())
 }
 
 fn load_input_settings(
