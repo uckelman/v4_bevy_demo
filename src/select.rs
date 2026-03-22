@@ -27,7 +27,7 @@ use tracing::instrument;
 
 use crate::{
     actions::trigger_action_func,
-    keys::{alt_pressed, ctrl_pressed, shift_pressed},
+    keys::{alt_pressed, ctrl_pressed, shift_pressed, ModifiersExt},
     log::{OpenGroupEvent, CloseGroupEvent},
     piece::Actions
 };
@@ -267,18 +267,12 @@ pub fn handle_key_selection(
     mut commands: Commands
 )
 {
-    let ctrl = ctrl_pressed(&input);
-    let alt = alt_pressed(&input);
-    let shift = shift_pressed(&input);
-
     let mut eai = query.iter()
         .flat_map(|(entity, actions)| actions.0.iter().map(move |a| (entity, a)))
         .filter_map(|(entity, a)| matches!(
-            a.key,
-            Some(ak) if ak.ctrl == ctrl &&
-                ak.alt == alt &&
-                ak.shift == shift &&
-                input.just_pressed(ak.key)
+            &a.key,
+            Some(ak) if input.just_pressed(ak.code) &&
+                input.modifiers_pressed(&ak.modifiers)
             ).then_some((entity, a.action))
         );
 

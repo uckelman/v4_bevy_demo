@@ -12,12 +12,12 @@ use bevy::{
 };
 
 use crate::{
-    actionkey::ActionKey,
     actionfunc::ActionFunc,
     actions::{add_action_observers},
     assets::{ImageSource, SpriteHandles},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::PieceType,
+    keys::KeyBinding,
     r#move::on_move,
     object::ObjectId,
     raise,
@@ -44,7 +44,7 @@ pub struct FaceUp(pub usize);
 pub struct Action {
     pub label: String,
     pub action: ActionFunc,
-    pub key: Option<ActionKey>
+    pub key: Option<KeyBinding>
 }
 
 #[derive(Clone, Component, Debug, Default)]
@@ -117,7 +117,7 @@ pub fn spawn_piece(
             .map(|a| Action {
                 label: a.label.clone(),
                 action: a.action,
-                key: a.key
+                key: a.key.clone()
             })
             .collect::<Vec<_>>()
         ),

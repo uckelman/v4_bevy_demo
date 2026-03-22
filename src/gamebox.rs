@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::{
     actionfunc::ActionFunc,
-    actionkey::ActionKey,
+    keys::KeyBinding
 };
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
@@ -177,8 +177,7 @@ pub enum ImageDefinition {
 pub struct Action {
     pub label: String,
     pub action: ActionFunc,
-    #[serde(flatten)]
-    pub key: Option<ActionKey>
+    pub key: Option<KeyBinding>
 }
 
 // TODO: should faces have ids in additon to names?
