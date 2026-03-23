@@ -49,6 +49,7 @@ mod gamebox;
 mod grid;
 mod keys;
 mod log;
+mod log_serialize;
 mod r#move;
 mod object;
 mod piece;
@@ -72,7 +73,8 @@ use crate::{
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
-    log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, init_log, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey, serialize_edits},
+    log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, init_log, load_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
+    log_serialize::serialize_edits,
     r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
     view_adjust::{
