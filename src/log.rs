@@ -4,16 +4,14 @@ use bevy::{
         component::Component,
         event::{EntityEvent, Event},
         observer::On,
-        prelude::{Commands, RelationshipTarget, With, Without},
-        world::DeferredWorld
+        prelude::{Commands, RelationshipTarget, With, Without}
     },
     math::Vec3,
-    prelude::{debug, Entity, EntityRef, Query, Resource, Result}
+    prelude::{debug, Entity, Query, Resource, Result}
 };
 use std::{
-    fmt,
     fs::File,
-    io::{BufReader, Write}
+    io::BufReader
 };
 use serde::{
     Serialize, Serializer,
