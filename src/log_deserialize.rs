@@ -33,7 +33,7 @@ use crate::{
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type")]
-enum EditProxy {
+enum Item {
     Clone(CloneEdit),
     Create(CreateEdit),
     Delete(DeleteEdit),
@@ -44,32 +44,32 @@ enum EditProxy {
     Group
 }
 
-struct EditProxySeed<'c, 'w, 's> {
+struct ItemSeed<'c, 'w, 's> {
     entity: Entity,
     commands: &'c mut Commands<'w, 's>
 }
 
-impl<'de> DeserializeSeed<'de> for EditProxySeed<'_, '_, '_> {
-    type Value = EditProxy;
+impl<'de> DeserializeSeed<'de> for ItemSeed<'_, '_, '_> {
+    type Value = Item;
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>
     {
-        deserializer.deserialize_any(EditProxyVisitor {
+        deserializer.deserialize_any(ItemVisitor {
             entity: self.entity,
             commands: self.commands
         })
     }
 }
 
-struct EditProxyVisitor<'c, 'w, 's> {
+struct ItemVisitor<'c, 'w, 's> {
     entity: Entity,
     commands: &'c mut Commands<'w, 's>
 }
 
-impl<'de> Visitor<'de> for EditProxyVisitor<'_, '_, '_> {
-    type Value = EditProxy;
+impl<'de> Visitor<'de> for ItemVisitor<'_, '_, '_> {
+    type Value = Item;
 
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "an edit or a sequence of edits")
@@ -90,21 +90,24 @@ impl<'de> Visitor<'de> for EditProxyVisitor<'_, '_, '_> {
             let mut ec = self.commands.spawn_empty();
             let entity = ec.id();
 
-            let seed = EditProxySeed {
+            let seed = ItemSeed {
                 entity,
                 commands: ec.commands_mut()
             };
 
-            let Some(ep) = seq.next_element_seed::<EditProxySeed>(seed)? else { self.commands.entity(entity).despawn(); break; };
+            let Some(ep) = seq.next_element_seed::<ItemSeed>(seed)? else {
+                self.commands.entity(entity).despawn();
+                break;
+            };
 
             match ep {
-                EditProxy::Clone(ed) => { ec.insert((EditType::Clone, ed)); },
-                EditProxy::Create(ed) => { ec.insert((EditType::Create, ed)); },
-                EditProxy::Delete(ed) => { ec.insert((EditType::Delete, ed)); },
-                EditProxy::Flip(ed) => { ec.insert((EditType::Flip, ed)); },
-                EditProxy::Group => { ec.insert(EditType::Group); },
-                EditProxy::Move(ed) => { ec.insert((EditType::Move, ed)); },
-                EditProxy::Rotate(ed) => { ec.insert((EditType::Rotate, ed)); }
+                Item::Clone(ed) => { ec.insert((EditType::Clone, ed)); },
+                Item::Create(ed) => { ec.insert((EditType::Create, ed)); },
+                Item::Delete(ed) => { ec.insert((EditType::Delete, ed)); },
+                Item::Flip(ed) => { ec.insert((EditType::Flip, ed)); },
+                Item::Group => { ec.insert(EditType::Group); },
+                Item::Move(ed) => { ec.insert((EditType::Move, ed)); },
+                Item::Rotate(ed) => { ec.insert((EditType::Rotate, ed)); }
             }
 
             children.push(entity);
@@ -116,7 +119,7 @@ impl<'de> Visitor<'de> for EditProxyVisitor<'_, '_, '_> {
                 .insert(EditOf(self.entity));
         }
 
-        Ok(EditProxy::Group)
+        Ok(Item::Group)
     }
 
     fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
@@ -144,7 +147,7 @@ pub fn deserialize_edits(
 
 // TODO: ensure that root is a group
 
-    let r = EditProxySeed {
+    let r = ItemSeed {
         entity: root_entity,
         commands: &mut commands
     };
