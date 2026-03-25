@@ -49,6 +49,7 @@ mod gamebox;
 mod grid;
 mod keys;
 mod log;
+mod log_deserialize;
 mod log_serialize;
 mod r#move;
 mod object;
@@ -164,9 +165,9 @@ fn splash_plugin(app: &mut App) {
                 setup_game_resources,
                 load_assets,
                 init_log,
-                load_log
+                deserialize_edits
                     .after(load_assets)
-                    .after(init_log),
+                    .after(init_log)
             )
         )
         .add_systems(
