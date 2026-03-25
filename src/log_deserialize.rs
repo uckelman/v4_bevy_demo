@@ -96,6 +96,7 @@ impl<'de> Visitor<'de> for ItemVisitor<'_, '_, '_> {
             };
 
             let Some(ep) = seq.next_element_seed::<ItemSeed>(seed)? else {
+                // sequence is finished, we don't need this entity
                 self.commands.entity(entity).despawn();
                 break;
             };
@@ -115,8 +116,7 @@ impl<'de> Visitor<'de> for ItemVisitor<'_, '_, '_> {
 
         // add children to the group
         for e in children {
-            self.commands.entity(e)
-                .insert(EditOf(self.entity));
+            self.commands.entity(e).insert(EditOf(self.entity));
         }
 
         Ok(Item::Group)
