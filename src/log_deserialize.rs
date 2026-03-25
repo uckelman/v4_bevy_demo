@@ -79,11 +79,9 @@ impl<'de> Visitor<'de> for ItemVisitor<'_, '_, '_> {
     where
         A: SeqAccess<'de>
     {
-        // set up the group
+        // set up the group; Edits must exist before EditOf is used for children
         self.commands.entity(self.entity)
             .insert(Edits::default());
-
-        let mut children = vec![];
 
         loop {
             // make the entity for the child
@@ -101,22 +99,31 @@ impl<'de> Visitor<'de> for ItemVisitor<'_, '_, '_> {
                 break;
             };
 
+            let edof = EditOf(self.entity);
+
             match ep {
-                Item::Clone(ed) => { ec.insert((EditType::Clone, ed)); },
-                Item::Create(ed) => { ec.insert((EditType::Create, ed)); },
-                Item::Delete(ed) => { ec.insert((EditType::Delete, ed)); },
-                Item::Flip(ed) => { ec.insert((EditType::Flip, ed)); },
-                Item::Group => { ec.insert(EditType::Group); },
-                Item::Move(ed) => { ec.insert((EditType::Move, ed)); },
-                Item::Rotate(ed) => { ec.insert((EditType::Rotate, ed)); }
+                Item::Clone(ed) => {
+                    ec.insert((EditType::Clone, edof, ed));
+                },
+                Item::Create(ed) => {
+                    ec.insert((EditType::Create, edof, ed));
+                },
+                Item::Delete(ed) => {
+                    ec.insert((EditType::Delete, edof, ed));
+                },
+                Item::Flip(ed) => {
+                    ec.insert((EditType::Flip, edof, ed));
+                },
+                Item::Group => {
+                    ec.insert((EditType::Group, edof));
+                },
+                Item::Move(ed) => {
+                    ec.insert((EditType::Move, edof, ed));
+                },
+                Item::Rotate(ed) => {
+                    ec.insert((EditType::Rotate, edof, ed));
+                }
             }
-
-            children.push(entity);
-        }
-
-        // add children to the group
-        for e in children {
-            self.commands.entity(e).insert(EditOf(self.entity));
         }
 
         Ok(Item::Group)
