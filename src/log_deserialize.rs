@@ -31,39 +31,50 @@ use crate::{
     rotate::RotateEdit
 };
 
-struct EditProxyInSeed<'c, 'w, 's> {
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase", tag = "type")]
+enum EditProxyEdit {
+    Clone(CloneEdit),
+    Create(CreateEdit),
+    Delete(DeleteEdit),
+    Flip(FlipEdit),
+    Move(MoveEdit),
+    Rotate(RotateEdit)
+}
+
+#[derive(Debug, Deserialize)]
+enum EditProxy {
+    Group,
+    #[serde(untagged)]
+    Edit(EditProxyEdit)
+}
+
+struct EditProxySeed<'c, 'w, 's> {
     entity: Entity,
     commands: &'c mut Commands<'w, 's>
 }
 
-impl<'de> DeserializeSeed<'de> for EditProxyInSeed<'_, '_, '_> {
-    type Value = EditProxyIn;
+impl<'de> DeserializeSeed<'de> for EditProxySeed<'_, '_, '_> {
+    type Value = EditProxy;
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>
     {
-        deserializer.deserialize_any(EditProxyInVisitor {
+        deserializer.deserialize_any(EditProxyVisitor {
             entity: self.entity,
             commands: self.commands
         })
     }
 }
 
-#[derive(Debug, Deserialize)]
-enum EditProxyIn {
-    Group,
-    #[serde(untagged)]
-    Leaf(EditProxyInEdit)
-}
-
-struct EditProxyInVisitor<'c, 'w, 's> {
+struct EditProxyVisitor<'c, 'w, 's> {
     entity: Entity,
     commands: &'c mut Commands<'w, 's>
 }
 
-impl<'de> Visitor<'de> for EditProxyInVisitor<'_, '_, '_> {
-    type Value = EditProxyIn;
+impl<'de> Visitor<'de> for EditProxyVisitor<'_, '_, '_> {
+    type Value = EditProxy;
 
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "an edit or a sequence of edits")
@@ -73,39 +84,44 @@ impl<'de> Visitor<'de> for EditProxyInVisitor<'_, '_, '_> {
     where
         A: SeqAccess<'de>
     {
+        // set up the group
+        self.commands.entity(self.entity)
+            .insert(Edits::default());
+
         let mut children = vec![];
 
         loop {
+            // make the entity for the child
             let mut ec = self.commands.spawn_empty();
             let entity = ec.id();
 
-            let seed = EditProxyInSeed {
+            let seed = EditProxySeed {
                 entity,
                 commands: ec.commands_mut()
             };
 
-            let Some(ep) = seq.next_element_seed::<EditProxyInSeed>(seed)? else { self.commands.entity(entity).despawn(); break; };
+            let Some(ep) = seq.next_element_seed::<EditProxySeed>(seed)? else { self.commands.entity(entity).despawn(); break; };
 
             match ep {
-                EditProxyIn::Leaf(EditProxyInEdit::Clone(ed)) => {
+                EditProxy::Edit(EditProxyEdit::Clone(ed)) => {
                     ec.insert((EditType::Clone, ed));
                 },
-                EditProxyIn::Leaf(EditProxyInEdit::Create(ed)) => {
+                EditProxy::Edit(EditProxyEdit::Create(ed)) => {
                     ec.insert((EditType::Create, ed));
                 },
-                EditProxyIn::Leaf(EditProxyInEdit::Delete(ed)) => {
+                EditProxy::Edit(EditProxyEdit::Delete(ed)) => {
                     ec.insert((EditType::Delete, ed));
                 },
-                EditProxyIn::Leaf(EditProxyInEdit::Flip(ed)) => {
+                EditProxy::Edit(EditProxyEdit::Flip(ed)) => {
                     ec.insert((EditType::Flip, ed));
                 },
-                EditProxyIn::Group => {
+                EditProxy::Group => {
                     ec.insert(EditType::Group);
                 },
-                EditProxyIn::Leaf(EditProxyInEdit::Move(ed)) => {
+                EditProxy::Edit(EditProxyEdit::Move(ed)) => {
                     ec.insert((EditType::Move, ed));
                 },
-                EditProxyIn::Leaf(EditProxyInEdit::Rotate(ed)) => {
+                EditProxy::Edit(EditProxyEdit::Rotate(ed)) => {
                     ec.insert((EditType::Rotate, ed));
                 }
             }
@@ -113,17 +129,13 @@ impl<'de> Visitor<'de> for EditProxyInVisitor<'_, '_, '_> {
             children.push(entity);
         }
 
-        // set up the group
-        self.commands.entity(self.entity)
-            .insert(Edits::default());
-
-        // add all the children to it
+        // add children to the group
         for e in children {
             self.commands.entity(e)
                 .insert(EditOf(self.entity));
         }
 
-        Ok(EditProxyIn::Group)
+        Ok(EditProxy::Group)
     }
 
     fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
@@ -132,17 +144,6 @@ impl<'de> Visitor<'de> for EditProxyInVisitor<'_, '_, '_> {
     {
         Deserialize::deserialize(MapAccessDeserializer::new(map))
     }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase", tag = "type")]
-enum EditProxyInEdit {
-    Clone(CloneEdit),
-    Create(CreateEdit),
-    Delete(DeleteEdit),
-    Flip(FlipEdit),
-    Move(MoveEdit),
-    Rotate(RotateEdit)
 }
 
 #[instrument(skip_all)]
@@ -162,7 +163,7 @@ pub fn deserialize_edits(
 
 // TODO: ensure that root is a group
 
-    let r = EditProxyInSeed {
+    let r = EditProxySeed {
         entity: root_entity,
         commands: &mut commands
     };
