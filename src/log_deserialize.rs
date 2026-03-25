@@ -152,15 +152,16 @@ pub fn deserialize_edits(
 
     let root_entity = root_query.single()?;
 
-// TODO: ensure that root is a group
-
     let r = ItemSeed {
         entity: root_entity,
         commands: &mut commands
     };
 
     let mut d = serde_json::Deserializer::from_reader(reader);
-    let _ = r.deserialize(&mut d)?;
+    if !matches!(r.deserialize(&mut d)?, Item::Group) {
+        // TODO: define a real error type
+        return Err("log root must be a group".into());
+    }
 
     commands.trigger(EditsComplete);
     Ok(())
