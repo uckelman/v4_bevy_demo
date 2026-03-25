@@ -33,20 +33,15 @@ use crate::{
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type")]
-enum EditProxyEdit {
+enum EditProxy {
     Clone(CloneEdit),
     Create(CreateEdit),
     Delete(DeleteEdit),
     Flip(FlipEdit),
     Move(MoveEdit),
-    Rotate(RotateEdit)
-}
-
-#[derive(Debug, Deserialize)]
-enum EditProxy {
-    Group,
+    Rotate(RotateEdit),
     #[serde(untagged)]
-    Edit(EditProxyEdit)
+    Group
 }
 
 struct EditProxySeed<'c, 'w, 's> {
@@ -103,27 +98,13 @@ impl<'de> Visitor<'de> for EditProxyVisitor<'_, '_, '_> {
             let Some(ep) = seq.next_element_seed::<EditProxySeed>(seed)? else { self.commands.entity(entity).despawn(); break; };
 
             match ep {
-                EditProxy::Edit(EditProxyEdit::Clone(ed)) => {
-                    ec.insert((EditType::Clone, ed));
-                },
-                EditProxy::Edit(EditProxyEdit::Create(ed)) => {
-                    ec.insert((EditType::Create, ed));
-                },
-                EditProxy::Edit(EditProxyEdit::Delete(ed)) => {
-                    ec.insert((EditType::Delete, ed));
-                },
-                EditProxy::Edit(EditProxyEdit::Flip(ed)) => {
-                    ec.insert((EditType::Flip, ed));
-                },
-                EditProxy::Group => {
-                    ec.insert(EditType::Group);
-                },
-                EditProxy::Edit(EditProxyEdit::Move(ed)) => {
-                    ec.insert((EditType::Move, ed));
-                },
-                EditProxy::Edit(EditProxyEdit::Rotate(ed)) => {
-                    ec.insert((EditType::Rotate, ed));
-                }
+                EditProxy::Clone(ed) => { ec.insert((EditType::Clone, ed)); },
+                EditProxy::Create(ed) => { ec.insert((EditType::Create, ed)); },
+                EditProxy::Delete(ed) => { ec.insert((EditType::Delete, ed)); },
+                EditProxy::Flip(ed) => { ec.insert((EditType::Flip, ed)); },
+                EditProxy::Group => { ec.insert(EditType::Group); },
+                EditProxy::Move(ed) => { ec.insert((EditType::Move, ed)); },
+                EditProxy::Rotate(ed) => { ec.insert((EditType::Rotate, ed)); }
             }
 
             children.push(entity);
