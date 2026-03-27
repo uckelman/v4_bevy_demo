@@ -11,7 +11,7 @@ edition = "2024"
 
 [dependencies]
 bevy = { version = "0.18", features = ["debug", "gif", "jpeg", "png", "serialize", "webp"] }
-#derive_more = { version = "2.1.1", features = ["as_ref"] }
+derive_more = { version = "2.1", features = ["as_ref"] }
 itertools = "0.14"
 rand = "0.10"
 regex = "1"

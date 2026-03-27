@@ -11,6 +11,7 @@ use bevy::{
     picking::events::{Drag, Pointer},
     prelude::{Entity, GlobalTransform, OrthographicProjection, PointerButton, Projection, State, Time, trace, Transform, Resource}
 };
+use derive_more::AsRef;
 use tracing::instrument;
 
 use crate::{
@@ -33,86 +34,32 @@ pub struct KeyScaleStep(pub f32);
 #[derive(Resource)]
 pub struct WheelScaleStep(pub f32);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct PanLeftKey(pub KeyBinding);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct PanRightKey(pub KeyBinding);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct PanUpKey(pub KeyBinding);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct PanDownKey(pub KeyBinding);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct ZoomInKey(pub KeyBinding);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct ZoomOutKey(pub KeyBinding);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct ZoomResetKey(pub KeyBinding);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct RotateCCWKey(pub KeyBinding);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct RotateCWKey(pub KeyBinding);
-
-impl AsRef<KeyBinding> for PanLeftKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
-
-impl AsRef<KeyBinding> for PanRightKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
-
-impl AsRef<KeyBinding> for PanUpKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
-
-impl AsRef<KeyBinding> for PanDownKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
-
-impl AsRef<KeyBinding> for ZoomInKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
-
-impl AsRef<KeyBinding> for ZoomOutKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
-
-impl AsRef<KeyBinding> for ZoomResetKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
-
-impl AsRef<KeyBinding> for RotateCCWKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
-
-impl AsRef<KeyBinding> for RotateCWKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
 
 fn pan_view(
     transform: &mut Transform,

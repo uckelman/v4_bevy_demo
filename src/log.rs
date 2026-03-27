@@ -9,6 +9,7 @@ use bevy::{
     math::Vec3,
     prelude::{debug, Entity, Query, Resource, Result}
 };
+use derive_more::AsRef;
 use std::{
     fs::File,
     io::BufReader
@@ -27,23 +28,11 @@ use crate::{
     rotate::RotateEdit
 };
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct RedoKey(pub KeyBinding);
 
-#[derive(Resource)]
+#[derive(AsRef, Resource)]
 pub struct UndoKey(pub KeyBinding);
-
-impl AsRef<KeyBinding> for RedoKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
-
-impl AsRef<KeyBinding> for UndoKey {
-    fn as_ref(&self) -> &KeyBinding {
-        &self.0
-    }
-}
 
 // the edit index is the insertion point for a new edit
 #[derive(Component, Default)]
