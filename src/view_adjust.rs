@@ -52,6 +52,9 @@ pub struct ZoomInKey(pub KeyBinding);
 pub struct ZoomOutKey(pub KeyBinding);
 
 #[derive(Resource)]
+pub struct ZoomResetKey(pub KeyBinding);
+
+#[derive(Resource)]
 pub struct RotateCCWKey(pub KeyBinding);
 
 #[derive(Resource)]
@@ -88,6 +91,12 @@ impl AsRef<KeyBinding> for ZoomInKey {
 }
 
 impl AsRef<KeyBinding> for ZoomOutKey {
+    fn as_ref(&self) -> &KeyBinding {
+        &self.0
+    }
+}
+
+impl AsRef<KeyBinding> for ZoomResetKey {
     fn as_ref(&self) -> &KeyBinding {
         &self.0
     }

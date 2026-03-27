@@ -25,6 +25,7 @@ pub struct Keys {
     pub pan_down: KeyBinding,
     pub zoom_in: KeyBinding,
     pub zoom_out: KeyBinding,
+    pub zoom_reset: KeyBinding,
     pub rotate_ccw: KeyBinding,
     pub rotate_cw: KeyBinding,
     pub undo: KeyBinding,

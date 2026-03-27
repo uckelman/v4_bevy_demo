@@ -19,7 +19,7 @@ use bevy::{
     image::{ImagePlugin, ImageSamplerDescriptor},
     input::{
         ButtonInput,
-        common_conditions::{input_pressed, input_just_pressed},
+        common_conditions::input_just_pressed,
         keyboard::KeyCode,
         mouse::AccumulatedMouseScroll
     },
@@ -86,7 +86,7 @@ use crate::{
         KeyPanStep, KeyRotateStep, KeyScaleStep,
         PanLeftKey, PanRightKey, PanUpKey, PanDownKey,
         RotateCCWKey, RotateCWKey,
-        ZoomInKey, ZoomOutKey,
+        ZoomInKey, ZoomOutKey, ZoomResetKey,
         WheelScaleStep
     },
     raise::RaiseAnchor,
@@ -211,6 +211,7 @@ fn load_input_settings(
 
     commands.insert_resource(ZoomInKey(keys.zoom_in));
     commands.insert_resource(ZoomOutKey(keys.zoom_out));
+    commands.insert_resource(ZoomResetKey(keys.zoom_reset));
 
     commands.insert_resource(RotateCCWKey(keys.rotate_ccw));
     commands.insert_resource(RotateCWKey(keys.rotate_cw));
@@ -245,16 +246,9 @@ fn game_plugin(app: &mut App) {
                 handle_rotate_ccw.run_if(cfg_input_pressed::<RotateCCWKey>),
                 handle_rotate_cw.run_if(cfg_input_pressed::<RotateCWKey>),
 
-// TODO: switch to configurable input
-                handle_zoom_reset.run_if(
-                    input_pressed(KeyCode::Digit0).and(
-                        input_pressed(KeyCode::ControlLeft).or(
-                            input_pressed(KeyCode::ControlRight)
-                        )
-                    )
-                ),
                 handle_zoom_in.run_if(cfg_input_pressed::<ZoomInKey>),
                 handle_zoom_out.run_if(cfg_input_pressed::<ZoomOutKey>),
+                handle_zoom_reset.run_if(cfg_input_just_pressed::<ZoomResetKey>),
                 handle_zoom_scroll.run_if(
                     resource_changed::<AccumulatedMouseScroll>.and(
                         not(resource_equals(AccumulatedMouseScroll::default()))
