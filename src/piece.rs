@@ -12,8 +12,7 @@ use bevy::{
 };
 
 use crate::{
-    actionfunc::ActionFunc,
-    actions::{add_action_observers},
+    actionfunc::{ActionFunc, add_action_observers},
     assets::{ImageSource, SpriteHandles},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::PieceType,

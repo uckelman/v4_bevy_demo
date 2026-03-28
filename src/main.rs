@@ -30,7 +30,6 @@ use bevy::{
 use std::path::PathBuf;
 
 mod actionfunc;
-mod actions;
 mod angle;
 mod assets;
 mod config;

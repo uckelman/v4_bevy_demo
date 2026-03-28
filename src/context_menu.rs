@@ -29,8 +29,7 @@ use std::fmt::Debug;
 use tracing::instrument;
 
 use crate::{
-    actionfunc::ActionFunc,
-    actions::trigger_action_func,
+    actionfunc::{ActionFunc, trigger_action_func},
     log::{OpenGroupEvent, CloseGroupEvent},
     piece::{Action, Actions},
     select::Selected

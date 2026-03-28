@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    actions::add_action_observers,
+    actionfunc::add_action_observers,
     edittype::EditType,
     log::{EditIndex, Edits, handle_do},
     object::{NextObjectId, ObjectId, ObjectIdMap},
