@@ -21,7 +21,7 @@ use crate::{
     Surface,
     context_menu::ContextMenuState,
     log::{OpenGroupEvent, CloseGroupEvent},
-    r#move::DoMoveEvent,
+    piece::r#move::DoMoveEvent,
     raise::raise_piece,
     select::Selected,
     util::AsOrthographicProjection

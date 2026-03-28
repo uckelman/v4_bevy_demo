@@ -13,14 +13,16 @@ use serde::{
 use std::io::Write;
 
 use crate::{
-    clone::CloneEdit,
-    create::CreateEdit,
-    delete::DeleteEdit,
     edittype::EditType,
-    flip::FlipEdit,
     log::{EditIndex, EditOf, Edits},
-    r#move::MoveEdit,
-    rotate::RotateEdit
+    piece::{
+        clone::CloneEdit,
+        create::CreateEdit,
+        delete::DeleteEdit,
+        flip::FlipEdit,
+        r#move::MoveEdit,
+        rotate::RotateEdit
+    }
 };
 
 trait SerializeEdit {

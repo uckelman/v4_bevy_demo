@@ -4,13 +4,15 @@ use bevy::ecs::{
 };
 
 use crate::{
-    clone::{RedoCloneEvent, UndoCloneEvent},
-    create::{RedoCreateEvent, UndoCreateEvent},
-    delete::{RedoDeleteEvent, UndoDeleteEvent},
-    flip::{RedoFlipEvent, UndoFlipEvent},
     log::{RedoGroupEvent, UndoGroupEvent},
-    r#move::{RedoMoveEvent, UndoMoveEvent},
-    rotate::{RedoRotateEvent, UndoRotateEvent},
+    piece::{
+        clone::{RedoCloneEvent, UndoCloneEvent},
+        create::{RedoCreateEvent, UndoCreateEvent},
+        delete::{RedoDeleteEvent, UndoDeleteEvent},
+        flip::{RedoFlipEvent, UndoFlipEvent},
+        r#move::{RedoMoveEvent, UndoMoveEvent},
+        rotate::{RedoRotateEvent, UndoRotateEvent}
+    }
 };
 
 #[derive(Clone, Component, Copy, Debug, Eq, PartialEq)]

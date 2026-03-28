@@ -22,14 +22,16 @@ use tracing::instrument;
 
 use crate::{
     LogPath,
-    clone::CloneEdit,
-    create::CreateEdit,
-    delete::DeleteEdit,
     edittype::EditType,
-    flip::FlipEdit,
     log::{EditOf, Edits, EditsComplete},
-    r#move::MoveEdit,
-    rotate::RotateEdit
+    piece::{
+        clone::CloneEdit,
+        create::CreateEdit,
+        delete::DeleteEdit,
+        flip::FlipEdit,
+        r#move::MoveEdit,
+        rotate::RotateEdit
+    }
 };
 
 #[derive(Debug, Deserialize)]

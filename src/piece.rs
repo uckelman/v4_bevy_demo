@@ -18,13 +18,20 @@ use crate::{
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::PieceType,
     keys::KeyBinding,
-    r#move::on_move,
     object::ObjectId,
+    piece::r#move::on_move,
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
     state::GameState,
     view::handle_piece_pressed
 };
+
+pub mod clone;
+pub mod create;
+pub mod delete;
+pub mod flip;
+pub mod r#move;
+pub mod rotate;
 
 #[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Piece;

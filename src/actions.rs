@@ -7,10 +7,12 @@ use std::mem;
 
 use crate::{
     actionfunc::ActionFunc,
-    clone::{DoCloneEvent, on_clone},
-    delete::{DoDeleteEvent, on_delete},
-    flip::{DoFlipEvent, on_flip},
-    rotate::{DoRotateEvent, on_rotate}
+    piece::{
+        clone::{DoCloneEvent, on_clone},
+        delete::{DoDeleteEvent, on_delete},
+        flip::{DoFlipEvent, on_flip},
+        rotate::{DoRotateEvent, on_rotate}
+    }
 };
 
 pub fn add_action_observer(

@@ -33,26 +33,20 @@ mod actionfunc;
 mod actions;
 mod angle;
 mod assets;
-mod clone;
 mod config;
 mod context_menu;
-mod create;
 mod debug;
-mod delete;
 mod drag;
 mod edittype;
-mod flip;
 mod gamebox;
 mod grid;
 mod keys;
 mod log;
 mod log_deserialize;
 mod log_serialize;
-mod r#move;
 mod object;
 mod piece;
 mod raise;
-mod rotate;
 mod select;
 mod state;
 mod title;
@@ -62,21 +56,24 @@ mod view_adjust;
 
 use crate::{
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
-    clone::{on_clone_redo, on_clone_undo},
     config::{Config, load_config},
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
-    create::{on_create, on_create_redo, on_create_undo},
     debug::{dump_edits, pick_dbg},
-    delete::{on_delete_redo, on_delete_undo},
-    flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
     log::{handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
     log_deserialize::deserialize_edits,
     log_serialize::serialize_edits,
-    r#move::{on_move_redo, on_move_undo},
     object::{NextObjectId, ObjectIdMap},
+    piece::{
+        clone::{on_clone_redo, on_clone_undo},
+        create::{on_create, on_create_redo, on_create_undo},
+        delete::{on_delete_redo, on_delete_undo},
+        flip::{on_flip_redo, on_flip_undo},
+        r#move::{on_move_redo, on_move_undo},
+        rotate::{on_rotate_redo, on_rotate_undo},
+    },
     view_adjust::{
         handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
         handle_rotate_ccw, handle_rotate_cw,
@@ -88,7 +85,6 @@ use crate::{
         WheelScaleStep
     },
     raise::RaiseAnchor,
-    rotate::{on_rotate_redo, on_rotate_undo},
     select::{clear_selection, draw_selection_rect, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selected, SelectionRect, setup_selection_box, handle_key_selection},
     state::GameState,
     title::{SplashScreenTimer, display_title}
