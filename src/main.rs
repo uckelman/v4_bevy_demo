@@ -40,6 +40,7 @@ mod create;
 mod debug;
 mod delete;
 mod drag;
+mod edittype;
 mod flip;
 mod gamebox;
 mod grid;
@@ -71,7 +72,7 @@ use crate::{
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
-    log::{DoCreateEvent, handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
+    log::{handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
     log_deserialize::deserialize_edits,
     log_serialize::serialize_edits,
     r#move::{on_move_redo, on_move_undo},

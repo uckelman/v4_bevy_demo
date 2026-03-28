@@ -14,9 +14,27 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    log::{DoMoveEvent, EditIndex, EditType, Edits, handle_do, RedoMoveEvent, UndoMoveEvent},
+    edittype::EditType,
+    log::{EditIndex, Edits, handle_do},
     object::{ObjectId, ObjectIdMap}
 };
+
+#[derive(Clone, EntityEvent)]
+pub struct DoMoveEvent {
+    pub entity: Entity,
+    pub src: Vec3,
+    pub dst: Vec3
+}
+
+#[derive(EntityEvent)]
+pub struct UndoMoveEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct RedoMoveEvent {
+    pub entity: Entity
+}
 
 fn do_move(t: &mut Transform, to: Vec3)
 {

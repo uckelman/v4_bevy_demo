@@ -13,9 +13,26 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    log::{DoRotateEvent, EditIndex, EditType, Edits, handle_do, RedoRotateEvent, UndoRotateEvent},
+    edittype::EditType,
+    log::{EditIndex, Edits, handle_do},
     object::{ObjectId, ObjectIdMap}
 };
+
+#[derive(Clone, EntityEvent)]
+pub struct DoRotateEvent {
+    pub entity: Entity,
+    pub dtheta: f32
+}
+
+#[derive(EntityEvent)]
+pub struct UndoRotateEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct RedoRotateEvent {
+    pub entity: Entity
+}
 
 fn do_rotate(t: &mut Transform, dtheta: f32)
 {

@@ -11,7 +11,10 @@ use bevy::{
     prelude::{Result, trace}
 };
 
-use crate::log::{EditOf, EditIndex, EditType, Edits, EditsComplete};
+use crate::{
+    edittype::EditType,
+    log::{EditOf, EditIndex, Edits, EditsComplete}
+};
 
 pub fn pick_dbg(ev: On<Pointer<Click>>, names: Query<&Name>) {
     let name = names

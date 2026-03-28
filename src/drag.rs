@@ -20,7 +20,8 @@ use tracing::instrument;
 use crate::{
     Surface,
     context_menu::ContextMenuState,
-    log::{DoMoveEvent, OpenGroupEvent, CloseGroupEvent},
+    log::{OpenGroupEvent, CloseGroupEvent},
+    r#move::DoMoveEvent,
     raise::raise_piece,
     select::Selected,
     util::AsOrthographicProjection

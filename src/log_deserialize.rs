@@ -25,8 +25,9 @@ use crate::{
     clone::CloneEdit,
     create::CreateEdit,
     delete::DeleteEdit,
+    edittype::EditType,
     flip::FlipEdit,
-    log::{EditOf, Edits, EditsComplete, EditType},
+    log::{EditOf, Edits, EditsComplete},
     r#move::MoveEdit,
     rotate::RotateEdit
 };

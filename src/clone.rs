@@ -14,10 +14,26 @@ use tracing::instrument;
 
 use crate::{
     actions::add_action_observers,
-    log::{DoCloneEvent, EditIndex, EditType, Edits, handle_do, RedoCloneEvent, UndoCloneEvent},
+    edittype::EditType,
+    log::{EditIndex, Edits, handle_do},
     object::{NextObjectId, ObjectId, ObjectIdMap},
     piece::{Actions, add_observers}
 };
+
+#[derive(Clone, EntityEvent)]
+pub struct DoCloneEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct UndoCloneEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct RedoCloneEvent {
+    pub entity: Entity
+}
 
 fn do_clone(
     entity: Entity,

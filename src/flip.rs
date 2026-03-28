@@ -14,10 +14,27 @@ use tracing::instrument;
 
 use crate::{
     assets::ImageSource,
-    log::{DoFlipEvent, EditIndex, EditType, Edits, handle_do, RedoFlipEvent, UndoFlipEvent},
+    edittype::EditType,
+    log::{EditIndex, Edits, handle_do},
     object::{ObjectId, ObjectIdMap},
     piece::{Faces, FaceUp}
 };
+
+#[derive(Clone, EntityEvent)]
+pub struct DoFlipEvent {
+    pub entity: Entity,
+    pub delta: i32
+}
+
+#[derive(EntityEvent)]
+pub struct UndoFlipEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct RedoFlipEvent {
+    pub entity: Entity
+}
 
 fn set_face(
     sprite: &mut Sprite,

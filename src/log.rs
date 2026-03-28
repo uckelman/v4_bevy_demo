@@ -5,13 +5,15 @@ use bevy::{
         observer::On,
         prelude::{Commands, Entity, Query, RelationshipTarget, Resource, With, Without}
     },
-    math::Vec3,
     prelude::{debug, Result}
 };
 use derive_more::AsRef;
 use tracing::instrument;
 
-use crate::keys::KeyBinding;
+use crate::{
+    edittype::EditType,
+    keys::KeyBinding
+};
 
 #[derive(AsRef, Resource)]
 pub struct RedoKey(pub KeyBinding);
@@ -30,43 +32,6 @@ pub struct EditOf(pub Entity);
 #[derive(Component, Default)]
 #[relationship_target(relationship = EditOf, linked_spawn)]
 pub struct Edits(Vec<Entity>);
-
-#[derive(Clone, Component, Copy, Debug, Eq, PartialEq)]
-pub enum EditType {
-    Clone,
-    Create,
-    Delete,
-    Flip,
-    Group,
-    Move,
-    Rotate
-}
-
-impl EditType {
-    fn dispatch_undo_event(&self, entity: Entity, commands: &mut Commands) {
-        match self {
-            EditType::Clone => commands.trigger(UndoCloneEvent { entity }),
-            EditType::Create => commands.trigger(UndoCreateEvent { entity }),
-            EditType::Delete => commands.trigger(UndoDeleteEvent { entity }),
-            EditType::Flip => commands.trigger(UndoFlipEvent { entity }),
-            EditType::Group => commands.trigger(UndoGroupEvent { entity }),
-            EditType::Move => commands.trigger(UndoMoveEvent { entity }),
-            EditType::Rotate => commands.trigger(UndoRotateEvent { entity })
-        }
-    }
-
-    fn dispatch_redo_event(&self, entity: Entity, commands: &mut Commands) {
-        match self {
-            EditType::Clone => commands.trigger(RedoCloneEvent { entity }),
-            EditType::Create => commands.trigger(RedoCreateEvent { entity }),
-            EditType::Delete => commands.trigger(RedoDeleteEvent { entity }),
-            EditType::Flip => commands.trigger(RedoFlipEvent { entity }),
-            EditType::Group => commands.trigger(RedoGroupEvent { entity }),
-            EditType::Move => commands.trigger(RedoMoveEvent { entity }),
-            EditType::Rotate => commands.trigger(RedoRotateEvent { entity })
-        }
-    }
-}
 
 #[derive(Event)]
 pub struct EditsComplete;
@@ -458,28 +423,6 @@ pub fn handle_redo_all(
     Ok(())
 }
 
-#[derive(Clone, EntityEvent)]
-pub struct DoCloneEvent {
-    pub entity: Entity
-}
-
-#[derive(Clone, Event)]
-pub struct DoCreateEvent {
-    pub type_id: u32,
-    pub dst: Vec3
-}
-
-#[derive(Clone, EntityEvent)]
-pub struct DoDeleteEvent {
-    pub entity: Entity
-}
-
-#[derive(Clone, EntityEvent)]
-pub struct DoFlipEvent {
-    pub entity: Entity,
-    pub delta: i32
-}
-
 /*
 #[derive(EntityEvent)]
 pub struct DoGroupEvent {
@@ -487,51 +430,8 @@ pub struct DoGroupEvent {
 }
 */
 
-#[derive(Clone, EntityEvent)]
-pub struct DoMoveEvent {
-    pub entity: Entity,
-    pub src: Vec3,
-    pub dst: Vec3
-}
-
-#[derive(Clone, EntityEvent)]
-pub struct DoRotateEvent {
-    pub entity: Entity,
-    pub dtheta: f32
-}
-
-#[derive(EntityEvent)]
-pub struct UndoCloneEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct UndoCreateEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct UndoDeleteEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct UndoFlipEvent {
-    pub entity: Entity
-}
-
 #[derive(EntityEvent)]
 pub struct UndoGroupEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct UndoMoveEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct UndoRotateEvent {
     pub entity: Entity
 }
 
@@ -548,37 +448,7 @@ pub fn on_undo(
 }
 
 #[derive(EntityEvent)]
-pub struct RedoCloneEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct RedoCreateEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct RedoDeleteEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct RedoFlipEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
 pub struct RedoGroupEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct RedoMoveEvent {
-    pub entity: Entity
-}
-
-#[derive(EntityEvent)]
-pub struct RedoRotateEvent {
     pub entity: Entity
 }
 

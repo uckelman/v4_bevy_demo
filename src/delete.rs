@@ -15,11 +15,27 @@ use tracing::instrument;
 
 use crate::{
     assets::SpriteHandles,
+    edittype::EditType,
     gamebox::GameBox,
-    log::{DoDeleteEvent, EditIndex, EditType, Edits, handle_do, RedoDeleteEvent, UndoDeleteEvent},
+    log::{EditIndex, Edits, handle_do},
     object::{ObjectId, ObjectIdMap},
     piece::{FaceUp, PieceTypeId, spawn_piece}
 };
+
+#[derive(Clone, EntityEvent)]
+pub struct DoDeleteEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct UndoDeleteEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct RedoDeleteEvent {
+    pub entity: Entity
+}
 
 fn do_delete(
     entity: Entity,

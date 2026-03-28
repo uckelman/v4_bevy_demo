@@ -2,6 +2,7 @@ use bevy::{
     ecs::{
         change_detection::{Res, ResMut},
         component::Component,
+        event::{EntityEvent, Event},
         error::Result,
         observer::On,
         prelude::{Commands, Query}
@@ -14,11 +15,28 @@ use tracing::instrument;
 
 use crate::{
     assets::SpriteHandles,
+    edittype::EditType,
     gamebox::GameBox,
-    log::{DoCreateEvent, EditIndex, EditType, Edits, handle_do, RedoCreateEvent, UndoCreateEvent},
+    log::{EditIndex, Edits, handle_do},
     object::{NextObjectId, ObjectIdMap},
     piece::spawn_piece
 };
+
+#[derive(Clone, Event)]
+pub struct DoCreateEvent {
+    pub type_id: u32,
+    pub dst: Vec3
+}
+
+#[derive(EntityEvent)]
+pub struct UndoCreateEvent {
+    pub entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct RedoCreateEvent {
+    pub entity: Entity
+}
 
 #[derive(Component, Debug, Deserialize, Serialize)]
 #[serde(rename = "create", tag = "type")]
