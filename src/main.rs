@@ -10,11 +10,9 @@ use bevy::{
         change_detection::{Res, ResMut},
         component::Component,
         entity::Entity,
-        event::EntityEvent,
         error::Result,
         name::Name,
-        observer::On,
-        prelude::{any_with_component, Commands, not, Query, resource_changed, resource_equals, resource_exists, Single, SystemCondition, With}
+        prelude::{any_with_component, Commands, not, resource_changed, resource_equals, resource_exists, Single, SystemCondition, With}
     },
     image::{ImagePlugin, ImageSamplerDescriptor},
     input::{
@@ -25,10 +23,7 @@ use bevy::{
     },
     math::Vec3,
     mesh::Mesh,
-    picking::{
-        events::{Pointer, Click},
-        mesh_picking::MeshPickingPlugin
-    },
+    picking::mesh_picking::MeshPickingPlugin,
     prelude::{AppExtStates, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
     sprite::Anchor,
 };
@@ -42,6 +37,7 @@ mod clone;
 mod config;
 mod context_menu;
 mod create;
+mod debug;
 mod delete;
 mod drag;
 mod flip;
@@ -69,12 +65,13 @@ use crate::{
     config::{Config, load_config},
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     create::{on_create, on_create_redo, on_create_undo},
+    debug::{dump_edits, pick_dbg},
     delete::{on_delete_redo, on_delete_undo},
     flip::{on_flip_redo, on_flip_undo},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
-    log::{DoCreateEvent, dump_edits, handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
+    log::{DoCreateEvent, handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
     log_deserialize::deserialize_edits,
     log_serialize::serialize_edits,
     r#move::{on_move_redo, on_move_undo},
@@ -353,15 +350,6 @@ fn spawn_map(
         },
         DespawnOnExit(GameState::Game)
     ));
-}
-
-fn pick_dbg(ev: On<Pointer<Click>>, names: Query<&Name>) {
-    let name = names
-        .get(ev.event_target())
-        .map(|n| n.to_string())
-        .unwrap_or("Unknown".to_string());
-
-    trace!("Picked {name}({:?})", ev.event_target());
 }
 
 fn display_game(

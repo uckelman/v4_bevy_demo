@@ -1,13 +1,12 @@
 use bevy::{
     ecs::{
-        change_detection::Res,
         component::Component,
         event::{EntityEvent, Event},
         observer::On,
-        prelude::{Commands, RelationshipTarget, With, Without}
+        prelude::{Commands, Entity, Query, RelationshipTarget, Resource, With, Without}
     },
     math::Vec3,
-    prelude::{debug, Entity, Query, Resource, Result}
+    prelude::{debug, Result}
 };
 use derive_more::AsRef;
 use tracing::instrument;
@@ -655,76 +654,6 @@ pub fn on_group_redo(
     for &entity in &edits.0 {
         c_query.get(entity)?
             .dispatch_redo_event(entity, &mut commands);
-    }
-
-    Ok(())
-}
-
-pub fn dump_edits(
-    _evt: On<EditsComplete>,
-    root_query: Query<(Entity, &Edits), Without<EditOf>>,
-    edit_query: Query<&EditType>,
-    edits_query: Query<&Edits>,
-    edit_index_query: Query<(Entity, &EditIndex)>
-) -> Result
-{
-    eprintln!();
-
-    let (cur_entity, cur_idx) = edit_index_query.single()?;
-    let (root_entity, root_edits) = root_query.single()?;
-    dump_group(
-        root_entity,
-        root_edits,
-        0,
-        cur_entity,
-        cur_idx.0,
-        &edit_query,
-        &edits_query
-    )
-}
-
-fn dump_group(
-    entity: Entity,
-    edits: &Edits,
-    level: usize,
-    cur_entity: Entity,
-    cur_idx: usize,
-    edit_query: &Query<&EditType>,
-    edits_query: &Query<&Edits>
-) -> Result
-{
-    let indent = "  ".repeat(level);
-
-    if edits.0.is_empty() {
-        if cur_entity == entity && cur_idx == 0 {
-            eprintln!("{}-->", indent);
-        }
-    }
-    else {
-        for (i, &e) in edits.0.iter().enumerate() {
-            if cur_entity == entity && cur_idx == i {
-                eprintln!("{}-->", indent);
-            }
-
-            let etype = edit_query.get(e)?;
-            eprintln!("{}{:?}", indent, etype);
-
-            if etype == &EditType::Group {
-                dump_group(
-                    e,
-                    edits_query.get(e)?,
-                    level + 1,
-                    cur_entity,
-                    cur_idx,
-                    edit_query,
-                    edits_query
-                )?;
-            }
-        }
-
-        if cur_entity == entity && cur_idx == edits.0.len() {
-            eprintln!("{}-->", indent);
-        }
     }
 
     Ok(())
