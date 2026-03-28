@@ -423,18 +423,6 @@ pub fn handle_redo_all(
     Ok(())
 }
 
-/*
-#[derive(EntityEvent)]
-pub struct DoGroupEvent {
-    pub entity: Entity
-}
-*/
-
-#[derive(EntityEvent)]
-pub struct UndoGroupEvent {
-    pub entity: Entity
-}
-
 #[instrument(skip_all)]
 pub fn on_undo(
      evt: On<UndoEvent>,
@@ -445,11 +433,6 @@ pub fn on_undo(
     query.get(evt.entity)?
         .dispatch_undo_event(evt.entity, &mut commands);
     Ok(())
-}
-
-#[derive(EntityEvent)]
-pub struct RedoGroupEvent {
-    pub entity: Entity
 }
 
 #[instrument(skip_all)]
@@ -464,32 +447,10 @@ pub fn on_redo(
     Ok(())
 }
 
-/*
-#[instrument(skip_all)]
-pub fn on_group(
-    evt: On<GroupEvent>,
-    mut edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
-    current_edits: Res<CurrentEdits>,
-    mut commands: Commands
-) -> Result
-{
-
-/*
-    let (edits_entity, mut edits, mut edit_index) = edit_query.entity(current_edits.0)?;
-
-    commands.spawn((
-        EditOf(edits_entity),
-        EditType::Flip,
-        FlipEdit { object_id: object_id.0, delta: evt.delta }
-    ));
-
-*/
-
-
-    evt.0.iter().cloned().for_each(|e| commands.trigger(e));
-    Ok(())
+#[derive(EntityEvent)]
+pub struct UndoGroupEvent {
+    pub entity: Entity
 }
-*/
 
 #[instrument(skip_all)]
 pub fn on_group_undo(
@@ -508,6 +469,11 @@ pub fn on_group_undo(
     }
 
     Ok(())
+}
+
+#[derive(EntityEvent)]
+pub struct RedoGroupEvent {
+    pub entity: Entity
 }
 
 #[instrument(skip_all)]
