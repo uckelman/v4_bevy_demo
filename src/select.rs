@@ -27,7 +27,7 @@ use tracing::instrument;
 
 use crate::{
     actionfunc::trigger_action_func,
-    keys::{alt_pressed, ctrl_pressed, shift_pressed, ModifiersExt},
+    keys::{ctrl_pressed, shift_pressed, ModifiersExt},
     log::{OpenGroupEvent, CloseGroupEvent},
     piece::Actions
 };
