@@ -1,5 +1,4 @@
 use bevy::{
-    camera::visibility::Visibility,
     ecs::{
         change_detection::Res,
         component::Component,
@@ -62,7 +61,6 @@ pub fn spawn_map(
         ChildOf(parent),
         t,
         anchor,
-//        Visibility::Visible,
         DespawnOnExit(GameState::Game)
     )).id();
 

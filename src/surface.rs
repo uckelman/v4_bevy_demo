@@ -1,5 +1,4 @@
 use bevy::{
-    camera::visibility::Visibility,
     ecs::{
         component::Component,
         prelude::Commands
@@ -26,7 +25,6 @@ pub fn spawn_surface(
         Surface,
         ObjectId(oid),
         Transform::IDENTITY,
-//        Visibility::Hidden,
         MaxZ(0.0))
     );
 } 

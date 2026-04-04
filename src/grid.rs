@@ -1,9 +1,6 @@
 use bevy::{
     asset::Assets,
-    camera::{
-        Camera,
-        visibility::Visibility
-    },
+    camera::Camera,
     ecs::{
         bundle::Bundle,
         change_detection::ResMut,
@@ -284,7 +281,6 @@ fn spawn_hex_grid(
         // don't render the bounding box
         commands.spawn((
             gt,
-//            Visibility::Hidden,
             ChildOf(parent),
             DespawnOnExit(GameState::Game)
         ))
@@ -311,7 +307,6 @@ fn spawn_hex_grid(
                     Mesh2d(cmesh.clone()),
                     MeshMaterial2d(unhighlight_material.clone()),
                     Pickable::default(),
-//                    Visibility::Visible,
                     ct,
                     ChildOf(gid),
                     DespawnOnExit(GameState::Game)
@@ -324,7 +319,6 @@ fn spawn_hex_grid(
                 Mesh2d(omesh.clone()),
                 MeshMaterial2d(grid_material.clone()),
                 Pickable::default(),
-//                Visibility::Visible,
                 ct,
                 ChildOf(gid),
                 DespawnOnExit(GameState::Game)
