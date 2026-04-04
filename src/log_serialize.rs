@@ -14,7 +14,9 @@ use std::io::Write;
 
 use crate::{
     edittype::EditType,
+    grid,
     log::{EditIndex, EditOf, Edits},
+    map,
     piece::{
         clone::CloneEdit,
         create::CreateEdit,
@@ -22,7 +24,8 @@ use crate::{
         flip::FlipEdit,
         r#move::MoveEdit,
         rotate::RotateEdit
-    }
+    },
+    surface
 };
 
 trait SerializeEdit {
@@ -83,6 +86,9 @@ impl Serialize for GroupProxy<'_, '_, '_> {
                 .map_err(serde::ser::Error::custom)?;
 
             match etype {
+                EditType::CreateSurface => seq.serialize_edit::<surface::create::CreateEdit>(eref)?,
+                EditType::CreateMap => seq.serialize_edit::<map::create::CreateEdit>(eref)?,
+                EditType::CreateGrid => seq.serialize_edit::<grid::create::CreateEdit>(eref)?,
                 EditType::Clone => seq.serialize_edit::<CloneEdit>(eref)?,
                 EditType::Create => seq.serialize_edit::<CreateEdit>(eref)?,
                 EditType::Delete => seq.serialize_edit::<DeleteEdit>(eref)?,

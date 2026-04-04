@@ -1,10 +1,12 @@
 use bevy::{
+    camera::visibility::Visibility,
     ecs::{
         component::Component,
+        entity::Entity,
         event::EntityEvent,
         name::Name,
         observer::On,
-        prelude::{Commands, EntityCommands, Query}
+        prelude::{ChildOf, Commands, EntityCommands, Query}
     },
     math::{Quat, Vec3},
     picking::Pickable,
@@ -76,6 +78,7 @@ pub fn spawn_piece(
     oid: u32,
     pid: u32,
     p: &PieceType,
+    parent: Entity,
     location: Vec3,
     angle: f32,
     faceup: usize,
@@ -116,6 +119,7 @@ pub fn spawn_piece(
         Selectable,
         Draggable,
         sprite,
+        ChildOf(parent),
         t,
         Faces(faces),
         FaceUp(faceup),
@@ -127,6 +131,7 @@ pub fn spawn_piece(
             })
             .collect::<Vec<_>>()
         ),
+//        Visibility::Visible,
         DespawnOnExit(GameState::Game)
     ));
 

@@ -5,7 +5,7 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{Commands, Query}
+        prelude::{ChildOf, Commands, Query}
     },
     math::Vec3,
     prelude::{Entity, trace, Transform}
@@ -50,6 +50,7 @@ fn do_delete(
 pub struct DeleteEdit {
     pub object_id: u32,
     pub ptype_id: u32,
+    pub parent_id: u32,
     pub location: Vec3,
     pub angle: f32,
     pub faceup: usize
@@ -61,7 +62,8 @@ pub struct DeleteEdit {
 #[instrument(skip_all)]
 pub fn on_delete(
     evt: On<DoDeleteEvent>,
-    piece_query: Query<(&ObjectId, &PieceTypeId, &Transform, &FaceUp)>,
+    piece_query: Query<(&ObjectId, &PieceTypeId, &ChildOf, &Transform, &FaceUp)>,
+    parent_query: Query<&ObjectId>,
     edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
     commands: Commands
 ) -> Result
@@ -69,7 +71,8 @@ pub fn on_delete(
     trace!("");
 
     let entity = evt.event().event_target();
-    let (object_id, ptype_id, t, faceup) = piece_query.get(entity)?;
+    let (object_id, ptype_id, parent, t, faceup) = piece_query.get(entity)?;
+    let parent_id = parent_query.get(parent.0)?;
 
     handle_do(
         edit_query,
@@ -77,6 +80,7 @@ pub fn on_delete(
         DeleteEdit {
             object_id: object_id.0,
             ptype_id: ptype_id.0,
+            parent_id: parent_id.0,
             location: t.translation,
             angle: t.rotation.to_axis_angle().1,
             faceup: faceup.0
@@ -90,18 +94,22 @@ pub fn on_delete_undo(
     evt: On<UndoDeleteEvent>,
     edit: Query<&DeleteEdit>,
     gamebox: Res<GameBox>,
+    objmap: Res<ObjectIdMap>,
     sprite_handles: Res<SpriteHandles>,
     mut commands: Commands
 ) -> Result
 {
     // get the edit
     let Ok(del) = edit.get(evt.entity) else { return Ok(()); };
+    // get the parent entity
+    let parent = *objmap.0.get(&del.parent_id).unwrap();
 
     // apply the change
     spawn_piece(
         del.object_id,
         del.ptype_id,
         &gamebox.piece[&del.ptype_id],
+        parent,
         del.location,
         del.angle,
         del.faceup,

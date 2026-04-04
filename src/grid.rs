@@ -1,6 +1,9 @@
 use bevy::{
     asset::Assets,
-    camera::Camera,
+    camera::{
+        Camera,
+        visibility::Visibility
+    },
     ecs::{
         bundle::Bundle,
         change_detection::ResMut,
@@ -9,7 +12,7 @@ use bevy::{
         error::Result,
         name::Name,
         observer::On,
-        prelude::{Commands, Query, Single, With, Without}
+        prelude::{ChildOf, Commands, Query, Single, With, Without}
     },
     math::{
         Vec2, Vec3,
@@ -23,13 +26,15 @@ use bevy::{
     prelude::{Color, ColorMaterial, debug, DespawnOnExit, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform},
     sprite_render::Material2d
 };
-use tracing::instrument;
+use tracing::{enabled, instrument, Level};
 
 use crate::{
     gamebox::{Anchor, ColumnStagger, GridDefinition, HexGridDefinition, RectGridDefinition},
     piece::Piece,
     state::GameState
 };
+
+pub mod create;
 
 #[derive(Component, Default)]
 struct RectGrid;
@@ -64,6 +69,7 @@ struct RectGridParams {
 fn spawn_rect_grid(
     def: &RectGridDefinition,
     mut t: Transform,
+    parent: Entity,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
     commands: &mut Commands
@@ -116,14 +122,14 @@ fn spawn_rect_grid(
     let unhighlight_material = materials.add(unhighlight_color);
 
     let gmesh = meshes.add(grect);
-    commands
-        .spawn((
-            Mesh2d(gmesh),
-                    MeshMaterial2d(materials.add(Color::srgba(0.0, 1.0, 0.0, 0.2))),
-                    Pickable::default(),
-                    tg,
-                    DespawnOnExit(GameState::Game)
-        ));
+    commands.spawn((
+        Mesh2d(gmesh),
+        MeshMaterial2d(materials.add(Color::srgba(0.0, 1.0, 0.0, 0.2))),
+        Pickable::default(),
+        tg,
+        ChildOf(parent),
+        DespawnOnExit(GameState::Game)
+    ));
 
     for r in 0..*rows {
         for c in 0..*cols {
@@ -136,6 +142,7 @@ fn spawn_rect_grid(
                     MeshMaterial2d(unhighlight_material.clone()),
                     Pickable::default(),
                     ct,
+                    ChildOf(parent),
                     DespawnOnExit(GameState::Game)
                 ))
                 .observe(recolor_cell_on::<Pointer<Over>>(highlight_color))
@@ -147,15 +154,31 @@ fn spawn_rect_grid(
                     MeshMaterial2d(grid_material.clone()),
                     Pickable::default(),
                     ct,
+                    ChildOf(parent),
                     DespawnOnExit(GameState::Game)
                 ));
         }
     }
 }
 
+fn anchor_to_vec3(rect: Rectangle, anchor: Anchor) -> Vec3 {
+    match anchor {
+        Anchor::BottomLeft => rect.half_size,
+        Anchor::BottomCenter => rect.half_size.with_x(0.0),
+        Anchor::BottomRight => rect.half_size * Vec2::new(-1.0, 1.0),
+        Anchor::CenterLeft => rect.half_size.with_y(0.0),
+        Anchor::Center => Vec2::ZERO,
+        Anchor::CenterRight => -rect.half_size.with_y(0.0),
+        Anchor::TopLeft => rect.half_size * Vec2::new(1.0, -1.0),
+        Anchor::TopCenter => -rect.half_size.with_x(0.0),
+        Anchor::TopRight => -rect.half_size
+    }.extend(0.0)
+}
+
 fn spawn_hex_grid(
     def: &HexGridDefinition,
     mut t: Transform,
+    parent: Entity,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
     commands: &mut Commands
@@ -174,41 +197,24 @@ fn spawn_hex_grid(
         ..
     } = def;
 
+// FIXME: bb is slightly too tall; why?
     // grid bounding box
     let grect = Rectangle::new(
         *cols as f32 * hw * 0.75 + (hw * 0.25),
         *rows as f32 * (hh + 0.5) + (hh * 0.5)
     );
 
-    // center of the grid is at x,y
-    t.translation += Vec3::new(*x, *y, 0.0);
-    // apply the anchor
-    t.translation += match anchor {
-        Anchor::BottomLeft => grect.half_size,
-        Anchor::BottomCenter => grect.half_size.with_x(0.0),
-        Anchor::BottomRight => grect.half_size * Vec2::new(-1.0, 1.0),
-        Anchor::CenterLeft => grect.half_size.with_y(0.0),
-        Anchor::Center => Vec2::ZERO,
-        Anchor::CenterRight => -grect.half_size.with_y(0.0),
-        Anchor::TopLeft => grect.half_size * Vec2::new(1.0, -1.0),
-        Anchor::TopCenter => -grect.half_size.with_x(0.0),
-        Anchor::TopRight => -grect.half_size
-    }.extend(0.0);
+    // anchors don't apply to meshes presently; apply the anchor manually
+    t.translation += anchor_to_vec3(grect, *anchor);
 
-    let mut tg = t;
-
-    // cell 0,0 should be as near as possible to the grid origin
-    tg.translation += Vec3::new(
-        -hw / 2.0,
-        match first {
-            ColumnStagger::Low => -hh,
-            ColumnStagger::High => -hh / 2.0
-        },
-        0.0
-    );
+    // this is the translation for the grid bounding box
+    let gt = t;
 
     // center of cell 0,0 is half a grid from the center of the grid
-    t.translation -= grect.half_size.extend(0.0);
+    t.translation -= grect.size().extend(0.0);
+
+    // move center of cell 0,0 be be inside the bounding box
+    t.translation += Vec3::new(hw / 4.0, hh / 2.0, 0.0);
 
 /*
     use std::f32::consts::FRAC_PI_6;
@@ -254,7 +260,6 @@ fn spawn_hex_grid(
 
     let cmesh = meshes.add(hex);
 
-//    let grid_color = Color::srgb(0.8, 0.8, 0.8);
     let grid_color = Color::srgb(0.0, 0.0, 1.0);
     let highlight_color = Color::srgba(1.0, 0.0, 0.0, 0.3);
     let unhighlight_color = Color::NONE;
@@ -263,21 +268,31 @@ fn spawn_hex_grid(
     let highlight_material = materials.add(highlight_color);
     let unhighlight_material = materials.add(unhighlight_color);
 
-/*
-    let gmesh = meshes.add(grect);
-    commands
-        .spawn((
+    let gid = if enabled!(Level::DEBUG) {
+        // render the bounding box
+        let gmesh = meshes.add(grect);
+        commands.spawn((
             Mesh2d(gmesh),
-                    MeshMaterial2d(materials.add(Color::srgba(0.0, 1.0, 0.0, 0.2))),
-                    Pickable::default(),
-                    tg,
-                    DespawnOnExit(GameState::Game)
-        ));
-*/
+            MeshMaterial2d(materials.add(Color::srgba(0.0, 1.0, 0.0, 0.2))),
+            Pickable::IGNORE,
+            gt,
+            ChildOf(parent),
+            DespawnOnExit(GameState::Game)
+        ))
+    }
+    else {
+        // don't render the bounding box
+        commands.spawn((
+            gt,
+//            Visibility::Hidden,
+            ChildOf(parent),
+            DespawnOnExit(GameState::Game)
+        ))
+    }.id();
 
     let stagger = match first {
-        ColumnStagger::Low => 0,
-        ColumnStagger::High => 1
+        ColumnStagger::Low => 1,
+        ColumnStagger::High => 0
     };
 
     for r in 0..*rows {
@@ -296,21 +311,24 @@ fn spawn_hex_grid(
                     Mesh2d(cmesh.clone()),
                     MeshMaterial2d(unhighlight_material.clone()),
                     Pickable::default(),
+//                    Visibility::Visible,
                     ct,
+                    ChildOf(gid),
                     DespawnOnExit(GameState::Game)
                 ))
                 .observe(recolor_cell_on::<Pointer<Over>>(highlight_color))
                 .observe(recolor_cell_on::<Pointer<Out>>(unhighlight_color))
                 .observe(on_piece_drop);
 
-            commands
-                .spawn((
-                    Mesh2d(omesh.clone()),
-                    MeshMaterial2d(grid_material.clone()),
-                    Pickable::default(),
-                    ct,
-                    DespawnOnExit(GameState::Game)
-                ));
+            commands.spawn((
+                Mesh2d(omesh.clone()),
+                MeshMaterial2d(grid_material.clone()),
+                Pickable::default(),
+//                Visibility::Visible,
+                ct,
+                ChildOf(gid),
+                DespawnOnExit(GameState::Game)
+            ));
         }
     }
 }
@@ -318,6 +336,7 @@ fn spawn_hex_grid(
 pub fn spawn_grid(
     g: &GridDefinition,
     t: Transform,
+    parent: Entity,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
     commands: &mut Commands
@@ -325,9 +344,9 @@ pub fn spawn_grid(
 {
     match g {
         GridDefinition::Rect(def) =>
-            spawn_rect_grid(def, t, meshes, materials, commands),
+            spawn_rect_grid(def, t, parent, meshes, materials, commands),
         GridDefinition::Hex(def) =>
-            spawn_hex_grid(def, t, meshes, materials, commands)
+            spawn_hex_grid(def, t, parent, meshes, materials, commands)
     }
 }
 

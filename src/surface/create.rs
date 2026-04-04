@@ -7,26 +7,21 @@ use bevy::{
         observer::On,
         prelude::{Commands, Entity, Query}
     },
-    math::Vec3,
     prelude::trace
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    assets::SpriteHandles,
     edittype::EditType,
-    gamebox::GameBox,
     log::{EditIndex, Edits, handle_do},
     object::{NextObjectId, ObjectIdMap},
-    piece::spawn_piece
+    surface::spawn_surface
 };
 
 #[derive(Clone, Event)]
 pub struct DoCreateEvent {
-    pub type_id: u32,
-    pub parent_id: u32,
-    pub dst: Vec3
+    pub type_id: u32
 }
 
 #[derive(EntityEvent)]
@@ -40,12 +35,10 @@ pub struct RedoCreateEvent {
 }
 
 #[derive(Component, Debug, Deserialize, Serialize)]
-#[serde(rename = "create", tag = "type")]
+#[serde(rename = "create_surface", tag = "type")]
 pub struct CreateEdit {
     pub object_id: u32,
-    pub type_id: u32,
-    pub parent_id: u32,
-    pub dst: Vec3
+    pub type_id: u32
 }
 
 #[instrument(skip_all)]
@@ -63,13 +56,8 @@ pub fn on_create(
 
     handle_do(
         edit_query,
-        EditType::Create,
-        CreateEdit {
-            object_id,
-            type_id: evt.type_id,
-            parent_id: evt.parent_id,
-            dst: evt.dst
-        },
+        EditType::CreateSurface,
+        CreateEdit { object_id, type_id: evt.type_id },
         commands
     )
 }
@@ -82,6 +70,7 @@ pub fn on_create_undo(
     mut commands: Commands
 ) -> Result
 {
+// TODO: the edit not existing should be impossible, maybe we should panic?
     // get the edit
     let Ok(cr) = edit.get(evt.entity) else { return Ok(()); };
     // get the entity being edited
@@ -95,27 +84,12 @@ pub fn on_create_undo(
 pub fn on_create_redo(
     evt: On<RedoCreateEvent>,
     edit: Query<&CreateEdit>,
-    gamebox: Res<GameBox>,
-    objmap: Res<ObjectIdMap>,
-    sprite_handles: Res<SpriteHandles>,
     mut commands: Commands
 ) -> Result
 {
     // get the edit
     let Ok(cr) = edit.get(evt.entity) else { return Ok(()); };
-    // get the parent entity
-    let parent = *objmap.0.get(&cr.parent_id).unwrap();
     // apply the change
-    spawn_piece(
-        cr.object_id,
-        cr.type_id,
-        &gamebox.piece[&cr.type_id],
-        parent,
-        cr.dst,
-        0.0,
-        0,
-        &sprite_handles,
-        &mut commands
-    );
+    spawn_surface(cr.object_id, &mut commands);
     Ok(())
 }

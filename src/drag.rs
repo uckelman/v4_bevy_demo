@@ -3,7 +3,7 @@ use bevy::{
         change_detection::{Res, ResMut},
         error::Result,
         observer::On,
-        prelude::{Query, With, Without}
+        prelude::{ChildOf, Commands, Query, With, Without}
     },
     math::Vec3,
     picking::{
@@ -11,7 +11,7 @@ use bevy::{
         events::{Drag, DragEnd, DragStart, Pointer},
         pointer::PointerButton
     },
-    prelude::{Camera, Commands, Component, Entity, Projection, State, trace, Transform}
+    prelude::{Camera, Component, Entity, Projection, State, trace, Transform}
 };
 use itertools::Itertools;
 use std::cmp::Ordering;
@@ -123,7 +123,7 @@ pub fn on_piece_drag(
 #[instrument(skip_all)]
 pub fn on_piece_drag_end(
     drag: On<Pointer<DragEnd>>,
-    query: Query<(Entity, &Transform, &DragAnchor)>,
+    query: Query<(Entity, &ChildOf, &Transform, &DragAnchor)>,
     context_menu_state: Res<State<ContextMenuState>>,
     mut commands: Commands
 )
@@ -141,12 +141,12 @@ pub fn on_piece_drag_end(
         match etai.len() {
             0 => {},
             1 => {
-                let (e, t, a) = etai.next().unwrap();
-                move_and_deselect(e, t, a, &mut commands);
+                let (e, p, t, a) = etai.next().unwrap();
+                move_and_deselect(e, p.0, t, a, &mut commands);
             },
             _ => {
                 commands.trigger(OpenGroupEvent);
-                etai.for_each(|(e, t, a)| move_and_deselect(e, t, a, &mut commands));
+                etai.for_each(|(e, p, t, a)| move_and_deselect(e, p.0, t, a, &mut commands));
                 commands.trigger(CloseGroupEvent);
             }
         }
@@ -155,12 +155,19 @@ pub fn on_piece_drag_end(
 
 fn move_and_deselect(
     entity: Entity,
+    p: Entity,
     t: &Transform,
     anchor: &DragAnchor,
     commands: &mut Commands
 )
 {
-    commands.trigger(DoMoveEvent { entity, src: anchor.pos, dst: t.translation });
+    commands.trigger(DoMoveEvent {
+        entity,
+        src_parent: p,
+        src: anchor.pos,
+        dst_parent: p,
+        dst: t.translation
+    });
 
     commands.entity(entity)
         .remove::<DragAnchor>()

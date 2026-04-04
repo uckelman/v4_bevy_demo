@@ -43,11 +43,13 @@ mod keys;
 mod log;
 mod log_deserialize;
 mod log_serialize;
+mod map;
 mod object;
 mod piece;
 mod raise;
 mod select;
 mod state;
+mod surface;
 mod title;
 mod util;
 mod view;
@@ -57,7 +59,7 @@ use crate::{
     assets::{ImageSource, LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
     config::{Config, load_config},
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
-    debug::{dump_edits, pick_dbg},
+    debug::{cursor_events, dump_edits, pick_dbg},
     gamebox::{GameBox, MapDefinition, SurfaceItem},
     grid::spawn_grid,
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
@@ -281,6 +283,15 @@ fn game_plugin(app: &mut App) {
         .add_observer(on_undo)
         .add_observer(on_redo)
         .add_observer(on_redo_all)
+        .add_observer(surface::create::on_create)
+        .add_observer(surface::create::on_create_undo)
+        .add_observer(surface::create::on_create_redo)
+        .add_observer(map::create::on_create)
+        .add_observer(map::create::on_create_undo)
+        .add_observer(map::create::on_create_redo)
+        .add_observer(grid::create::on_create)
+        .add_observer(grid::create::on_create_undo)
+        .add_observer(grid::create::on_create_redo)
         .add_observer(on_clone_undo)
         .add_observer(on_clone_redo)
         .add_observer(on_create)
@@ -365,6 +376,7 @@ fn display_game(
         .observe(selection_rect_drag_end)
         .observe(trigger_close_context_menus_press);
 
+/*
     // create surface
     let mut stack = vec![(&gamebox.surface, Transform::IDENTITY)];
 
@@ -392,6 +404,7 @@ fn display_game(
             }
         }
     }
+*/
 
     commands.insert_resource(RaiseAnchor::default());
     commands.insert_resource(SelectionRect::default());

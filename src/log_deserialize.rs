@@ -23,7 +23,9 @@ use tracing::instrument;
 use crate::{
     LogPath,
     edittype::EditType,
+    grid,
     log::{EditOf, Edits, EditsComplete},
+    map,
     piece::{
         clone::CloneEdit,
         create::CreateEdit,
@@ -31,12 +33,20 @@ use crate::{
         flip::FlipEdit,
         r#move::MoveEdit,
         rotate::RotateEdit
-    }
+    },
+    surface
 };
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type")]
 enum Item {
+    #[serde(rename = "create_surface")]
+    CreateSurface(surface::create::CreateEdit),
+    #[serde(rename = "create_map")]
+    CreateMap(map::create::CreateEdit),
+    #[serde(rename = "create_grid")]
+    CreateGrid(grid::create::CreateEdit),
+
     Clone(CloneEdit),
     Create(CreateEdit),
     Delete(DeleteEdit),
@@ -105,6 +115,16 @@ impl<'de> Visitor<'de> for ItemVisitor<'_, '_, '_> {
             let edof = EditOf(self.entity);
 
             match ep {
+                Item::CreateSurface(ed) => {
+                    ec.insert((EditType::CreateSurface, edof, ed));
+                },
+                Item::CreateMap(ed) => {
+                    ec.insert((EditType::CreateMap, edof, ed));
+                },
+                Item::CreateGrid(ed) => {
+                    ec.insert((EditType::CreateGrid, edof, ed));
+                },
+
                 Item::Clone(ed) => {
                     ec.insert((EditType::Clone, edof, ed));
                 },

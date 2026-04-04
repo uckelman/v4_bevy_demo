@@ -22,7 +22,9 @@ use crate::{
 #[derive(Clone, EntityEvent)]
 pub struct DoMoveEvent {
     pub entity: Entity,
+    pub src_parent: Entity,
     pub src: Vec3,
+    pub dst_parent: Entity,
     pub dst: Vec3
 }
 
@@ -36,16 +38,13 @@ pub struct RedoMoveEvent {
     pub entity: Entity
 }
 
-fn do_move(t: &mut Transform, to: Vec3)
-{
-    t.translation = to;
-}
-
 #[derive(Component, Debug, Deserialize, Serialize)]
 #[serde(rename = "move", tag = "type")]
 pub struct MoveEdit {
     pub object_id: u32,
+    pub src_parent_id: u32,
     pub src: Vec3,
+    pub dst_parent_id: u32,
     pub dst: Vec3
 }
 
@@ -60,12 +59,20 @@ pub fn on_move(
     trace!("");
 
     let entity = evt.event().event_target();
-    let object_id = piece_query.get(entity)?;
+    let object_id = piece_query.get(entity)?.0;
+    let src_parent_id = piece_query.get(evt.src_parent)?.0;
+    let dst_parent_id = piece_query.get(evt.dst_parent)?.0;
 
     handle_do(
         edit_query,
         EditType::Move,
-        MoveEdit { object_id: object_id.0, src: evt.src, dst: evt.dst },
+        MoveEdit {
+            object_id,
+            src_parent_id,
+            src: evt.src,
+            dst_parent_id,
+            dst: evt.dst
+        },
         commands
     )
 }
@@ -75,17 +82,26 @@ pub fn on_move_undo(
     evt: On<UndoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<&mut Transform>
+    mut query: Query<&mut Transform>,
+    mut commands: Commands
 ) -> Result
 {
     // get the edit
     let Ok(mov) = edit.get(evt.entity) else { return Ok(()); };
     // get the entity being edited
     let entity = *objmap.0.get(&mov.object_id).unwrap();
-    // get the components of the entity being edited
+
+    if mov.src_parent_id != mov.dst_parent_id {
+        let dst_parent = *objmap.0.get(&mov.dst_parent_id).unwrap();
+        commands.entity(dst_parent).detach_child(entity);
+
+        let src_parent = *objmap.0.get(&mov.src_parent_id).unwrap();
+        commands.entity(src_parent).add_child(entity);
+    }
+
     let mut t = query.get_mut(entity)?;
-    // apply the change to the entity
-    do_move(&mut t, mov.src);
+    t.translation = mov.src;
+
     Ok(())
 }
 
@@ -94,16 +110,25 @@ pub fn on_move_redo(
     evt: On<RedoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<&mut Transform>
+    mut query: Query<&mut Transform>,
+    mut commands: Commands
 ) -> Result
 {
     // get the edit
     let Ok(mov) = edit.get(evt.entity) else { return Ok(()); };
     // get the entity being edited
     let entity = *objmap.0.get(&mov.object_id).unwrap();
-    // get the components of the entity being edited
+
+    if mov.src_parent_id != mov.dst_parent_id {
+        let src_parent = *objmap.0.get(&mov.src_parent_id).unwrap();
+        commands.entity(src_parent).detach_child(entity);
+
+        let dst_parent = *objmap.0.get(&mov.dst_parent_id).unwrap();
+        commands.entity(dst_parent).add_child(entity);
+    }
+
     let mut t = query.get_mut(entity)?;
-    // apply the change to the entity
-    do_move(&mut t, mov.dst);
+    t.translation = mov.dst;
+
     Ok(())
 }

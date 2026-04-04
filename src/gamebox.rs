@@ -1,6 +1,6 @@
 use bevy::ecs::prelude::Resource;
 use itertools::Itertools;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::{
@@ -8,8 +8,8 @@ use crate::{
     keys::KeyBinding
 };
 
-#[derive(Clone, Copy, Debug, Default, Deserialize)]
-#[serde(rename_all(deserialize = "kebab-case"))]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum Anchor {
     BottomLeft,
     BottomCenter,
@@ -77,6 +77,15 @@ pub struct MapDefinition {
     pub image: String
 }
 
+#[derive(Debug, Deserialize)]
+pub struct MapType {
+    pub id: u32,
+    #[serde(default)]
+    pub name: String,
+    pub image: String
+}
+
+// TODO
 // first hex column: high or low?
 // show/hide grid
 // grid color, opacity
@@ -85,6 +94,7 @@ pub struct MapDefinition {
 
 #[derive(Debug, Deserialize)]
 pub struct RectGridDefinition {
+    pub id: u32,
     #[serde(default)]
     pub name: String,
     #[serde(default)]
@@ -112,6 +122,7 @@ pub enum ColumnStagger {
 
 #[derive(Debug, Deserialize)]
 pub struct HexGridDefinition {
+    pub id: u32,
     #[serde(default)]
     pub name: String,
     #[serde(default)]
@@ -197,8 +208,12 @@ struct MaybeGameBox {
     #[serde(default)]
     pub images: HashMap<String, ImageDefinition>,
     #[serde(default)]
+    pub map: Vec<MapType>,
+    #[serde(default)]
+    pub grid: Vec<GridDefinition>,
+    #[serde(default)]
     pub piece: Vec<PieceType>,
-    pub surface: SurfaceItem
+//    pub surface: SurfaceItem
 }
 
 // TODO: rename fields? pieces is probably a nicer name?
@@ -206,8 +221,10 @@ struct MaybeGameBox {
 #[serde(try_from = "MaybeGameBox")]
 pub struct GameBox {
     pub images: HashMap<String, ImageDefinition>,
+    pub map: HashMap<u32, MapType>,
+    pub grid: HashMap<u32, GridDefinition>,
     pub piece: HashMap<u32, PieceType>,
-    pub surface: SurfaceItem
+//    pub surface: SurfaceItem
 }
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
@@ -221,6 +238,15 @@ impl TryFrom<MaybeGameBox> for GameBox {
 
     fn try_from(m: MaybeGameBox) -> Result<Self, Self::Error> {
 // TODO: check that grid keys are formatted name@c,r
+
+        // check that map images exist
+        if !m.map.iter()
+            .map(|mt| &mt.image)
+            .unique()
+            .all(|i| m.images.contains_key(i))
+        {
+            return Err(GameBoxError);
+        }
 
         // check that face keys exist
         if !m.piece.iter()
@@ -251,10 +277,26 @@ impl TryFrom<MaybeGameBox> for GameBox {
                 .map_or(Ok(()), |_| Err(GameBoxError))?;
         }
 
+        let mut map = HashMap::new();
+        for mt in m.map {
+            // fail on duplicate map type ids
+            map.insert(mt.id, mt)
+                .map_or(Ok(()), |_| Err(GameBoxError))?;
+        }
+
+        let grid = m.grid.into_iter()
+            .map(|gd| match gd {
+                GridDefinition::Rect(RectGridDefinition { id, .. }) |
+                GridDefinition::Hex(HexGridDefinition { id, .. }) => (id, gd)
+            })
+            .collect::<HashMap<_, _>>();
+
         Ok(GameBox {
             images: m.images,
+            map,
+            grid,
             piece,
-            surface: m.surface
+//            surface: m.surface
         })
     }
 }
