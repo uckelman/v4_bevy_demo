@@ -4,7 +4,7 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{Query, Resource, With}
+        prelude::{ChildOf, Query, Resource, With}
     },
     picking::{
         events::{Pointer, Press, Release},
@@ -15,7 +15,7 @@ use bevy::{
 use tracing::instrument;
 
 use crate::{
-    Surface,
+    maxz::MaxZ,
     piece::Piece
 };
 
@@ -42,21 +42,21 @@ pub fn raise_piece(
 
 pub fn raise_piece_to_top(
     transform: &mut Transform,
-    surface: &mut ResMut<Surface>
+    max_z: &mut MaxZ,
 )
 {
-    surface.max_z = surface.max_z.next_up();
-    set_piece_depth(transform, surface.max_z);
+    max_z.0 = max_z.0.next_up();
+    set_piece_depth(transform, max_z.0);
 }
 
 pub fn raise_piece_to_top_anchored(
     transform: &mut Transform,
-    surface: &mut ResMut<Surface>,
+    max_z: &mut MaxZ,
     anchor: &mut ResMut<RaiseAnchor>
 )
 {
     anchor.z = transform.translation.z;
-    raise_piece_to_top(transform, surface);
+    raise_piece_to_top(transform, max_z);
 }
 
 pub fn lower_piece_to_anchor(
@@ -67,12 +67,15 @@ pub fn lower_piece_to_anchor(
     transform.translation.z = anchor.z;
 }
 
+// TODO: add MaxZ to all things which can have children
+
 #[instrument(skip_all)]
 pub fn on_piece_pressed(
     press: On<Pointer<Press>>,
     mut query: Query<&mut Transform, With<Piece>>,
-    mut anchor: ResMut<RaiseAnchor>,
-    mut surface: ResMut<Surface>
+    root_query: Query<&ChildOf>,
+    mut maxz_query: Query<&mut MaxZ>,
+    mut anchor: ResMut<RaiseAnchor>
 ) -> Result
 {
     trace!("");
@@ -82,11 +85,13 @@ pub fn on_piece_pressed(
     }
 
     let entity = press.event().event_target();
-
     let mut transform = query.get_mut(entity)?;
 
+    let root = root_query.root_ancestor(entity);
+    let mut max_z = maxz_query.get_mut(root)?;
+
 // TODO: maybe we don't want this?
-    raise_piece_to_top_anchored(&mut transform, &mut surface, &mut anchor);
+    raise_piece_to_top_anchored(&mut transform, &mut max_z, &mut anchor);
 
     Ok(())
 }

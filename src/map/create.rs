@@ -8,7 +8,7 @@ use bevy::{
         prelude::{Commands, Entity, Query}
     },
     math::Vec3,
-    prelude::{Sprite, trace}
+    prelude::trace
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;

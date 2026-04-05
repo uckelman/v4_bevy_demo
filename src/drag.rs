@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{
-        change_detection::{Res, ResMut},
+        change_detection::Res,
         error::Result,
         observer::On,
         prelude::{ChildOf, Commands, Query, With, Without}
@@ -18,9 +18,9 @@ use std::cmp::Ordering;
 use tracing::instrument;
 
 use crate::{
-    Surface,
     context_menu::ContextMenuState,
     log::{OpenGroupEvent, CloseGroupEvent},
+    maxz::MaxZ,
     piece::r#move::DoMoveEvent,
     raise::raise_piece,
     select::Selected,
@@ -35,23 +35,27 @@ pub struct DragAnchor {
     pos: Vec3
 }
 
+// TODO: surface needs a MaxZ covering all descendants, otherwise we
+// can't raise a drag properly
+
 #[instrument(skip_all)]
 pub fn on_piece_drag_start(
     drag: On<Pointer<DragStart>>,
     query: Query<(Entity, &mut Transform), (With<Draggable>, With<Selected>)>,
+    root_query: Query<&ChildOf>,
+    mut maxz_query: Query<&mut MaxZ>,
     context_menu_state: Res<State<ContextMenuState>>,
-    mut surface: ResMut<Surface>,
     mut commands: Commands
-)
+) -> Result
 {
     trace!("");
 
     if drag.button != PointerButton::Primary {
-        return;
+        return Ok(());
     }
 
     if *context_menu_state == ContextMenuState::Open {
-        return;
+        return Ok(());
     }
 
     // find the min, max depth of the selection
@@ -63,12 +67,18 @@ pub fn on_piece_drag_start(
         .into_option()
         .map(|((_, a), (_, b))| (a.translation.z, b.translation.z))
     else {
-        return;
+        return Ok(());
     };
 
+    // selection must be on one surface; get it from the first selected item
+    let (entity, _) = query.iter().next().expect("query is nonempty");
+
     // raise the entire selection to be above the max
-    let dz = surface.max_z.next_up() - min_z;
-    surface.max_z = max_z + dz;
+    let root = root_query.root_ancestor(entity);
+    let mut max_z = maxz_query.get_mut(root)?;
+
+    let dz = max_z.0.next_up() - min_z;
+    max_z.0 += dz;
 
     for (entity, mut transform) in query {
         raise_piece(&mut transform, dz);
@@ -78,6 +88,8 @@ pub fn on_piece_drag_start(
             .insert(DragAnchor { pos: transform.translation })
             .insert(Pickable::IGNORE);
     }
+
+    Ok(())
 }
 
 #[instrument(skip_all)]

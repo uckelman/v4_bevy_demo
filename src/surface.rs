@@ -6,15 +6,15 @@ use bevy::{
     prelude::Transform
 };
 
-use crate::object::ObjectId;
+use crate::{
+    maxz::MaxZ,
+    object::ObjectId
+};
 
 pub mod create;
 
 #[derive(Component, Default)]
 pub struct Surface;
-
-#[derive(Component, Debug)]
-pub struct MaxZ(f32);
 
 pub fn spawn_surface(
     oid: u32,
@@ -25,6 +25,6 @@ pub fn spawn_surface(
         Surface,
         ObjectId(oid),
         Transform::IDENTITY,
-        MaxZ(0.0))
-    );
+        MaxZ(0.0)
+    ));
 } 

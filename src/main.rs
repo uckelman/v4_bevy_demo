@@ -6,12 +6,9 @@ use bevy::{
         io::AssetSourceBuilder
     },
     ecs::{
-        bundle::Bundle,
         change_detection::{Res, ResMut},
-        component::Component,
         entity::Entity,
         error::Result,
-        name::Name,
         prelude::{any_with_component, Commands, not, resource_changed, resource_equals, resource_exists, Single, SystemCondition, With}
     },
     image::{ImagePlugin, ImageSamplerDescriptor},
@@ -21,11 +18,9 @@ use bevy::{
         keyboard::KeyCode,
         mouse::AccumulatedMouseScroll
     },
-    math::Vec3,
     mesh::Mesh,
     picking::mesh_picking::MeshPickingPlugin,
-    prelude::{AppExtStates, ColorMaterial, DespawnOnExit, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Sprite, Time, trace, Transform, Window, WindowPlugin},
-    sprite::Anchor,
+    prelude::{AppExtStates, ColorMaterial, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Time, trace, Window, WindowPlugin}
 };
 use std::path::PathBuf;
 
@@ -44,6 +39,7 @@ mod log;
 mod log_deserialize;
 mod log_serialize;
 mod map;
+mod maxz;
 mod object;
 mod piece;
 mod raise;
@@ -216,7 +212,6 @@ fn load_input_settings(
 }
 
 fn setup_game_resources(mut commands: Commands) {
-    commands.insert_resource(Surface { max_z: 0.0 });
     commands.insert_resource(ObjectIdMap::default());
     commands.insert_resource(NextObjectId::default());
 }
@@ -313,52 +308,6 @@ fn game_plugin(app: &mut App) {
         .add_observer(pick_dbg);
 }
 
-#[derive(Resource)]
-struct Surface {
-    max_z: f32
-}
-
-#[derive(Component, Default)]
-struct Map;
-
-#[derive(Bundle, Default)]
-struct MapBundle {
-    marker: Map,
-    name: Name,
-    sprite: Sprite,
-    anchor: Anchor,
-    transform: Transform
-}
-
-fn spawn_map(
-    m: &MapDefinition,
-    mut t: Transform,
-    sprite_handles: &Res<SpriteHandles>,
-    commands: &mut Commands
-)
-{
-    let Some(src) = sprite_handles.0.get(&m.image) else { return; };
-
-    let sprite = match src {
-        ImageSource::Single(handle) => Sprite::from_image(handle.clone()),
-        _ => todo!()
-    };
-
-    t.translation += Vec3::new(m.x, m.y, 0.0);
-
-    trace!("map {}", t.translation.z);
-
-    commands.spawn((
-        MapBundle {
-            sprite,
-            anchor: m.anchor.into(),
-            transform: t,
-            ..Default::default()
-        },
-        DespawnOnExit(GameState::Game)
-    ));
-}
-
 fn display_game(
     window: Single<Entity, With<Window>>,
     sprite_handles: Res<SpriteHandles>,
@@ -375,36 +324,6 @@ fn display_game(
         .observe(selection_rect_drag)
         .observe(selection_rect_drag_end)
         .observe(trigger_close_context_menus_press);
-
-/*
-    // create surface
-    let mut stack = vec![(&gamebox.surface, Transform::IDENTITY)];
-
-    loop {
-        let Some((st, t)) = stack.pop() else { break; };
-
-        match st {
-            SurfaceItem::Map(m) => spawn_map(m, t, &sprite_handles, &mut commands),
-            SurfaceItem::Grid(g) => spawn_grid(g, t, &mut meshes, &mut materials, &mut commands),
-            SurfaceItem::Group(g) => {
-                let mut t = t;
-                t.translation += Vec3::new(g.x, g.y, 0.0);
-                let mut z = t.translation.z;
-
-                stack.extend(
-                    g.children
-                        .iter()
-                        .map(|ch| {
-                            let mut t = t;
-                            z -= 1.0;
-                            t.translation.z = z;
-                            (ch, t)
-                        })
-                );
-            }
-        }
-    }
-*/
 
     commands.insert_resource(RaiseAnchor::default());
     commands.insert_resource(SelectionRect::default());
@@ -425,10 +344,10 @@ fn on_camera_scroll(
 }
 */
 
-// TODO: try turning off vsync to fix drag lag
-
 /*
 Drag lag: im suspecting that the drag event is either being fired less often than you think, or the system itself is on a wrong schedule
+
+TODO: try turning off vsync to fix drag lag
 */
 
 // TODO: load svg
@@ -438,3 +357,4 @@ Drag lag: im suspecting that the drag event is either being fired less often tha
 // TODO: stacking
 
 // TODO: make states for lasso select, piece drag, etc
+//
