@@ -1,5 +1,4 @@
 use bevy::{
-    camera::visibility::Visibility,
     ecs::{
         component::Component,
         entity::Entity,
@@ -131,7 +130,6 @@ pub fn spawn_piece(
             })
             .collect::<Vec<_>>()
         ),
-//        Visibility::Visible,
         DespawnOnExit(GameState::Game)
     ));
 
