@@ -25,11 +25,11 @@ pub fn spawn_map(
     oid: u32,
     tid: u32,
     m: &MapType,
+    parent: Entity,
     location: Vec3,
     angle: f32,
     scale: f32,
     anchor: Anchor,
-    parent: Entity,
     sprite_handles: &Res<SpriteHandles>,
     commands: &mut Commands
 )

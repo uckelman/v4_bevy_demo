@@ -47,11 +47,11 @@ pub struct RedoCreateEvent {
 pub struct CreateEdit {
     pub object_id: u32,
     pub type_id: u32,
+    pub parent_id: u32,
     pub dst: Vec3,
     pub angle: f32,
     pub scale: f32,
-    pub anchor: Anchor,
-    pub parent_id: u32
+    pub anchor: Anchor
 }
 
 #[instrument(skip_all)]
@@ -73,11 +73,11 @@ pub fn on_create(
         CreateEdit {
             object_id,
             type_id: evt.type_id,
+            parent_id: evt.parent_id,
             dst: evt.dst,
             angle: evt.angle,
             scale: evt.scale,
-            anchor: evt.anchor,
-            parent_id: evt.parent_id
+            anchor: evt.anchor
         },
         commands
     )
@@ -120,11 +120,11 @@ pub fn on_create_redo(
         cr.object_id,
         cr.type_id,
         &gamebox.map[&cr.type_id],
+        parent,
         cr.dst,
         cr.angle,
         cr.scale,
         cr.anchor,
-        parent,
         &sprite_handles,
         &mut commands
     );

@@ -329,8 +329,8 @@ fn spawn_hex_grid(
 
 pub fn spawn_grid(
     g: &GridDefinition,
-    t: Transform,
     parent: Entity,
+    t: Transform,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
     commands: &mut Commands

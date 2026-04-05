@@ -133,8 +133,8 @@ pub fn on_create_redo(
     spawn_grid(
 //        cr.object_id,
         gdef,
-        t,
         parent,
+        t,
         &mut meshes,
         &mut materials,
         &mut commands
