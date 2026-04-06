@@ -2,7 +2,7 @@ use bevy::{
     DefaultPlugins,
     app::{App, PluginGroup, Update},
     asset::{
-        AssetApp, Assets,
+        AssetApp,
         io::AssetSourceBuilder
     },
     ecs::{
@@ -18,9 +18,8 @@ use bevy::{
         keyboard::KeyCode,
         mouse::AccumulatedMouseScroll
     },
-    mesh::Mesh,
     picking::mesh_picking::MeshPickingPlugin,
-    prelude::{AppExtStates, ColorMaterial, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Time, trace, Window, WindowPlugin}
+    prelude::{AppExtStates, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Time, trace, Window, WindowPlugin}
 };
 use std::path::PathBuf;
 
