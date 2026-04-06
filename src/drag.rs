@@ -31,8 +31,9 @@ use crate::{
 #[derive(Clone, Component, Copy, Debug,  Default)]
 pub struct Draggable;
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct DragAnchor {
+    parent: Entity,
     pos: Vec3
 }
 
@@ -42,7 +43,7 @@ pub struct DragAnchor {
 #[instrument(skip_all)]
 pub fn on_piece_drag_start(
     drag: On<Pointer<DragStart>>,
-    query: Query<(Entity, &GlobalTransform, &mut Transform), (With<Draggable>, With<Selected>)>,
+    query: Query<(Entity, &ChildOf, &GlobalTransform, &mut Transform), (With<Draggable>, With<Selected>)>,
     parent_query: Query<&ChildOf>,
     mut maxz_query: Query<&mut MaxZ>,
     global_transform_query: Query<&GlobalTransform>,
@@ -62,7 +63,7 @@ pub fn on_piece_drag_start(
 
     // find the min, max depth of the selection
     let Some((sel_min_z, sel_max_z)) = query.iter()
-        .map(|(_, t, _)| t.translation().z)
+        .map(|(_, _, t, _)| t.translation().z)
         .minmax()
         .into_option()
     else {
@@ -70,7 +71,7 @@ pub fn on_piece_drag_start(
     };
 
     // selection must be on one surface; get it from the first selected item
-    let (entity, _, _) = query.iter().next().expect("query is nonempty");
+    let (entity, ..) = query.iter().next().expect("query is nonempty");
     let root = parent_query.root_ancestor(entity);
 
     // raise entire selection by amount the lowest member is below max z
@@ -80,14 +81,19 @@ pub fn on_piece_drag_start(
 
     max_z.0 = sel_max_z + dz;
 
-    for (entity, _, mut transform) in query {
+    for (entity, parent, _, mut transform) in query {
         let z = transform.translation.z + dz;
         raise_piece(&mut transform, z);
 
         // set the drag anchor, prevent picking from hitting piece
         commands.entity(entity)
-            .insert(DragAnchor { pos: transform.translation })
-            .insert(Pickable::IGNORE);
+            .insert((
+                DragAnchor {
+                    parent: parent.0,
+                    pos: transform.translation
+                },
+                Pickable::IGNORE
+            ));
     }
 
     Ok(())
@@ -150,16 +156,16 @@ pub fn on_piece_drag_end(
     if drag.button == PointerButton::Primary {
         // remove the drag anchor, make piece pickable again
 
-        let mut etai = query.iter();
-        match etai.len() {
+        let mut eptai = query.iter();
+        match eptai.len() {
             0 => {},
             1 => {
-                let (e, p, t, a) = etai.next().unwrap();
+                let (e, p, t, a) = eptai.next().unwrap();
                 move_and_deselect(e, p.0, t, a, &mut commands);
             },
             _ => {
                 commands.trigger(OpenGroupEvent);
-                etai.for_each(|(e, p, t, a)| move_and_deselect(e, p.0, t, a, &mut commands));
+                eptai.for_each(|(e, p, t, a)| move_and_deselect(e, p.0, t, a, &mut commands));
                 commands.trigger(CloseGroupEvent);
             }
         }
@@ -176,7 +182,7 @@ fn move_and_deselect(
 {
     commands.trigger(DoMoveEvent {
         entity,
-        src_parent: p,
+        src_parent: anchor.parent,
         src: anchor.pos,
         dst_parent: p,
         dst: t.translation
