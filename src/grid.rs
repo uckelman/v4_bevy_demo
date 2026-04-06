@@ -25,6 +25,7 @@ use tracing::{enabled, instrument, Level};
 
 use crate::{
     gamebox::{Anchor, ColumnStagger, GridDefinition, HexGridDefinition, RectGridDefinition},
+    object::ObjectId,
     piece::Piece,
     state::GameState
 };
@@ -169,6 +170,7 @@ fn spawn_hex_grid(
 )
 {
     let HexGridDefinition {
+        id,
         x,
         y,
         anchor,
@@ -256,6 +258,7 @@ fn spawn_hex_grid(
         // render the bounding box
         let gmesh = meshes.add(grect);
         commands.spawn((
+            ObjectId(*id),
             Mesh2d(gmesh),
             MeshMaterial2d(materials.add(Color::srgba(0.0, 1.0, 0.0, 0.2))),
             Pickable::IGNORE,
@@ -267,6 +270,7 @@ fn spawn_hex_grid(
     else {
         // don't render the bounding box
         commands.spawn((
+            ObjectId(*id),
             gt,
             ChildOf(parent),
             DespawnOnExit(GameState::Game)
