@@ -5,7 +5,7 @@ use bevy::{
         message::MessageReader,
         name::Name,
         observer::On,
-        prelude::{Entity, Query, RelationshipTarget, Single, With, Without},
+        prelude::{Entity, Query, RelationshipTarget, With, Without},
     },
     picking::{
         events::{Click, Pointer}

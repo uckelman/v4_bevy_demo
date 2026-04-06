@@ -15,7 +15,6 @@ use bevy::{
     prelude::{Camera, GlobalTransform, Projection, State, trace, Transform}
 };
 use itertools::Itertools;
-use std::cmp::Ordering;
 use tracing::instrument;
 
 use crate::{
@@ -46,7 +45,6 @@ pub fn on_piece_drag_start(
     query: Query<(Entity, &ChildOf, &GlobalTransform, &mut Transform), (With<Draggable>, With<Selected>)>,
     parent_query: Query<&ChildOf>,
     mut maxz_query: Query<&mut MaxZ>,
-    global_transform_query: Query<&GlobalTransform>,
     context_menu_state: Res<State<ContextMenuState>>,
     mut commands: Commands
 ) -> Result

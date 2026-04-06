@@ -4,7 +4,7 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{ChildOf, Query, Resource, With, Without}
+        prelude::{ChildOf, Query, Resource, With}
     },
     picking::{
         events::{Pointer, Press, Release},

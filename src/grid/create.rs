@@ -54,7 +54,6 @@ pub fn on_create(
     mut next_object_id: ResMut<NextObjectId>,
     parent_query: Query<&ObjectId>,
     edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
-    objmap: Res<ObjectIdMap>,
     commands: Commands
 ) -> Result
 {

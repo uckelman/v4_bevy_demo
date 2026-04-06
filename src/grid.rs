@@ -20,8 +20,7 @@ use bevy::{
         Pickable,
         events::{DragDrop, Over, Out, Pointer, Move}
     },
-    prelude::{Color, ColorMaterial, debug, DespawnOnExit, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform},
-    sprite_render::Material2d
+    prelude::{Color, ColorMaterial, debug, DespawnOnExit, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform}
 };
 use tracing::{enabled, instrument, Level};
 
