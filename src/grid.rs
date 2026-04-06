@@ -309,7 +309,7 @@ fn spawn_hex_grid(
             commands.spawn((
                 Mesh2d(omesh.clone()),
                 MeshMaterial2d(grid_material.clone()),
-                Pickable::default(),
+                Pickable::IGNORE,
                 ct,
                 ChildOf(gid),
                 DespawnOnExit(GameState::Game)
