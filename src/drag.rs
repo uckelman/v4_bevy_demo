@@ -159,7 +159,7 @@ pub fn on_piece_drag_end(
         match eptai.len() {
             0 => {},
             1 => {
-                let (e, p, t, a) = eptai.next().unwrap();
+                let (e, p, t, a) = eptai.next().expect("len is 1");
                 move_and_deselect(e, p.0, t, a, &mut commands);
             },
             _ => {
