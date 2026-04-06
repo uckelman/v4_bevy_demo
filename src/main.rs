@@ -58,7 +58,7 @@ use crate::{
     gamebox::GameBox,
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
     log::{handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
-    log_deserialize::deserialize_edits,
+    log_deserialize::{deserialize_edits, update_next_object_id},
     log_serialize::serialize_edits,
     object::{NextObjectId, ObjectIdMap},
     piece::{
@@ -157,7 +157,9 @@ fn splash_plugin(app: &mut App) {
                 deserialize_edits
                     .after(display_title)
                     .after(load_assets)
-                    .after(init_log)
+                    .after(init_log),
+                update_next_object_id
+                    .after(deserialize_edits)
             )
         )
         .add_systems(

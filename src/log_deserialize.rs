@@ -1,8 +1,7 @@
 use bevy::{
     ecs::{
-        change_detection::Res,
+        change_detection::{Res, ResMut},
         prelude::{Commands, With, Without}
-
     },
     prelude::{debug, Entity, Query, Result}
 };
@@ -23,10 +22,13 @@ use tracing::instrument;
 use crate::{
     LogPath,
     edittype::EditType,
+    gamebox::{GameBox, GridDefinition},
     grid,
     log::{EditOf, Edits, EditsComplete},
     map,
+    object::NextObjectId,
     piece::{
+        self,
         clone::CloneEdit,
         create::CreateEdit,
         delete::DeleteEdit,
@@ -188,4 +190,35 @@ pub fn deserialize_edits(
 
     commands.trigger(EditsComplete);
     Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn update_next_object_id(
+    surface_create_q: Query<&surface::create::CreateEdit>,
+    map_create_q: Query<&map::create::CreateEdit>,
+    grid_create_q: Query<&grid::create::CreateEdit>,
+    gamebox: Res<GameBox>,
+    piece_clone_q: Query<&piece::create::CreateEdit>,
+    piece_create_q: Query<&piece::clone::CloneEdit>,
+    mut next_object_id: ResMut<NextObjectId>
+)
+{
+    // find the max object id
+    if let Some(max_object_id) = surface_create_q.iter().map(|ed| ed.object_id)
+        .chain(map_create_q.iter().map(|ed| ed.object_id))
+        .chain(
+            grid_create_q.iter().map(|ed|
+                ed.object_id + match &gamebox.grid[&ed.type_id] {
+                    GridDefinition::Hex(h) => h.cols * h.rows,
+                    GridDefinition::Rect(r) => r.cols * r.rows
+                }
+            )
+        )
+        .chain(piece_clone_q.iter().map(|ed| ed.object_id))
+        .chain(piece_create_q.iter().map(|ed| ed.object_id))
+        .max()
+        && max_object_id >= next_object_id.0
+    {
+        next_object_id.0 = max_object_id + 1;
+    }
 }
