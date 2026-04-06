@@ -2,18 +2,27 @@ use bevy::{
     ecs::{
         change_detection::Res,
         component::Component,
+        event::EntityEvent,
+        error::Result,
         name::Name,
-        prelude::{ChildOf, Commands, Entity}
+        observer::On,
+        prelude::{ChildOf, Commands, Entity, Query, With, Without}
     },
     math::{Quat, Vec3},
+    picking::{
+        Pickable,
+        events::{DragDrop, Pointer}
+    },
     prelude::{debug, DespawnOnExit, Sprite, Transform}
 };
+use tracing::instrument;
 
 use crate::{
     GameState,
     assets::{ImageSource, SpriteHandles},
     gamebox::{Anchor, MapType},
-    object::ObjectId
+    object::ObjectId,
+    piece::Piece
 };
 
 pub mod create;
@@ -53,16 +62,45 @@ pub fn spawn_map(
         )
     };
 
-    let id = commands.spawn((
-        Map,
-        ObjectId(oid),
-        Name::from(m.name.as_ref()),
-        sprite,
-        ChildOf(parent),
-        t,
-        anchor,
-        DespawnOnExit(GameState::Game)
-    )).id();
+    let id = commands
+        .spawn((
+            Map,
+            ObjectId(oid),
+            Name::from(m.name.as_ref()),
+            sprite,
+            ChildOf(parent),
+            t,
+            anchor,
+            Pickable::default(),
+            DespawnOnExit(GameState::Game)
+        ))
+        .observe(on_piece_drop)
+        .id();
 
     debug!("map {id}");
+}
+
+#[instrument(skip_all)]
+pub fn on_piece_drop(
+    mut drop: On<Pointer<DragDrop>>,
+    src_query: Query<&ChildOf, (With<Piece>, Without<Map>)>,
+    mut commands: Commands
+) -> Result
+{
+    debug!("");
+
+    drop.propagate(false);
+
+    let dst = drop.event().event_target();
+    let src = drop.event().dropped;
+
+    let parent = src_query.get(src)?;
+
+    if parent.0 != dst {
+        // reparent to map
+        commands.entity(src).insert(ChildOf(dst));
+        eprintln!("map {dst}");
+    }
+
+    Ok(())
 }
