@@ -90,12 +90,15 @@ pub fn on_piece_drop(
 {
     debug!("");
 
+    let src = drop.event().dropped;
+
+    let Ok((parent, src_t, mut t)) = src_query.get_mut(src) else {
+        return Ok(());
+    };
+
     drop.propagate(false);
 
     let dst = drop.event().event_target();
-    let src = drop.event().dropped;
-
-    let (parent, src_t, mut t) = src_query.get_mut(src)?;
 
     if parent.0 != dst {
         let dst_t = dst_query.get(dst)?;

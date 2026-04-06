@@ -61,13 +61,13 @@ pub fn on_piece_drop(
 {
     debug!("");
 
-    drop.propagate(false);
-
     let src = drop.event().dropped;
 
     let Ok((parent, src_t, mut t)) = src_query.get_mut(src) else {
         return Ok(());
     };
+
+    drop.propagate(false);
 
     let dst = surface_query.get(drop.event().event_target())?.0;
 
