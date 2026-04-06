@@ -295,6 +295,7 @@ fn spawn_hex_grid(
             commands
                 .spawn((
                     HexGridCell,
+                    ObjectId(id + 1 + r * cols + c),
                     Mesh2d(cmesh.clone()),
                     MeshMaterial2d(unhighlight_material.clone()),
                     Pickable::default(),
@@ -354,25 +355,39 @@ fn recolor_cell_on<E: EntityEvent>(
     }
 }
 
+// TODO: multiple selection drops
+
 #[instrument(skip_all)]
 pub fn on_piece_drop(
-    drop: On<Pointer<DragDrop>>,
-    dst_query: Query<&Transform, With<HexGridCell>>,
-    mut src_query: Query<&mut Transform, (With<Piece>, Without<HexGridCell>)>,
+    mut drop: On<Pointer<DragDrop>>,
+    mut src_query: Query<(&ChildOf, &GlobalTransform, &mut Transform), (With<Piece>, Without<HexGridCell>)>,
+    dst_query: Query<(&GlobalTransform, &Transform), With<HexGridCell>>,
+    mut commands: Commands
 ) -> Result
 {
     debug!("");
 
-    let dst = drop.event().event_target();
     let src = drop.event().dropped;
 
-    let dst_t = dst_query.get(dst)?;
+    let Ok((parent, src_gt, mut src_t)) = src_query.get_mut(src) else {
+        return Ok(());
+    };
 
-    if let Ok(mut src_t) = src_query.get_mut(src) {
-        // snap piece to center
-        src_t.translation.x = dst_t.translation.x;
-        src_t.translation.y = dst_t.translation.y;
+    drop.propagate(false);
+
+    let dst = drop.event().event_target();
+    let (dst_gt, dst_t) = dst_query.get(dst)?;
+
+    if parent.0 != dst {
+        // reparent to grid cell
+        *src_t = src_gt.reparented_to(dst_gt);
+        commands.entity(src).insert(ChildOf(dst));
+        eprintln!("grid cell {dst}");
     }
+
+    // snap piece to center of grid cell
+    src_t.translation.x = 0.0;
+    src_t.translation.y = 0.0;
 
     Ok(())
 }
