@@ -2,7 +2,6 @@ use bevy::{
     asset::Assets,
     camera::Camera,
     ecs::{
-        bundle::Bundle,
         change_detection::ResMut,
         component::Component,
         entity::Entity,
@@ -40,17 +39,6 @@ struct HexGrid;
 
 #[derive(Component, Default)]
 struct HexGridCell;
-
-#[derive(Bundle, Default)]
-struct RectGridBundle<M: Material2d> {
-    marker: RectGrid,
-    name: Name,
-    pickable: Pickable,
-    transform: Transform,
-    mesh: Mesh2d,
-    mesh_material: MeshMaterial2d<M>,
-    grid: RectGridParams
-}
 
 #[derive(Component, Default)]
 struct RectGridParams {
