@@ -78,7 +78,7 @@ pub fn on_piece_drag_start(
 
     let dz = max_z.0 - sel_min_z + 1.0;
 
-    maxz.0 = sel_max_z + dz;
+    max_z.0 = sel_max_z + dz;
 
     for (entity, _, mut transform) in query {
         let z = transform.translation.z + dz;
