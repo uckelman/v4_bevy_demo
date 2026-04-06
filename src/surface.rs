@@ -63,18 +63,21 @@ pub fn on_piece_drop(
 
     drop.propagate(false);
 
-    let dst = surface_query.get(drop.event().event_target())?;
     let src = drop.event().dropped;
 
-    let (parent, src_t, mut t) = src_query.get_mut(src)?;
+    let Ok((parent, src_t, mut t)) = src_query.get_mut(src) else {
+        return Ok(());
+    };
 
-    if parent.0 != dst.0 {
-        let dst_t = dst_query.get(dst.0)?;
+    let dst = surface_query.get(drop.event().event_target())?.0;
+
+    if parent.0 != dst {
+        let dst_t = dst_query.get(dst)?;
 
         // reparent to surface
         *t = src_t.reparented_to(dst_t);
-        commands.entity(src).insert(ChildOf(dst.0));
-        eprintln!("surface {}", dst.0);
+        commands.entity(src).insert(ChildOf(dst));
+        eprintln!("surface {}", dst);
     }
 
     Ok(())
