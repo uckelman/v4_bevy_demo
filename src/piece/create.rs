@@ -5,10 +5,10 @@ use bevy::{
         error::Result,
         event::{EntityEvent, Event},
         observer::On,
-        prelude::{Commands, Entity, Query}
+        prelude::{ChildOf, Commands, Entity, Query}
     },
     math::Vec3,
-    prelude::trace
+    prelude::{GlobalTransform, trace}
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -18,14 +18,15 @@ use crate::{
     edittype::EditType,
     gamebox::GameBox,
     log::{EditIndex, Edits, handle_do},
-    object::{NextObjectId, ObjectIdMap},
+    maxz::MaxZ,
+    object::{NextObjectId, ObjectId, ObjectIdMap},
     piece::spawn_piece
 };
 
 #[derive(Clone, Event)]
 pub struct DoCreateEvent {
     pub type_id: u32,
-    pub parent_id: u32,
+    pub parent: Entity,
     pub dst: Vec3
 }
 
@@ -53,6 +54,7 @@ pub fn on_create(
     evt: On<DoCreateEvent>,
     mut next_object_id: ResMut<NextObjectId>,
     edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
+    parent_query: Query<&ObjectId>,
     commands: Commands
 ) -> Result
 {
@@ -61,13 +63,15 @@ pub fn on_create(
     let object_id = next_object_id.0;
     next_object_id.0 += 1;
 
+    let parent_id = parent_query.get(evt.parent)?;
+
     handle_do(
         edit_query,
         EditType::Create,
         CreateEdit {
             object_id,
             type_id: evt.type_id,
-            parent_id: evt.parent_id,
+            parent_id: parent_id.0,
             dst: evt.dst
         },
         commands
@@ -95,6 +99,9 @@ pub fn on_create_undo(
 pub fn on_create_redo(
     evt: On<RedoCreateEvent>,
     edit: Query<&CreateEdit>,
+    root_query: Query<&ChildOf>,
+    mut maxz_query: Query<&mut MaxZ>,
+    global_transform_query: Query<&GlobalTransform>,
     gamebox: Res<GameBox>,
     objmap: Res<ObjectIdMap>,
     sprite_handles: Res<SpriteHandles>,
@@ -105,6 +112,18 @@ pub fn on_create_redo(
     let Ok(cr) = edit.get(evt.entity) else { return Ok(()); };
     // get the parent entity
     let parent = *objmap.0.get(&cr.parent_id).unwrap();
+
+    // update max z
+    let root = root_query.root_ancestor(parent);
+    let mut max_z = maxz_query.get_mut(root)?;
+
+    let parent_t = global_transform_query.get(parent)?;
+    let z = parent_t.translation().z + cr.dst.z;
+
+    if z > max_z.0 {
+        max_z.0 = z;
+    }
+
     // apply the change
     spawn_piece(
         cr.object_id,

@@ -6,7 +6,7 @@ use bevy::{
         error::Result,
         event::{EntityEvent, Event},
         observer::On,
-        prelude::{Commands, Entity, Query}
+        prelude::{ChildOf, Commands, Entity, Query}
     },
     math::{Quat, Vec3},
     mesh::Mesh,
@@ -20,13 +20,14 @@ use crate::{
     gamebox::{GameBox, GridDefinition},
     grid::spawn_grid,
     log::{EditIndex, Edits, handle_do},
-    object::{NextObjectId, ObjectIdMap}
+    maxz::MaxZ,
+    object::{NextObjectId, ObjectId, ObjectIdMap}
 };
 
 #[derive(Clone, Event)]
 pub struct DoCreateEvent {
     pub type_id: u32,
-    pub parent_id: u32
+    pub parent: Entity
 }
 
 #[derive(EntityEvent)]
@@ -51,7 +52,9 @@ pub struct CreateEdit {
 pub fn on_create(
     evt: On<DoCreateEvent>,
     mut next_object_id: ResMut<NextObjectId>,
+    parent_query: Query<&ObjectId>,
     edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
+    objmap: Res<ObjectIdMap>,
     commands: Commands
 ) -> Result
 {
@@ -60,13 +63,15 @@ pub fn on_create(
     let object_id = next_object_id.0;
     next_object_id.0 += 1;
 
+    let parent_id = parent_query.get(evt.parent)?;
+
     handle_do(
         edit_query,
         EditType::CreateGrid,
         CreateEdit {
             object_id,
             type_id: evt.type_id,
-            parent_id: evt.parent_id
+            parent_id: parent_id.0
         },
         commands
     )

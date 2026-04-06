@@ -4,13 +4,13 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{ChildOf, Query, Resource, With}
+        prelude::{ChildOf, Query, Resource, With, Without}
     },
     picking::{
         events::{Pointer, Press, Release},
         pointer::PointerButton
     },
-    prelude::{trace, Transform}
+    prelude::{GlobalTransform, trace, Transform}
 };
 use tracing::instrument;
 
@@ -24,39 +24,22 @@ pub struct RaiseAnchor {
     z: f32
 }
 
-pub fn set_piece_depth(
+pub fn raise_piece(
     transform: &mut Transform,
-    z: f32
+    z: f32,
 )
 {
     transform.translation.z = z;
 }
 
-pub fn raise_piece(
+pub fn raise_piece_anchored(
     transform: &mut Transform,
-    dz: f32
-)
-{
-    set_piece_depth(transform, transform.translation.z + dz)
-}
-
-pub fn raise_piece_to_top(
-    transform: &mut Transform,
-    max_z: &mut MaxZ,
-)
-{
-    max_z.0 = max_z.0.next_up();
-    set_piece_depth(transform, max_z.0);
-}
-
-pub fn raise_piece_to_top_anchored(
-    transform: &mut Transform,
-    max_z: &mut MaxZ,
+    z: f32,
     anchor: &mut ResMut<RaiseAnchor>
 )
 {
     anchor.z = transform.translation.z;
-    raise_piece_to_top(transform, max_z);
+    raise_piece(transform, z);
 }
 
 pub fn lower_piece_to_anchor(
@@ -67,14 +50,13 @@ pub fn lower_piece_to_anchor(
     transform.translation.z = anchor.z;
 }
 
-// TODO: add MaxZ to all things which can have children
-
 #[instrument(skip_all)]
 pub fn on_piece_pressed(
     press: On<Pointer<Press>>,
-    mut query: Query<&mut Transform, With<Piece>>,
+    mut query: Query<(&ChildOf, &mut Transform), With<Piece>>,
     root_query: Query<&ChildOf>,
     mut maxz_query: Query<&mut MaxZ>,
+    global_transform_query: Query<&GlobalTransform>,
     mut anchor: ResMut<RaiseAnchor>
 ) -> Result
 {
@@ -85,13 +67,19 @@ pub fn on_piece_pressed(
     }
 
     let entity = press.event().event_target();
-    let mut transform = query.get_mut(entity)?;
+    let (parent, mut transform) = query.get_mut(entity)?;
 
+    // update max z
     let root = root_query.root_ancestor(entity);
     let mut max_z = maxz_query.get_mut(root)?;
 
+    max_z.0 += 1.0;
+
+    let parent_t = global_transform_query.get(parent.0)?;
+    let local_z = max_z.0 - parent_t.translation().z;
+
 // TODO: maybe we don't want this?
-    raise_piece_to_top_anchored(&mut transform, &mut max_z, &mut anchor);
+    raise_piece_anchored(&mut transform, local_z, &mut anchor);
 
     Ok(())
 }

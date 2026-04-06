@@ -1,9 +1,10 @@
 use bevy::{
     ecs::{
         change_detection::Res,
+        component::Component,
         error::Result,
         observer::On,
-        prelude::{ChildOf, Commands, Query, With, Without}
+        prelude::{ChildOf, Commands, Entity, Query, With, Without}
     },
     math::Vec3,
     picking::{
@@ -11,7 +12,7 @@ use bevy::{
         events::{Drag, DragEnd, DragStart, Pointer},
         pointer::PointerButton
     },
-    prelude::{Camera, Component, Entity, Projection, State, trace, Transform}
+    prelude::{Camera, GlobalTransform, Projection, State, trace, Transform}
 };
 use itertools::Itertools;
 use std::cmp::Ordering;
@@ -41,9 +42,10 @@ pub struct DragAnchor {
 #[instrument(skip_all)]
 pub fn on_piece_drag_start(
     drag: On<Pointer<DragStart>>,
-    query: Query<(Entity, &mut Transform), (With<Draggable>, With<Selected>)>,
-    root_query: Query<&ChildOf>,
+    query: Query<(Entity, &GlobalTransform, &mut Transform), (With<Draggable>, With<Selected>)>,
+    parent_query: Query<&ChildOf>,
     mut maxz_query: Query<&mut MaxZ>,
+    global_transform_query: Query<&GlobalTransform>,
     context_menu_state: Res<State<ContextMenuState>>,
     mut commands: Commands
 ) -> Result
@@ -59,29 +61,28 @@ pub fn on_piece_drag_start(
     }
 
     // find the min, max depth of the selection
-    let Some((min_z, max_z)) = query.iter()
-        .minmax_by(|(_, ta), (_, tb)|
-            ta.translation.z.partial_cmp(&tb.translation.z)
-                .unwrap_or(Ordering::Less)
-        )
+    let Some((sel_min_z, sel_max_z)) = query.iter()
+        .map(|(_, t, _)| t.translation().z)
+        .minmax()
         .into_option()
-        .map(|((_, a), (_, b))| (a.translation.z, b.translation.z))
     else {
         return Ok(());
     };
 
     // selection must be on one surface; get it from the first selected item
-    let (entity, _) = query.iter().next().expect("query is nonempty");
+    let (entity, _, _) = query.iter().next().expect("query is nonempty");
+    let root = parent_query.root_ancestor(entity);
 
-    // raise the entire selection to be above the max
-    let root = root_query.root_ancestor(entity);
+    // raise entire selection by amount the lowest member is below max z
     let mut max_z = maxz_query.get_mut(root)?;
 
-    let dz = max_z.0.next_up() - min_z;
-    max_z.0 += dz;
+    let dz = max_z.0 - sel_min_z + 1.0;
 
-    for (entity, mut transform) in query {
-        raise_piece(&mut transform, dz);
+    maxz.0 = sel_max_z + dz;
+
+    for (entity, _, mut transform) in query {
+        let z = transform.translation.z + dz;
+        raise_piece(&mut transform, z);
 
         // set the drag anchor, prevent picking from hitting piece
         commands.entity(entity)

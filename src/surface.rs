@@ -27,4 +27,4 @@ pub fn spawn_surface(
         Transform::IDENTITY,
         MaxZ(0.0)
     ));
-} 
+}

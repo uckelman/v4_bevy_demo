@@ -5,7 +5,7 @@ use bevy::{
         error::Result,
         event::{EntityEvent, Event},
         observer::On,
-        prelude::{Commands, Entity, Query}
+        prelude::{ChildOf, Commands, Entity, Query}
     },
     math::Vec3,
     prelude::trace
@@ -19,17 +19,18 @@ use crate::{
     gamebox::{Anchor, GameBox},
     log::{EditIndex, Edits, handle_do},
     map::spawn_map,
-    object::{NextObjectId, ObjectIdMap}
+    maxz::MaxZ,
+    object::{NextObjectId, ObjectId, ObjectIdMap}
 };
 
 #[derive(Clone, Event)]
 pub struct DoCreateEvent {
     pub type_id: u32,
+    pub parent: Entity,
     pub dst: Vec3,
     pub angle: f32,
     pub scale: f32,
-    pub anchor: Anchor,
-    pub parent_id: u32
+    pub anchor: Anchor
 }
 
 #[derive(EntityEvent)]
@@ -58,6 +59,7 @@ pub struct CreateEdit {
 pub fn on_create(
     evt: On<DoCreateEvent>,
     mut next_object_id: ResMut<NextObjectId>,
+    parent_query: Query<&ObjectId>,
     edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
     commands: Commands
 ) -> Result
@@ -67,13 +69,15 @@ pub fn on_create(
     let object_id = next_object_id.0;
     next_object_id.0 += 1;
 
+    let parent_id = parent_query.get(evt.parent)?;
+
     handle_do(
         edit_query,
         EditType::CreateMap,
         CreateEdit {
             object_id,
             type_id: evt.type_id,
-            parent_id: evt.parent_id,
+            parent_id: parent_id.0,
             dst: evt.dst,
             angle: evt.angle,
             scale: evt.scale,
