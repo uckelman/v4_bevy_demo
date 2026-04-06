@@ -155,6 +155,7 @@ fn splash_plugin(app: &mut App) {
                 load_assets,
                 init_log,
                 deserialize_edits
+                    .after(display_title)
                     .after(load_assets)
                     .after(init_log)
             )
