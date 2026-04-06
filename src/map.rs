@@ -13,7 +13,7 @@ use bevy::{
         Pickable,
         events::{DragDrop, Pointer}
     },
-    prelude::{debug, DespawnOnExit, Sprite, Transform}
+    prelude::{debug, DespawnOnExit, GlobalTransform, Sprite, Transform}
 };
 use tracing::instrument;
 
@@ -83,7 +83,8 @@ pub fn spawn_map(
 #[instrument(skip_all)]
 pub fn on_piece_drop(
     mut drop: On<Pointer<DragDrop>>,
-    src_query: Query<&ChildOf, (With<Piece>, Without<Map>)>,
+    mut src_query: Query<(&ChildOf, &GlobalTransform, &mut Transform), (With<Piece>, Without<Map>)>,
+    dst_query: Query<&GlobalTransform>,
     mut commands: Commands
 ) -> Result
 {
@@ -94,10 +95,13 @@ pub fn on_piece_drop(
     let dst = drop.event().event_target();
     let src = drop.event().dropped;
 
-    let parent = src_query.get(src)?;
+    let (parent, src_t, mut t) = src_query.get_mut(src)?;
 
     if parent.0 != dst {
+        let dst_t = dst_query.get(dst)?;
+
         // reparent to map
+        *t = src_t.reparented_to(dst_t);
         commands.entity(src).insert(ChildOf(dst));
         eprintln!("map {dst}");
     }
