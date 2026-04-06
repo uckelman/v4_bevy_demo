@@ -3,10 +3,14 @@ use bevy::{
         component::Component,
         prelude::Commands
     },
-    prelude::Transform
+    picking::{
+        Pickable,
+    },
+    prelude::{DespawnOnExit, Transform}
 };
 
 use crate::{
+    GameState,
     maxz::MaxZ,
     object::ObjectId
 };
@@ -24,7 +28,10 @@ pub fn spawn_surface(
     commands.spawn((
         Surface,
         ObjectId(oid),
+//        Name::from(m.name.as_ref()),
         Transform::IDENTITY,
-        MaxZ(0.0)
+        MaxZ(0.0),
+        Pickable::default(),
+        DespawnOnExit(GameState::Game)
     ));
 }
