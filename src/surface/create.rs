@@ -5,9 +5,10 @@ use bevy::{
         error::Result,
         event::{EntityEvent, Event},
         observer::On,
-        prelude::{Commands, Entity, Query}
+        prelude::{Commands, Entity, Query, With}
     },
-    prelude::trace
+    prelude::trace,
+    window::{PrimaryWindow, Window}
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -84,12 +85,16 @@ pub fn on_create_undo(
 pub fn on_create_redo(
     evt: On<RedoCreateEvent>,
     edit: Query<&CreateEdit>,
+    q_window: Query<Entity, (With<Window>, With<PrimaryWindow>)>,
     mut commands: Commands
 ) -> Result
 {
     // get the edit
     let Ok(cr) = edit.get(evt.entity) else { return Ok(()); };
+
+    let window = q_window.single()?;
+
     // apply the change
-    spawn_surface(cr.object_id, &mut commands);
+    spawn_surface(cr.object_id, window, &mut commands);
     Ok(())
 }
