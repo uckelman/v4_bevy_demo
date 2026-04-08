@@ -10,7 +10,7 @@ use bevy::{
         Pickable,
         events::{DragDrop, Pointer}
     },
-    prelude::{debug, DespawnOnExit, GlobalTransform, Transform}
+    prelude::{debug, DespawnOnExit, GlobalTransform, Transform, Visibility}
 };
 use tracing::instrument;
 
@@ -42,6 +42,7 @@ pub fn spawn_surface(
         Transform::IDENTITY,
         MaxZ(0.0),
         Pickable::IGNORE,
+        Visibility::Inherited,
         DespawnOnExit(GameState::Game)
     )).id();
 

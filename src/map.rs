@@ -13,7 +13,7 @@ use bevy::{
         Pickable,
         events::{DragDrop, Pointer}
     },
-    prelude::{debug, DespawnOnExit, GlobalTransform, Sprite, Transform}
+    prelude::{debug, DespawnOnExit, GlobalTransform, Sprite, Transform, Visibility}
 };
 use tracing::instrument;
 
@@ -72,6 +72,7 @@ pub fn spawn_map(
             t,
             anchor,
             Pickable::default(),
+            Visibility::Inherited,
             DespawnOnExit(GameState::Game)
         ))
         .observe(on_piece_drop)

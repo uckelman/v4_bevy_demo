@@ -9,7 +9,7 @@ use bevy::{
     },
     math::{Quat, Vec3},
     picking::Pickable,
-    prelude::{Color, DespawnOnExit, Sprite, trace, Transform}
+    prelude::{Color, DespawnOnExit, Sprite, trace, Transform, Visibility}
 };
 
 use crate::{
@@ -130,6 +130,8 @@ pub fn spawn_piece(
             })
             .collect::<Vec<_>>()
         ),
+        Pickable::default(),
+        Visibility::Inherited,
         DespawnOnExit(GameState::Game)
     ));
 

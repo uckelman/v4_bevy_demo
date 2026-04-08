@@ -19,7 +19,7 @@ use bevy::{
         Pickable,
         events::{DragDrop, Over, Out, Pointer, Move}
     },
-    prelude::{Color, ColorMaterial, debug, DespawnOnExit, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform}
+    prelude::{Color, ColorMaterial, debug, DespawnOnExit, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform, Visibility}
 };
 use tracing::{enabled, instrument, Level};
 
@@ -261,9 +261,10 @@ fn spawn_hex_grid(
             ObjectId(*id),
             Mesh2d(gmesh),
             MeshMaterial2d(materials.add(Color::srgba(0.0, 1.0, 0.0, 0.2))),
-            Pickable::IGNORE,
-            gt,
             ChildOf(parent),
+            gt,
+            Pickable::IGNORE,
+            Visibility::Inherited,
             DespawnOnExit(GameState::Game)
         ))
     }
@@ -271,8 +272,10 @@ fn spawn_hex_grid(
         // don't render the bounding box
         commands.spawn((
             ObjectId(*id),
-            gt,
             ChildOf(parent),
+            gt,
+            Pickable::IGNORE,
+            Visibility::Inherited,
             DespawnOnExit(GameState::Game)
         ))
     }.id();
@@ -298,9 +301,10 @@ fn spawn_hex_grid(
                     ObjectId(id + 1 + r * cols + c),
                     Mesh2d(cmesh.clone()),
                     MeshMaterial2d(unhighlight_material.clone()),
-                    Pickable::default(),
-                    ct,
                     ChildOf(gid),
+                    ct,
+                    Pickable::default(),
+                    Visibility::Inherited,
                     DespawnOnExit(GameState::Game)
                 ))
                 .observe(recolor_cell_on::<Pointer<Over>>(highlight_color))
@@ -310,9 +314,10 @@ fn spawn_hex_grid(
             commands.spawn((
                 Mesh2d(omesh.clone()),
                 MeshMaterial2d(grid_material.clone()),
-                Pickable::IGNORE,
-                ct,
                 ChildOf(gid),
+                ct,
+                Pickable::IGNORE,
+                Visibility::Inherited,
                 DespawnOnExit(GameState::Game)
             ));
         }
