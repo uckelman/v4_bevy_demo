@@ -114,7 +114,6 @@ pub fn spawn_piece(
         ObjectId(oid),
         PieceTypeId(pid),
         Name::from(p.name.as_ref()),
-        Pickable::default(),
         Selectable,
         Draggable,
         sprite,
