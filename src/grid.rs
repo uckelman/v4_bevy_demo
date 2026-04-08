@@ -295,6 +295,7 @@ fn spawn_hex_grid(
                 0.0
             );
 
+            // the cell
             commands
                 .spawn((
                     HexGridCell,
@@ -311,6 +312,7 @@ fn spawn_hex_grid(
                 .observe(recolor_cell_on::<Pointer<Out>>(unhighlight_color))
                 .observe(on_piece_drop);
 
+            // the outline
             commands.spawn((
                 Mesh2d(omesh.clone()),
                 MeshMaterial2d(grid_material.clone()),
