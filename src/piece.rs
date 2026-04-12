@@ -179,7 +179,8 @@ fn recolor_on<E: EntityEvent>(
 #[instrument(skip_all)]
 pub fn on_piece_drop(
     mut drop: On<Pointer<DragDrop>>,
-    mut query: Query<(&ChildOf, &StackingGroup, &GlobalTransform, &mut Transform), With<Piece>>,
+    mut src_query: Query<(&ChildOf, &StackingGroup, &GlobalTransform, &mut Transform), With<Piece>>,
+    dst_query: Query<(&StackingGroup, &GlobalTransform), With<Piece>>,
     mut next_object_id: ResMut<NextObjectId>,
     mut commands: Commands
 ) -> Result
@@ -189,10 +190,13 @@ pub fn on_piece_drop(
     let src = drop.event().dropped;
     let dst = drop.event().event_target();
 
-    let Ok([
-        (src_parent, src_sg, src_gt, mut src_t),
-        (dst_parent, dst_sg, dst_gt, mut dst_t)
-    ]) = query.get_many_mut([src, dst]) else {
+    let Ok((src_parent, src_sg, src_gt, mut src_t)) = src_query.get_mut(src)
+    else {
+        return Ok(());
+    };
+
+    let Ok((dst_sg, dst_gt)) = dst_query.get(dst)
+    else {
         return Ok(());
     };
 
