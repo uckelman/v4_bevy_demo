@@ -37,13 +37,11 @@ mod keys;
 mod log;
 mod log_deserialize;
 mod log_serialize;
-mod map;
 mod maxz;
 mod object;
 mod piece;
 mod raise;
 mod select;
-mod stack;
 mod state;
 mod surface;
 mod title;
@@ -283,9 +281,6 @@ fn game_plugin(app: &mut App) {
         .add_observer(surface::create::on_create)
         .add_observer(surface::create::on_create_undo)
         .add_observer(surface::create::on_create_redo)
-        .add_observer(map::create::on_create)
-        .add_observer(map::create::on_create_undo)
-        .add_observer(map::create::on_create_redo)
         .add_observer(grid::create::on_create)
         .add_observer(grid::create::on_create_undo)
         .add_observer(grid::create::on_create_redo)

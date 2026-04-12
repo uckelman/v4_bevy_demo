@@ -6,7 +6,6 @@ use bevy::ecs::{
 use crate::{
     grid,
     log::{RedoGroupEvent, UndoGroupEvent},
-    map,
     piece::{
         clone::{RedoCloneEvent, UndoCloneEvent},
         create::{RedoCreateEvent, UndoCreateEvent},
@@ -21,7 +20,6 @@ use crate::{
 #[derive(Clone, Component, Copy, Debug, Eq, PartialEq)]
 pub enum EditType {
     CreateSurface,
-    CreateMap,
     CreateGrid,
     Clone,
     Create,
@@ -36,7 +34,6 @@ impl EditType {
     pub fn dispatch_undo_event(&self, entity: Entity, commands: &mut Commands) {
         match self {
             EditType::CreateSurface => commands.trigger(surface::create::UndoCreateEvent { entity }),
-            EditType::CreateMap => commands.trigger(map::create::UndoCreateEvent { entity }),
             EditType::CreateGrid => commands.trigger(grid::create::UndoCreateEvent { entity }),
             EditType::Clone => commands.trigger(UndoCloneEvent { entity }),
             EditType::Create => commands.trigger(UndoCreateEvent { entity }),
@@ -51,7 +48,6 @@ impl EditType {
     pub fn dispatch_redo_event(&self, entity: Entity, commands: &mut Commands) {
         match self {
             EditType::CreateSurface => commands.trigger(surface::create::RedoCreateEvent { entity }),
-            EditType::CreateMap => commands.trigger(map::create::RedoCreateEvent { entity }),
             EditType::CreateGrid => commands.trigger(grid::create::RedoCreateEvent { entity }),
             EditType::Clone => commands.trigger(RedoCloneEvent { entity }),
             EditType::Create => commands.trigger(RedoCreateEvent { entity }),

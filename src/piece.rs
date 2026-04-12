@@ -9,14 +9,14 @@ use bevy::{
     },
     math::{Quat, Vec3},
     picking::Pickable,
-    prelude::{Color, DespawnOnExit, Sprite, trace, Transform, Visibility}
+    prelude::{Color, debug, DespawnOnExit, Sprite, trace, Transform, Visibility}
 };
 
 use crate::{
     actionfunc::{ActionFunc, add_action_observers},
     assets::{ImageSource, SpriteHandles},
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
-    gamebox::PieceType,
+    gamebox::{Anchor, PieceType},
     keys::KeyBinding,
     object::ObjectId,
     piece::r#move::on_move,
@@ -57,20 +57,24 @@ pub struct Action {
 #[derive(Clone, Component, Debug, Default)]
 pub struct Actions(pub Vec<Action>);
 
-pub fn add_observers(commands: &mut EntityCommands<'_>) {
-    commands
-        .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
-        .observe(recolor_on::<DeselectEvent>(Color::WHITE))
-        .observe(handle_piece_pressed)
-        .observe(raise::on_piece_pressed)
-        .observe(raise::on_piece_released)
+pub fn add_draggable_observers(ec: &mut EntityCommands) {
+    ec
         .observe(on_piece_drag_start)
         .observe(on_piece_drag)
         .observe(on_piece_drag_end)
     //    .observe(on_piece_drop)
+        .observe(on_move);
+}
+
+pub fn add_selectable_observers(ec: &mut EntityCommands) {
+    ec
+        .observe(recolor_on::<SelectEvent>(Color::hsl(0.0, 0.9, 0.7)))
+        .observe(recolor_on::<DeselectEvent>(Color::WHITE))
         .observe(on_selection)
         .observe(on_deselection)
-        .observe(on_move);
+        .observe(raise::on_piece_pressed)
+        .observe(raise::on_piece_released)
+        .observe(handle_piece_pressed);
 }
 
 pub fn spawn_piece(
@@ -80,6 +84,7 @@ pub fn spawn_piece(
     parent: Entity,
     location: Vec3,
     angle: f32,
+    anchor: Anchor,
     faceup: usize,
     sprite_handles: &SpriteHandles,
     commands: &mut Commands
@@ -107,6 +112,8 @@ pub fn spawn_piece(
         scale: Vec3::ONE
     };
 
+    let anchor: bevy::sprite::Anchor = anchor.into();
+
     trace!("piece {}", t.translation.z);
 
     let mut ec = commands.spawn((
@@ -114,11 +121,10 @@ pub fn spawn_piece(
         ObjectId(oid),
         PieceTypeId(pid),
         Name::from(p.name.as_ref()),
-        Selectable,
-        Draggable,
         sprite,
         ChildOf(parent),
         t,
+        anchor,
         Faces(faces),
         FaceUp(faceup),
         Actions(p.actions.iter()
@@ -134,8 +140,19 @@ pub fn spawn_piece(
         DespawnOnExit(GameState::Game)
     ));
 
-    add_observers(&mut ec);
+    if p.selectable {
+        ec.insert(Selectable);
+        add_selectable_observers(&mut ec);
+    }
+
+    if p.draggable {
+        ec.insert(Draggable);
+        add_draggable_observers(&mut ec);
+    }
+
     add_action_observers(p.actions.iter().map(|a| a.action), &mut ec);
+
+    debug!("piece {}", ec.id());
 }
 
 fn recolor_on<E: EntityEvent>(

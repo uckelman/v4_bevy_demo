@@ -1,4 +1,7 @@
-use bevy::ecs::prelude::Resource;
+use bevy::{
+    ecs::prelude::Resource,
+    math::Vec2
+};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -39,10 +42,28 @@ impl From<Anchor> for bevy::sprite::Anchor {
     }
 }
 
+impl From<bevy::sprite::Anchor> for Anchor {
+    fn from(a: bevy::sprite::Anchor) -> Self {
+        match a {
+            bevy::sprite::Anchor::BOTTOM_LEFT => Anchor::BottomLeft,
+            bevy::sprite::Anchor::BOTTOM_CENTER => Anchor::BottomCenter,
+            bevy::sprite::Anchor::BOTTOM_RIGHT => Anchor::BottomRight,
+            bevy::sprite::Anchor::CENTER_LEFT => Anchor::CenterLeft,
+            bevy::sprite::Anchor::CENTER => Anchor::Center,
+            bevy::sprite::Anchor::CENTER_RIGHT => Anchor::CenterRight,
+            bevy::sprite::Anchor::TOP_LEFT => Anchor::TopLeft,
+            bevy::sprite::Anchor::TOP_CENTER => Anchor::TopCenter,
+            bevy::sprite::Anchor::TOP_RIGHT => Anchor::TopRight,
+            bevy::sprite::Anchor(Vec2 { .. }) => todo!()
+        }
+    }
+}
+
 const fn default_scale() -> f32 {
     1.0
 }
 
+/*
 #[derive(Debug, Deserialize)]
 pub struct GroupDefinition {
     #[serde(default)]
@@ -76,14 +97,7 @@ pub struct MapDefinition {
     pub anchor: Anchor,
     pub image: String
 }
-
-#[derive(Debug, Deserialize)]
-pub struct MapType {
-    pub id: u32,
-    #[serde(default)]
-    pub name: String,
-    pub image: String
-}
+*/
 
 // TODO
 // first hex column: high or low?
@@ -153,9 +167,9 @@ pub enum GridDefinition {
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum SurfaceItem {
-    Map(MapDefinition),
+//    Map(MapDefinition),
     Grid(GridDefinition),
-    Group(GroupDefinition)
+//    Group(GroupDefinition)
 }
 
 #[derive(Debug, Deserialize)]
@@ -193,6 +207,10 @@ pub struct Action {
 
 // TODO: should faces have ids in additon to names?
 
+const fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Deserialize)]
 pub struct PieceType {
     pub id: u32,
@@ -200,15 +218,17 @@ pub struct PieceType {
     #[serde(default)]
     pub faces: Vec<String>,
     #[serde(default)]
-    pub actions: Vec<Action>
+    pub actions: Vec<Action>,
+    #[serde(default = "default_true")]
+    pub selectable: bool,
+    #[serde(default = "default_true")]
+    pub draggable: bool
 }
 
 #[derive(Debug, Deserialize)]
 struct MaybeGameBox {
     #[serde(default)]
     pub images: HashMap<String, ImageDefinition>,
-    #[serde(default)]
-    pub map: Vec<MapType>,
     #[serde(default)]
     pub grid: Vec<GridDefinition>,
     #[serde(default)]
@@ -221,7 +241,6 @@ struct MaybeGameBox {
 #[serde(try_from = "MaybeGameBox")]
 pub struct GameBox {
     pub images: HashMap<String, ImageDefinition>,
-    pub map: HashMap<u32, MapType>,
     pub grid: HashMap<u32, GridDefinition>,
     pub piece: HashMap<u32, PieceType>,
 //    pub surface: SurfaceItem
@@ -238,15 +257,6 @@ impl TryFrom<MaybeGameBox> for GameBox {
 
     fn try_from(m: MaybeGameBox) -> Result<Self, Self::Error> {
 // TODO: check that grid keys are formatted name@c,r
-
-        // check that map images exist
-        if !m.map.iter()
-            .map(|mt| &mt.image)
-            .unique()
-            .all(|i| m.images.contains_key(i))
-        {
-            return Err(GameBoxError);
-        }
 
         // check that face keys exist
         if !m.piece.iter()
@@ -277,13 +287,6 @@ impl TryFrom<MaybeGameBox> for GameBox {
                 .map_or(Ok(()), |_| Err(GameBoxError))?;
         }
 
-        let mut map = HashMap::new();
-        for mt in m.map {
-            // fail on duplicate map type ids
-            map.insert(mt.id, mt)
-                .map_or(Ok(()), |_| Err(GameBoxError))?;
-        }
-
         let grid = m.grid.into_iter()
             .map(|gd| match gd {
                 GridDefinition::Rect(RectGridDefinition { id, .. }) |
@@ -293,7 +296,6 @@ impl TryFrom<MaybeGameBox> for GameBox {
 
         Ok(GameBox {
             images: m.images,
-            map,
             grid,
             piece,
 //            surface: m.surface

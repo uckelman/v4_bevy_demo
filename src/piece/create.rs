@@ -16,7 +16,7 @@ use tracing::instrument;
 use crate::{
     assets::SpriteHandles,
     edittype::EditType,
-    gamebox::GameBox,
+    gamebox::{Anchor, GameBox},
     log::{EditIndex, Edits, handle_do},
     maxz::MaxZ,
     object::{NextObjectId, ObjectId, ObjectIdMap},
@@ -27,7 +27,9 @@ use crate::{
 pub struct DoCreateEvent {
     pub type_id: u32,
     pub parent: Entity,
-    pub dst: Vec3
+    pub dst: Vec3,
+    pub angle: f32,
+    pub anchor: Anchor
 }
 
 #[derive(EntityEvent)]
@@ -46,7 +48,11 @@ pub struct CreateEdit {
     pub object_id: u32,
     pub type_id: u32,
     pub parent_id: u32,
-    pub dst: Vec3
+    pub dst: Vec3,
+    #[serde(default)]
+    pub angle: f32,
+    #[serde(default)]
+    pub anchor: Anchor
 }
 
 #[instrument(skip_all)]
@@ -72,7 +78,9 @@ pub fn on_create(
             object_id,
             type_id: evt.type_id,
             parent_id: parent_id.0,
-            dst: evt.dst
+            dst: evt.dst,
+            angle: evt.angle,
+            anchor: evt.anchor
         },
         commands
     )
@@ -131,7 +139,8 @@ pub fn on_create_redo(
         &gamebox.piece[&cr.type_id],
         parent,
         cr.dst,
-        0.0,
+        cr.angle,
+        cr.anchor,
         0,
         &sprite_handles,
         &mut commands

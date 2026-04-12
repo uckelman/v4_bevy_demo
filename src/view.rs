@@ -67,6 +67,8 @@ pub fn handle_piece_pressed(
             );
         }
 
+// TODO: move context menu opening to own observer, should not be tied
+// to selection
         // secondary button opens a context menu
         if press.button == PointerButton::Secondary {
             commands.trigger(OpenContextMenu {

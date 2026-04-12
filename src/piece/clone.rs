@@ -5,7 +5,7 @@ use bevy::{
         event::EntityEvent,
         error::Result,
         observer::On,
-        prelude::{Commands, Query}
+        prelude::{Commands, Has, Query}
     },
     prelude::{Entity, trace}
 };
@@ -14,10 +14,12 @@ use tracing::instrument;
 
 use crate::{
     actionfunc::add_action_observers,
+    drag::Draggable,
     edittype::EditType,
     log::{EditIndex, Edits, handle_do},
     object::{NextObjectId, ObjectId, ObjectIdMap},
-    piece::{Actions, add_observers}
+    piece::{Actions, add_draggable_observers, add_selectable_observers},
+    select::Selectable
 };
 
 #[derive(Clone, EntityEvent)]
@@ -38,6 +40,8 @@ pub struct RedoCloneEvent {
 fn do_clone(
     entity: Entity,
     object_id: u32,
+    selectable: bool,
+    draggable: bool,
     actions: &Actions,
     commands: &mut Commands
 )
@@ -51,7 +55,14 @@ fn do_clone(
     // assign the clone's ObjectId
     ec.insert(ObjectId(object_id));
 
-    add_observers(&mut ec);
+    if selectable {
+        add_selectable_observers(&mut ec);
+    }
+
+    if draggable {
+        add_draggable_observers(&mut ec);
+    }
+
     add_action_observers(actions.0.iter().map(|a| a.action), &mut ec);
 }
 
@@ -109,7 +120,7 @@ pub fn on_clone_redo(
     evt: On<RedoCloneEvent>,
     edit: Query<&CloneEdit>,
     objmap: Res<ObjectIdMap>,
-    query: Query<&Actions>,
+    query: Query<(Has<Selectable>, Has<Draggable>, &Actions)>,
     mut commands: Commands
 ) -> Result
 {
@@ -118,8 +129,16 @@ pub fn on_clone_redo(
     // get the source entity
     let entity = *objmap.0.get(&cl.source_id).unwrap();
     // get the components of the source entity
-    let actions = query.get(entity)?;
+    let (selectable, draggable, actions) = query.get(entity)?;
+
     // apply the change
-    do_clone(entity, cl.object_id, actions, &mut commands);
+    do_clone(
+        entity,
+        cl.object_id,
+        draggable,
+        selectable,
+        actions,
+        &mut commands
+    );
     Ok(())
 }

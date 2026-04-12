@@ -16,7 +16,6 @@ use crate::{
     edittype::EditType,
     grid,
     log::{EditIndex, EditOf, Edits},
-    map,
     piece::{
         clone::CloneEdit,
         create::CreateEdit,
@@ -87,7 +86,6 @@ impl Serialize for GroupProxy<'_, '_, '_> {
 
             match etype {
                 EditType::CreateSurface => seq.serialize_edit::<surface::create::CreateEdit>(eref)?,
-                EditType::CreateMap => seq.serialize_edit::<map::create::CreateEdit>(eref)?,
                 EditType::CreateGrid => seq.serialize_edit::<grid::create::CreateEdit>(eref)?,
                 EditType::Clone => seq.serialize_edit::<CloneEdit>(eref)?,
                 EditType::Create => seq.serialize_edit::<CreateEdit>(eref)?,

@@ -25,7 +25,6 @@ use crate::{
     gamebox::{GameBox, GridDefinition},
     grid,
     log::{EditOf, Edits, EditsComplete},
-    map,
     object::NextObjectId,
     piece::{
         self,
@@ -44,8 +43,6 @@ use crate::{
 enum Item {
     #[serde(rename = "create_surface")]
     CreateSurface(surface::create::CreateEdit),
-    #[serde(rename = "create_map")]
-    CreateMap(map::create::CreateEdit),
     #[serde(rename = "create_grid")]
     CreateGrid(grid::create::CreateEdit),
 
@@ -120,9 +117,6 @@ impl<'de> Visitor<'de> for ItemVisitor<'_, '_, '_> {
                 Item::CreateSurface(ed) => {
                     ec.insert((EditType::CreateSurface, edof, ed));
                 },
-                Item::CreateMap(ed) => {
-                    ec.insert((EditType::CreateMap, edof, ed));
-                },
                 Item::CreateGrid(ed) => {
                     ec.insert((EditType::CreateGrid, edof, ed));
                 },
@@ -195,7 +189,6 @@ pub fn deserialize_edits(
 #[instrument(skip_all)]
 pub fn update_next_object_id(
     surface_create_q: Query<&surface::create::CreateEdit>,
-    map_create_q: Query<&map::create::CreateEdit>,
     grid_create_q: Query<&grid::create::CreateEdit>,
     gamebox: Res<GameBox>,
     piece_clone_q: Query<&piece::create::CreateEdit>,
@@ -205,7 +198,6 @@ pub fn update_next_object_id(
 {
     // find the max object id
     if let Some(max_object_id) = surface_create_q.iter().map(|ed| ed.object_id)
-        .chain(map_create_q.iter().map(|ed| ed.object_id))
         .chain(
             grid_create_q.iter().map(|ed|
                 ed.object_id + match &gamebox.grid[&ed.type_id] {

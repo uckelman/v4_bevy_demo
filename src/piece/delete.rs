@@ -8,7 +8,8 @@ use bevy::{
         prelude::{ChildOf, Commands, Query}
     },
     math::Vec3,
-    prelude::{Entity, trace, Transform}
+    prelude::{Entity, trace, Transform},
+    sprite::Anchor
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -16,7 +17,7 @@ use tracing::instrument;
 use crate::{
     assets::SpriteHandles,
     edittype::EditType,
-    gamebox::GameBox,
+    gamebox::{self, GameBox},
     log::{EditIndex, Edits, handle_do},
     object::{ObjectId, ObjectIdMap},
     piece::{FaceUp, PieceTypeId, spawn_piece}
@@ -49,10 +50,11 @@ fn do_delete(
 #[serde(rename = "delete", tag = "type")]
 pub struct DeleteEdit {
     pub object_id: u32,
-    pub ptype_id: u32,
+    pub type_id: u32,
     pub parent_id: u32,
     pub location: Vec3,
     pub angle: f32,
+    pub anchor: gamebox::Anchor,
     pub faceup: usize
 }
 
@@ -62,7 +64,7 @@ pub struct DeleteEdit {
 #[instrument(skip_all)]
 pub fn on_delete(
     evt: On<DoDeleteEvent>,
-    piece_query: Query<(&ObjectId, &PieceTypeId, &ChildOf, &Transform, &FaceUp)>,
+    piece_query: Query<(&ObjectId, &PieceTypeId, &ChildOf, &Transform, &Anchor, &FaceUp)>,
     parent_query: Query<&ObjectId>,
     edit_query: Query<(Entity, &mut Edits, &mut EditIndex)>,
     commands: Commands
@@ -71,7 +73,7 @@ pub fn on_delete(
     trace!("");
 
     let entity = evt.event().event_target();
-    let (object_id, ptype_id, parent, t, faceup) = piece_query.get(entity)?;
+    let (object_id, type_id, parent, t, anchor, faceup) = piece_query.get(entity)?;
     let parent_id = parent_query.get(parent.0)?;
 
     handle_do(
@@ -79,10 +81,11 @@ pub fn on_delete(
         EditType::Delete,
         DeleteEdit {
             object_id: object_id.0,
-            ptype_id: ptype_id.0,
+            type_id: type_id.0,
             parent_id: parent_id.0,
             location: t.translation,
             angle: t.rotation.to_axis_angle().1,
+            anchor: (*anchor).into(),
             faceup: faceup.0
         },
         commands
@@ -107,11 +110,12 @@ pub fn on_delete_undo(
     // apply the change
     spawn_piece(
         del.object_id,
-        del.ptype_id,
-        &gamebox.piece[&del.ptype_id],
+        del.type_id,
+        &gamebox.piece[&del.type_id],
         parent,
         del.location,
         del.angle,
+        del.anchor,
         del.faceup,
         &sprite_handles,
         &mut commands
