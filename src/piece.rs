@@ -36,7 +36,7 @@ pub mod rotate;
 #[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Piece;
 
-#[derive(Clone, Component, Debug, Default)]
+#[derive(Clone, Component, Copy, Debug)]
 pub struct PieceTypeId(pub u32);
 
 // TODO: should this reference a piece type?
@@ -44,7 +44,7 @@ pub struct PieceTypeId(pub u32);
 pub struct Faces(pub Vec<ImageSource>);
 
 // TODO: should this be a cyclic iterator?
-#[derive(Clone, Component, Debug, Default)]
+#[derive(Clone, Component, Copy, Debug, Default)]
 pub struct FaceUp(pub usize);
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
