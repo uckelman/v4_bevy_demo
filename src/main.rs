@@ -60,14 +60,6 @@ use crate::{
     log_deserialize::{deserialize_edits, update_next_object_id},
     log_serialize::serialize_edits,
     object::{NextObjectId, ObjectIdMap},
-    piece::{
-        clone::{on_clone_redo, on_clone_undo},
-        create::{on_create, on_create_redo, on_create_undo},
-        delete::{on_delete_redo, on_delete_undo},
-        flip::{on_flip_redo, on_flip_undo},
-        r#move::{on_move_redo, on_move_undo},
-        rotate::{on_rotate_redo, on_rotate_undo},
-    },
     view_adjust::{
         handle_pan_left, handle_pan_right, handle_pan_up, handle_pan_down, handle_pan_drag,
         handle_rotate_ccw, handle_rotate_cw,
@@ -284,23 +276,23 @@ fn game_plugin(app: &mut App) {
         .add_observer(grid::create::on_create)
         .add_observer(grid::create::on_create_undo)
         .add_observer(grid::create::on_create_redo)
-        .add_observer(on_clone_undo)
-        .add_observer(on_clone_redo)
-        .add_observer(on_create)
-        .add_observer(on_create_undo)
-        .add_observer(on_create_redo)
-        .add_observer(on_delete_undo)
-        .add_observer(on_delete_redo)
-        .add_observer(on_flip_undo)
-        .add_observer(on_flip_redo)
+        .add_observer(piece::clone::on_clone_undo)
+        .add_observer(piece::clone::on_clone_redo)
+        .add_observer(piece::create::on_create)
+        .add_observer(piece::create::on_create_undo)
+        .add_observer(piece::create::on_create_redo)
+        .add_observer(piece::delete::on_delete_undo)
+        .add_observer(piece::delete::on_delete_redo)
+        .add_observer(piece::flip::on_flip_undo)
+        .add_observer(piece::flip::on_flip_redo)
+        .add_observer(piece::r#move::on_move_undo)
+        .add_observer(piece::r#move::on_move_redo)
+        .add_observer(piece::rotate::on_rotate_undo)
+        .add_observer(piece::rotate::on_rotate_redo)
         .add_observer(on_group_open)
         .add_observer(on_group_close)
         .add_observer(on_group_undo)
         .add_observer(on_group_redo)
-        .add_observer(on_move_undo)
-        .add_observer(on_move_redo)
-        .add_observer(on_rotate_undo)
-        .add_observer(on_rotate_redo)
         .add_observer(dump_edits)
         .add_observer(pick_dbg);
 }
