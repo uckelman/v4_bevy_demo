@@ -1,16 +1,22 @@
 use bevy::{
     ecs::{
+        change_detection::ResMut,
         component::Component,
         entity::Entity,
+        error::Result,
         event::EntityEvent,
         name::Name,
         observer::On,
-        prelude::{ChildOf, Commands, EntityCommands, Query}
+        prelude::{ChildOf, Commands, EntityCommands, Query, With}
     },
     math::{Quat, Vec3},
-    picking::Pickable,
-    prelude::{Color, debug, DespawnOnExit, Sprite, trace, Transform, Visibility}
+    picking::{
+        Pickable,
+        events::{DragDrop, Pointer}
+    },
+    prelude::{Color, debug, DespawnOnExit, GlobalTransform, Sprite, trace, Transform, Visibility}
 };
+use tracing::instrument;
 
 use crate::{
     actionfunc::{ActionFunc, add_action_observers},
@@ -18,7 +24,7 @@ use crate::{
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::{Anchor, PieceType},
     keys::KeyBinding,
-    object::ObjectId,
+    object::{NextObjectId, ObjectId},
     piece::r#move::on_move,
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
@@ -38,6 +44,9 @@ pub struct Piece;
 
 #[derive(Clone, Component, Copy, Debug)]
 pub struct PieceTypeId(pub u32);
+
+#[derive(Clone, Component, Copy, Debug, Eq, PartialEq)]
+pub struct StackingGroup(pub u32);
 
 // TODO: should this reference a piece type?
 #[derive(Clone, Component, Debug, Default)]
@@ -62,7 +71,7 @@ pub fn add_draggable_observers(ec: &mut EntityCommands) {
         .observe(on_piece_drag_start)
         .observe(on_piece_drag)
         .observe(on_piece_drag_end)
-    //    .observe(on_piece_drop)
+        .observe(on_piece_drop)
         .observe(on_move);
 }
 
@@ -121,6 +130,7 @@ pub fn spawn_piece(
         ObjectId(oid),
         PieceTypeId(pid),
         Name::from(p.name.as_ref()),
+        StackingGroup(p.stacking_group),
         sprite,
         ChildOf(parent),
         t,
@@ -164,4 +174,46 @@ fn recolor_on<E: EntityEvent>(
             sprite.color = color;
         }
     }
+}
+
+#[instrument(skip_all)]
+pub fn on_piece_drop(
+    mut drop: On<Pointer<DragDrop>>,
+    mut query: Query<(&ChildOf, &StackingGroup, &GlobalTransform, &mut Transform), With<Piece>>,
+    mut next_object_id: ResMut<NextObjectId>,
+    mut commands: Commands
+) -> Result
+{
+    debug!("");
+
+    let src = drop.event().dropped;
+    let dst = drop.event().event_target();
+
+    let Ok([
+        (src_parent, src_sg, src_gt, mut src_t),
+        (dst_parent, dst_sg, dst_gt, mut dst_t)
+    ]) = query.get_many_mut([src, dst]) else {
+        return Ok(());
+    };
+
+    // don't stack unless src and dst are in the same stacking group
+    if src_sg != dst_sg {
+        return Ok(());
+    }
+
+    drop.propagate(false);
+
+    if src_parent.0 != dst {
+        // reparent src to dst
+        *src_t = src_gt.reparented_to(dst_gt);
+        commands.entity(src).insert(ChildOf(dst));
+    }
+
+//    eprintln!("{}", src_gt.translation().z);
+
+    // give src a stacking offset
+    src_t.translation.x = 2.0;
+    src_t.translation.y = 2.0;
+
+    Ok(())
 }

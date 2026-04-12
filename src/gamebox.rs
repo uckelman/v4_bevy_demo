@@ -222,7 +222,9 @@ pub struct PieceType {
     #[serde(default = "default_true")]
     pub selectable: bool,
     #[serde(default = "default_true")]
-    pub draggable: bool
+    pub draggable: bool,
+    #[serde(default)]
+    pub stacking_group: u32
 }
 
 #[derive(Debug, Deserialize)]
