@@ -388,7 +388,7 @@ pub fn on_piece_drop(
     if parent.0 != dst {
         // reparent to grid cell
         *src_t = src_gt.reparented_to(dst_gt);
-        commands.entity(src).insert(ChildOf(dst));
+        commands.entity(dst).add_child(src);
         eprintln!("grid cell {dst}");
     }
 

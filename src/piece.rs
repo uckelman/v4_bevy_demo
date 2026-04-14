@@ -210,7 +210,7 @@ pub fn on_piece_drop(
     if src_parent.0 != dst {
         // reparent src to dst
         *src_t = src_gt.reparented_to(dst_gt);
-        commands.entity(src).insert(ChildOf(dst));
+        commands.entity(dst).add_child(src);
     }
 
 //    eprintln!("{}", src_gt.translation().z);
