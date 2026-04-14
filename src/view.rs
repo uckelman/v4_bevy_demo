@@ -1,8 +1,9 @@
 use bevy::{
     ecs::{
         change_detection::Res,
+        event::EntityEvent,
         observer::On,
-        prelude::{Commands, Query, With}
+        prelude::{ChildOf, Children, Commands, Entity, Query, With}
     },
     input::{
         ButtonInput,
