@@ -22,7 +22,7 @@ use crate::{
     keys::{ctrl_pressed, shift_pressed},
     piece::StackingGroup,
     stack,
-    select::{Selected, toggle, select, set_selection_if_not_selected}
+    select::{deselect_all, Selected, toggle, select}
 };
 
 #[instrument(skip_all)]
@@ -64,11 +64,8 @@ pub fn handle_piece_pressed(
         else {
             // unmodified sets if not selected
             trace!("unmodified");
-            stack_iter.for_each(|e| set_selection_if_not_selected(
-                e,
-                &selection_query,
-                &mut commands
-            ));
+            deselect_all(&selection_query, &mut commands);
+            stack_iter.for_each(|e| select(e, &mut commands));
         }
     }
 }

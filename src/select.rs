@@ -108,24 +108,12 @@ fn deselect(entity: Entity, commands: &mut Commands)
     commands.trigger(DeselectEvent { entity });
 }
 
-fn deselect_all(
+pub fn deselect_all(
     query: &Query<Entity, With<Selected>>,
     commands: &mut Commands
 )
 {
     query.iter().for_each(|entity| deselect(entity, commands));
-}
-
-pub fn set_selection_if_not_selected(
-    entity: Entity,
-    query: &Query<Entity, With<Selected>>,
-    commands: &mut Commands
-)
-{
-    if !query.contains(entity) {
-        deselect_all(query, commands);
-        select(entity, commands);
-    }
 }
 
 #[instrument(skip_all)]
