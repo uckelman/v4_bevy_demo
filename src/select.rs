@@ -6,7 +6,7 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{Commands, Query, Single, With}
+        prelude::{ChildOf, Children, Commands, Query, Single, With}
     },
     gizmos::{
         config::{DefaultGizmoConfigGroup, GizmoConfigStore, GizmoLineJoint},
@@ -23,13 +23,15 @@ use bevy::{
     },
     prelude::{Color, Entity, GlobalTransform, trace, Transform, Resource, Vec3Swizzles}
 };
+use std::collections::HashSet;
 use tracing::instrument;
 
 use crate::{
     actionfunc::trigger_action_func,
     keys::{ctrl_pressed, shift_pressed, ModifiersExt},
     log::{OpenGroupEvent, CloseGroupEvent},
-    piece::Actions
+    piece::{Actions, StackingGroup},
+    stack
 };
 
 #[derive(Clone, Component, Copy, Debug, Default)]
@@ -200,6 +202,8 @@ pub fn selection_rect_drag_end(
     modifiers: Res<ButtonInput<KeyCode>>,
     query: Query<(Entity, &Transform), With<Selectable>>,
     s_query: Query<Entity, With<Selected>>,
+    d_query: Query<(Option<&Children>, &StackingGroup)>,
+    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
     mut selection: ResMut<SelectionRect>,
     mut commands: Commands
 )
@@ -212,25 +216,30 @@ pub fn selection_rect_drag_end(
 
     selection.active = false;
 
+    let mut sel = HashSet::new();
+
     // TODO: checking all Selectables is probably slow, maybe use a quadtree?
-    let qi = query.iter()
-        .filter(|(_, transform)|
-            selection.rect.contains(transform.translation.xy())
-        )
-        .map(|(entity, _)| entity);
+    query.iter()
+        .filter(|(_, t)| selection.rect.contains(t.translation.xy()))
+        .map(|(entity, _)| entity)
+        .for_each(|e| if !sel.contains(&e) {
+            sel.extend(stack::iter(e, &a_query, &d_query))
+        });
+
+    let sel = sel.into_iter();
 
     if ctrl_pressed(&modifiers) {
         // toggle selection
-        qi.for_each(|entity| toggle(entity, &s_query, &mut commands));
+        sel.for_each(|entity| toggle(entity, &s_query, &mut commands));
     }
     else if shift_pressed(&modifiers) {
         // add to selection
-        qi.for_each(|entity| select(entity, &mut commands));
+        sel.for_each(|entity| select(entity, &mut commands));
     }
     else {
         // set selection
         deselect_all(&s_query, &mut commands);
-        qi.for_each(|entity| select(entity, &mut commands));
+        sel.for_each(|entity| select(entity, &mut commands));
     }
 }
 
