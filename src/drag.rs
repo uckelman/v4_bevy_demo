@@ -165,18 +165,18 @@ pub fn on_piece_drag_end(
             0 => {},
             1 => {
                 let (e, p, t, a) = eptai.next().expect("len is 1");
-                move_and_deselect(e, p.0, t, a, &mut commands);
+                unanchor_and_move(e, p.0, t, a, &mut commands);
             },
             _ => {
                 commands.trigger(OpenGroupEvent);
-                eptai.for_each(|(e, p, t, a)| move_and_deselect(e, p.0, t, a, &mut commands));
+                eptai.for_each(|(e, p, t, a)| unanchor_and_move(e, p.0, t, a, &mut commands));
                 commands.trigger(CloseGroupEvent);
             }
         }
     }
 }
 
-fn move_and_deselect(
+fn unanchor_and_move(
     entity: Entity,
     p: Entity,
     t: &Transform,
@@ -184,6 +184,10 @@ fn move_and_deselect(
     commands: &mut Commands
 )
 {
+    commands.entity(entity)
+        .remove::<DragAnchor>()
+        .insert(Pickable::default());
+
     commands.trigger(DoMoveEvent {
         entity,
         src_parent: anchor.parent,
@@ -191,8 +195,4 @@ fn move_and_deselect(
         dst_parent: p,
         dst: t.translation
     });
-
-    commands.entity(entity)
-        .remove::<DragAnchor>()
-        .insert(Pickable::default());
 }
