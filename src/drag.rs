@@ -159,7 +159,7 @@ pub fn on_piece_drag_end(
     }
 
     if drag.button == PointerButton::Primary {
-        // remove the drag anchor, make piece pickable again
+        // remove the drag anchor, make piece pickable again, move it
         let mut eptai = query.iter();
         match eptai.len() {
             0 => {},
