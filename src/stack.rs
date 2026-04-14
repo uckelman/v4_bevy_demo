@@ -83,7 +83,7 @@ where
         let (next, stacking_group) = children_query
             .get(entity)
             .map(|(ch, sg)| (
-                ch.map_or_else(|| VecDeque::new(), |c| c.iter().collect()),
+                ch.map_or_else(VecDeque::new, |c| c.iter().collect()),
                 *sg
             ))
             .unwrap_or((VecDeque::new(), StackingGroup(0)));
@@ -128,10 +128,10 @@ where
     DR::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w R>, &'w StackingGroup)>,
     DS::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w S>, &'w StackingGroup)>
 {
-    StackBelowIter::new(&parent_query, entity)
+    StackBelowIter::new(parent_query, entity)
         .collect::<Vec<_>>()
         .into_iter()
         .rev()
         .chain(iter::once(entity))
-        .chain(StackAboveIter::new(&children_query, entity))
+        .chain(StackAboveIter::new(children_query, entity))
 }

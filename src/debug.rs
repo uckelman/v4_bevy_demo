@@ -39,7 +39,7 @@ pub fn dump_entities(
         for ci in world.inspect_entity(e)? {
             eprintln!("{}", ci.name());
         }
-        eprintln!("");
+        eprintln!();
     }
 
     Ok(())
