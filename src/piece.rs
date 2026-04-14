@@ -29,7 +29,7 @@ use crate::{
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
     state::GameState,
-    view::handle_piece_pressed
+    view::{handle_context_menu, handle_piece_pressed}
 };
 
 pub mod clone;
@@ -149,6 +149,8 @@ pub fn spawn_piece(
         Visibility::Inherited,
         DespawnOnExit(GameState::Game)
     ));
+
+    ec.observe(handle_context_menu);
 
     if p.selectable {
         ec.insert(Selectable);

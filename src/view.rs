@@ -40,11 +40,6 @@ pub fn handle_piece_pressed(
     // prevent the event from bubbling up
     press.propagate(false);
 
-    // all buttons close context menus
-    if *context_menu_state == ContextMenuState::Open {
-        commands.trigger(CloseContextMenus);
-    }
-
     // primary, secondary buttons select
     if press.button == PointerButton::Primary ||
         press.button == PointerButton::Secondary
@@ -74,15 +69,34 @@ pub fn handle_piece_pressed(
                 &mut commands
             ));
         }
+    }
+}
 
-// TODO: move context menu opening to own observer, should not be tied
-// to selection
-        // secondary button opens a context menu
-        if press.button == PointerButton::Secondary {
-            commands.trigger(OpenContextMenu {
-                entity,
-                pos: press.pointer_location.position
-            });
-        }
+#[instrument(skip_all)]
+pub fn handle_context_menu(
+    mut press: On<Pointer<Press>>,
+    selection_query: Query<Entity, With<Selected>>,
+    context_menu_state: Res<State<ContextMenuState>>,
+    mut commands: Commands
+)
+{
+    trace!("");
+
+    // prevent the event from bubbling up
+    press.propagate(false);
+
+    // all buttons close context menus
+    if *context_menu_state == ContextMenuState::Open {
+        commands.trigger(CloseContextMenus);
+    }
+
+    // secondary button opens a context menu
+    if press.button == PointerButton::Secondary {
+        let entity = press.event().event_target();
+
+        commands.trigger(OpenContextMenu {
+            entity,
+            pos: press.pointer_location.position
+        });
     }
 }
