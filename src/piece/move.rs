@@ -5,10 +5,10 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{Commands, Query}
+        prelude::{Commands, Entity, Query}
     },
     math::Vec3,
-    prelude::{Entity, trace, Transform}
+    prelude::{trace, Transform}
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -92,9 +92,6 @@ pub fn on_move_undo(
     let entity = *objmap.0.get(&mov.object_id).unwrap();
 
     if mov.src_parent_id != mov.dst_parent_id {
-        let dst_parent = *objmap.0.get(&mov.dst_parent_id).unwrap();
-        commands.entity(dst_parent).detach_child(entity);
-
         let src_parent = *objmap.0.get(&mov.src_parent_id).unwrap();
         commands.entity(src_parent).add_child(entity);
     }
@@ -120,9 +117,6 @@ pub fn on_move_redo(
     let entity = *objmap.0.get(&mov.object_id).unwrap();
 
     if mov.src_parent_id != mov.dst_parent_id {
-        let src_parent = *objmap.0.get(&mov.src_parent_id).unwrap();
-        commands.entity(src_parent).detach_child(entity);
-
         let dst_parent = *objmap.0.get(&mov.dst_parent_id).unwrap();
         commands.entity(dst_parent).add_child(entity);
     }
