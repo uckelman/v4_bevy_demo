@@ -6,6 +6,7 @@ use bevy::{
         name::Name,
         observer::On,
         prelude::{Entity, Query, RelationshipTarget, With, Without},
+        world::DeferredWorld
     },
     picking::{
         events::{Click, Pointer}
@@ -28,10 +29,11 @@ pub fn pick_dbg(ev: On<Pointer<Click>>, names: Query<&Name>) {
     trace!("Picked {name}({:?})", ev.event_target());
 }
 
-//    all: Query<Entity>,
-//    world: DeferredWorld
-
-/*
+pub fn dump_entities(
+    all: Query<Entity>,
+    world: DeferredWorld
+) -> Result
+{
     for e in all.iter() {
         eprintln!("{e}");
         for ci in world.inspect_entity(e)? {
@@ -41,7 +43,7 @@ pub fn pick_dbg(ev: On<Pointer<Click>>, names: Query<&Name>) {
     }
 
     Ok(())
-*/
+}
 
 /*
     for (root_entity, root_edits) in root_query.iter() {
