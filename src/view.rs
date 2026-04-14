@@ -76,7 +76,6 @@ pub fn handle_piece_pressed(
 #[instrument(skip_all)]
 pub fn handle_context_menu(
     mut press: On<Pointer<Press>>,
-    selection_query: Query<Entity, With<Selected>>,
     context_menu_state: Res<State<ContextMenuState>>,
     mut commands: Commands
 )
