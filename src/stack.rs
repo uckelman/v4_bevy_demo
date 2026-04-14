@@ -12,7 +12,7 @@ use std::{
 
 use crate::piece::StackingGroup;
 
-pub struct StackAncestorIter<'w, 's, D: QueryData, F: QueryFilter, R: Relationship>
+pub struct StackBelowIter<'w, 's, D: QueryData, F: QueryFilter, R: Relationship>
 where
     D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w R>, &'w StackingGroup)>
 {
@@ -21,7 +21,7 @@ where
     next: Option<Entity>
 }
 
-impl<'w, 's, D: QueryData, F: QueryFilter, R: Relationship> StackAncestorIter<'w, 's, D, F, R>
+impl<'w, 's, D: QueryData, F: QueryFilter, R: Relationship> StackBelowIter<'w, 's, D, F, R>
 where
     D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w R>, &'w StackingGroup)>
 {
@@ -43,7 +43,7 @@ where
 }
 
 impl<'w, 's, D: QueryData, F: QueryFilter, R: Relationship> Iterator
-    for StackAncestorIter<'w, 's, D, F, R>
+    for StackBelowIter<'w, 's, D, F, R>
 where
     D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w R>, &'w StackingGroup)>
 {
@@ -63,7 +63,7 @@ where
     }
 }
 
-pub struct StackDescendantIter<'w, 's, D: QueryData, F: QueryFilter, S: RelationshipTarget>
+pub struct StackAboveIter<'w, 's, D: QueryData, F: QueryFilter, S: RelationshipTarget>
 where
     D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w S>, &'w StackingGroup)>
 {
@@ -72,7 +72,7 @@ where
     next: VecDeque<Entity>
 }
 
-impl<'w, 's, D: QueryData, F: QueryFilter, S: RelationshipTarget> StackDescendantIter<'w, 's, D, F, S>
+impl<'w, 's, D: QueryData, F: QueryFilter, S: RelationshipTarget> StackAboveIter<'w, 's, D, F, S>
 where
     D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w S>, &'w StackingGroup)>
 {
@@ -97,7 +97,7 @@ where
 }
 
 impl<'w, 's, D: QueryData, F: QueryFilter, S: RelationshipTarget> Iterator
-    for StackDescendantIter<'w, 's, D, F, S>
+    for StackAboveIter<'w, 's, D, F, S>
 where
     D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w S>, &'w StackingGroup)>,
 {
@@ -129,10 +129,10 @@ where
     DR::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w R>, &'w StackingGroup)>,
     DS::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w S>, &'w StackingGroup)>
 {
-    StackAncestorIter::new(&parent_query, entity)
+    StackBelowIter::new(&parent_query, entity)
         .collect::<Vec<_>>()
         .into_iter()
         .rev()
         .chain(iter::once(entity))
-        .chain(StackDescendantIter::new(&children_query, entity))
+        .chain(StackAboveIter::new(&children_query, entity))
 }
