@@ -104,7 +104,8 @@ where
     type Item = Entity;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let entity = self.next.pop_front()? {
+        loop {
+            let entity = self.next.pop_front()?;
             if let Ok((children, &sg)) = self.children_query.get(entity)
                 && sg == self.stacking_group
             {
@@ -115,8 +116,6 @@ where
                 return Some(entity);
             }
         }
-
-        None
     }
 }
 

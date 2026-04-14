@@ -1,6 +1,5 @@
 use bevy::{
     ecs::{
-        change_detection::ResMut,
         component::Component,
         entity::Entity,
         error::Result,
@@ -24,7 +23,7 @@ use crate::{
     drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::{Anchor, PieceType},
     keys::KeyBinding,
-    object::{NextObjectId, ObjectId},
+    object::ObjectId,
     piece::r#move::on_move,
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
@@ -183,7 +182,6 @@ pub fn on_piece_drop(
     mut drop: On<Pointer<DragDrop>>,
     mut src_query: Query<(&ChildOf, &StackingGroup, &GlobalTransform, &mut Transform), With<Piece>>,
     dst_query: Query<(&StackingGroup, &GlobalTransform), With<Piece>>,
-    mut next_object_id: ResMut<NextObjectId>,
     mut commands: Commands
 ) -> Result
 {
