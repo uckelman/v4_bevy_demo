@@ -51,11 +51,10 @@ mod view;
 mod view_adjust;
 
 use crate::{
-    assets::{LoadingHandles, SpriteHandles, load_assets, mark_images_loaded},
+    assets::{LoadingHandles, load_assets, mark_images_loaded},
     config::{Config, load_config},
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     debug::{cursor_events, dump_edits, pick_dbg},
-    gamebox::GameBox,
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
     log::{handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
     log_deserialize::{deserialize_edits, update_next_object_id},

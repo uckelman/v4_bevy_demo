@@ -368,7 +368,7 @@ fn recolor_cell_on<E: EntityEvent>(
 pub fn on_piece_drop(
     mut drop: On<Pointer<DragDrop>>,
     mut src_query: Query<(&ChildOf, &GlobalTransform, &mut Transform), (With<Piece>, Without<HexGridCell>)>,
-    dst_query: Query<(&GlobalTransform, &Transform), With<HexGridCell>>,
+    dst_query: Query<&GlobalTransform, With<HexGridCell>>,
     mut commands: Commands
 ) -> Result
 {
@@ -383,7 +383,7 @@ pub fn on_piece_drop(
     drop.propagate(false);
 
     let dst = drop.event().event_target();
-    let (dst_gt, dst_t) = dst_query.get(dst)?;
+    let dst_gt = dst_query.get(dst)?;
 
     if parent.0 != dst {
         // reparent to grid cell

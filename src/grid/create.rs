@@ -6,7 +6,7 @@ use bevy::{
         error::Result,
         event::{EntityEvent, Event},
         observer::On,
-        prelude::{ChildOf, Commands, Entity, Query}
+        prelude::{Commands, Entity, Query}
     },
     math::{Quat, Vec3},
     mesh::Mesh,
