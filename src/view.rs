@@ -12,13 +12,15 @@ use bevy::{
         events::{Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{Entity, EntityEvent, State, trace}
+    prelude::{State, trace}
 };
 use tracing::instrument;
 
 use crate::{
     context_menu::{CloseContextMenus, ContextMenuState, OpenContextMenu},
     keys::{ctrl_pressed, shift_pressed},
+    piece::StackingGroup,
+    stack,
     select::{Selected, toggle, select, set_selection_if_not_selected}
 };
 
@@ -27,7 +29,9 @@ pub fn handle_piece_pressed(
     mut press: On<Pointer<Press>>,
     modifiers: Res<ButtonInput<KeyCode>>,
     selection_query: Query<Entity, With<Selected>>,
-    context_menu_state: Res<State<ContextMenuState>>,
+    sg_query: Query<&StackingGroup>,
+    d_query: Query<(Option<&Children>, &StackingGroup)>,
+    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
     mut commands: Commands
 )
 {
@@ -47,24 +51,28 @@ pub fn handle_piece_pressed(
     {
         let entity = press.event().event_target();
 
+        let Ok(entity_sg) = sg_query.get(entity) else { return; };
+
+        let stack_iter = stack::iter(entity, &a_query, &d_query);
+
         if ctrl_pressed(&modifiers) {
             // ctrl toggles
             trace!("ctrl");
-            toggle(entity, &selection_query, &mut commands);
+            stack_iter.for_each(|e| toggle(e, &selection_query, &mut commands));
         }
         else if shift_pressed(&modifiers) {
             // shift adds
             trace!("shift");
-            select(entity, &mut commands);
+            stack_iter.for_each(|e| select(e, &mut commands));
         }
         else {
             // unmodified sets if not selected
             trace!("unmodified");
-            set_selection_if_not_selected(
-                entity,
+            stack_iter.for_each(|e| set_selection_if_not_selected(
+                e,
                 &selection_query,
                 &mut commands
-            );
+            ));
         }
 
 // TODO: move context menu opening to own observer, should not be tied

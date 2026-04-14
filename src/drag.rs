@@ -21,9 +21,13 @@ use crate::{
     context_menu::ContextMenuState,
     log::{OpenGroupEvent, CloseGroupEvent},
     maxz::MaxZ,
-    piece::r#move::DoMoveEvent,
+    piece::{
+        StackingGroup,
+        r#move::DoMoveEvent
+    },
     raise::raise_piece,
     select::Selected,
+    stack::StackBelowIter,
     util::AsOrthographicProjection
 };
 
@@ -44,6 +48,7 @@ pub fn on_piece_drag_start(
     drag: On<Pointer<DragStart>>,
     query: Query<(Entity, &ChildOf, &GlobalTransform, &mut Transform), (With<Draggable>, With<Selected>)>,
     parent_query: Query<&ChildOf>,
+    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
     mut maxz_query: Query<&mut MaxZ>,
     context_menu_state: Res<State<ContextMenuState>>,
     mut commands: Commands
@@ -80,18 +85,20 @@ pub fn on_piece_drag_start(
     max_z.0 = sel_max_z + dz;
 
     for (entity, parent, _, mut transform) in query {
-        let z = transform.translation.z + dz;
-        raise_piece(&mut transform, z);
+        if StackBelowIter::new(&a_query, entity).next().is_none() {
+            let z = transform.translation.z + dz;
+            raise_piece(&mut transform, z);
 
-        // set the drag anchor, prevent picking from hitting piece
-        commands.entity(entity)
-            .insert((
-                DragAnchor {
-                    parent: parent.0,
-                    pos: transform.translation
-                },
-                Pickable::IGNORE
-            ));
+            // set the drag anchor, prevent picking from hitting piece
+            commands.entity(entity)
+                .insert((
+                    DragAnchor {
+                        parent: parent.0,
+                        pos: transform.translation
+                    },
+                    Pickable::IGNORE
+                ));
+        }
     }
 
     Ok(())

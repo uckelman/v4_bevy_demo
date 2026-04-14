@@ -42,6 +42,7 @@ mod object;
 mod piece;
 mod raise;
 mod select;
+mod stack;
 mod state;
 mod surface;
 mod title;
