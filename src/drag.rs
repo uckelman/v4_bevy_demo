@@ -106,7 +106,7 @@ pub fn on_piece_drag_start(
 
 #[instrument(skip_all)]
 pub fn on_piece_drag(
-    drag: On<Pointer<Drag>>,
+    mut drag: On<Pointer<Drag>>,
     mut d_query: Query<(&mut Transform, &DragAnchor), Without<Camera>>,
     tp_query: Query<(&Transform, &Projection), With<Camera>>,
     context_menu_state: Res<State<ContextMenuState>>
@@ -121,6 +121,9 @@ pub fn on_piece_drag(
     if *context_menu_state == ContextMenuState::Open {
         return Ok(());
     }
+
+    // prevent the event from bubbling up to the world
+    drag.propagate(false);
 
     let (camera_transform, camera_projection) = tp_query.single()?;
     let camera_projection = camera_projection.as_ortho()?;
@@ -138,15 +141,12 @@ pub fn on_piece_drag(
         transform.translation = anchor.pos + drag_dist;
     });
 
-    // prevent the event from bubbling up to the world
-//    drag.propagate(false);
-
     Ok(())
 }
 
 #[instrument(skip_all)]
 pub fn on_piece_drag_end(
-    drag: On<Pointer<DragEnd>>,
+    mut drag: On<Pointer<DragEnd>>,
     query: Query<(Entity, &ChildOf, &Transform, &DragAnchor)>,
     context_menu_state: Res<State<ContextMenuState>>,
     mut commands: Commands
@@ -157,6 +157,8 @@ pub fn on_piece_drag_end(
     if *context_menu_state == ContextMenuState::Open {
         return;
     }
+
+    drag.propagate(false);
 
     if drag.button == PointerButton::Primary {
         // remove the drag anchor, make piece pickable again, move it
