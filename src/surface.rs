@@ -64,7 +64,7 @@ pub fn on_piece_drop(
 
     let src = drop.event().dropped;
 
-    let Ok((parent, src_gt, mut t)) = src_query.get_mut(src) else {
+    let Ok((src_parent, src_gt, mut t)) = src_query.get_mut(src) else {
         return Ok(());
     };
 
@@ -72,7 +72,7 @@ pub fn on_piece_drop(
 
     let dst = surface_query.get(drop.event().event_target())?.0;
 
-    if parent.0 != dst {
+    if src_parent.0 != dst {
         let dst_gt = dst_query.get(dst)?;
 
         // reparent to surface
