@@ -64,9 +64,6 @@ pub fn on_piece_drag_start(
         return Ok(());
     }
 
-    // prevent the event from bubbling up to the world
-    drag.propagate(false);
-
     // find all the stack bottoms, highest point for the selection
     let mut bottoms = vec![];
     let mut sel_min_z = f32::INFINITY;
@@ -91,6 +88,9 @@ pub fn on_piece_drag_start(
     // selection must be on one surface; get it from the first selected item
     let Some(first) = bottoms.first() else { return Ok(()); };
     let root = parent_query.root_ancestor(first.0);
+
+    // prevent the event from bubbling up to the world
+    drag.propagate(false);
 
     // raise entire selection by amount the lowest member is below max z
     let mut max_z = maxz_query.get_mut(root)?;
