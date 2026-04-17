@@ -204,24 +204,24 @@ pub fn on_piece_drop(
         return Ok(());
     };
 
-    // don't stack unless src and dst are in the same stacking group
-    if src_sg != dst_sg {
-        return Ok(());
-    }
-
     drop.propagate(false);
+
+// TODO: handle dropping whole stack
+
+    if src_sg == dst_sg {
+        // stack src onto dst if they are in the same stacking group
+        // give src a stacking offset
+        src_t.translation = Vec3::new(2.0, 2.0, 1.0);
+    }
+    else if src_parent.0 != dst {
+        // otherwise keep the same global transform if reparenting
+        *src_t = src_gt.reparented_to(dst_gt);
+    }
 
     if src_parent.0 != dst {
         // reparent src to dst
-        *src_t = src_gt.reparented_to(dst_gt);
         commands.entity(dst).add_child(src);
     }
-
-//    eprintln!("{}", src_gt.translation().z);
-
-    // give src a stacking offset
-    src_t.translation.x = 2.0;
-    src_t.translation.y = 2.0;
 
     Ok(())
 }
