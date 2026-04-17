@@ -190,6 +190,10 @@ pub fn on_piece_drop(
     let src = drop.event().dropped;
     let dst = drop.event().event_target();
 
+    if src == dst {
+        return Ok(());
+    }
+
     let Ok((src_parent, src_sg, src_gt, mut src_t)) = src_query.get_mut(src)
     else {
         return Ok(());
