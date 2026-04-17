@@ -45,7 +45,7 @@ pub struct DragAnchor {
 
 #[instrument(skip_all)]
 pub fn on_piece_drag_start(
-    drag: On<Pointer<DragStart>>,
+    mut drag: On<Pointer<DragStart>>,
     query: Query<(Entity, &ChildOf, &GlobalTransform, &mut Transform), (With<Draggable>, With<Selected>)>,
     parent_query: Query<&ChildOf>,
     a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
@@ -64,41 +64,52 @@ pub fn on_piece_drag_start(
         return Ok(());
     }
 
-    // find the min, max depth of the selection
-    let Some((sel_min_z, sel_max_z)) = query.iter()
-        .map(|(_, _, t, _)| t.translation().z)
-        .minmax()
-        .into_option()
-    else {
-        return Ok(());
-    };
+    // prevent the event from bubbling up to the world
+    drag.propagate(false);
+
+    // find all the stack bottoms, highest point for the selection
+    let mut bottoms = vec![];
+    let mut sel_min_z = f32::INFINITY;
+    let mut sel_max_z = f32::NEG_INFINITY;
+
+    for (e, p, gt, t) in query {
+        if StackBelowIter::new(&a_query, e).next().is_none() {
+            bottoms.push((e, p, t));
+        }
+
+        let z = gt.translation().z;
+
+        if z < sel_min_z {
+            sel_min_z = z;
+        }
+
+        if z > sel_max_z {
+            sel_max_z = z;
+        }
+    }
 
     // selection must be on one surface; get it from the first selected item
-    let (entity, ..) = query.iter().next().expect("query is nonempty");
-    let root = parent_query.root_ancestor(entity);
+    let Some(first) = bottoms.first() else { return Ok(()); };
+    let root = parent_query.root_ancestor(first.0);
 
     // raise entire selection by amount the lowest member is below max z
     let mut max_z = maxz_query.get_mut(root)?;
-
     let dz = max_z.0 - sel_min_z + 1.0;
-
     max_z.0 = sel_max_z + dz;
 
-    for (entity, parent, _, mut transform) in query {
-        if StackBelowIter::new(&a_query, entity).next().is_none() {
-            let z = transform.translation.z + dz;
-            raise_piece(&mut transform, z);
+    for (entity, parent, mut transform) in bottoms {
+        let z = transform.translation.z + dz;
+        raise_piece(&mut transform, z);
 
-            // set the drag anchor, prevent picking from hitting piece
-            commands.entity(entity)
-                .insert((
-                    DragAnchor {
-                        parent: parent.0,
-                        pos: transform.translation
-                    },
-                    Pickable::IGNORE
-                ));
-        }
+        // set the drag anchor, prevent picking from hitting piece
+        commands.entity(entity)
+            .insert((
+                DragAnchor {
+                    parent: parent.0,
+                    pos: transform.translation
+                },
+                Pickable::IGNORE
+            ));
     }
 
     Ok(())
