@@ -41,13 +41,18 @@ pub fn handle_piece_pressed(
     // prevent the event from bubbling up
     press.propagate(false);
 
-    // primary, secondary buttons select
-    if press.button == PointerButton::Primary ||
-        press.button == PointerButton::Secondary
+    // primary buttons selects
+    if press.button == PointerButton::Primary
     {
         let entity = press.event().event_target();
 
         let Ok(entity_sg) = sg_query.get(entity) else { return; };
+
+        let stack_iter = stack::iter(entity, &a_query, &d_query);
+        for e in stack_iter {
+            eprintln!("{e}");
+        }
+        eprintln!();
 
         let stack_iter = stack::iter(entity, &a_query, &d_query);
 
@@ -67,6 +72,34 @@ pub fn handle_piece_pressed(
             deselect_all(&selection_query, &mut commands);
             stack_iter.for_each(|e| select(e, &mut commands));
         }
+    }
+    else if press.button == PointerButton::Secondary &&
+        !ctrl_pressed(&modifiers) &&
+        !shift_pressed(&modifiers)
+    {
+        // if the target is selected, don't change the selection
+        // if the target is not selected, select only the target
+
+        let entity = press.event().event_target();
+
+        let Ok(entity_sg) = sg_query.get(entity) else { return; };
+
+        if selection_query.contains(entity) {
+            return;
+        }
+
+        let stack_iter = stack::iter(entity, &a_query, &d_query);
+        for e in stack_iter {
+            eprintln!("{e}");
+        }
+        eprintln!();
+
+        let stack_iter = stack::iter(entity, &a_query, &d_query);
+
+        // unmodified sets if not selected
+        trace!("unmodified");
+        deselect_all(&selection_query, &mut commands);
+        stack_iter.for_each(|e| select(e, &mut commands));
     }
 }
 
