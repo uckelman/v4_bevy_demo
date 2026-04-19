@@ -48,7 +48,7 @@ pub fn handle_piece_pressed(
 
         let Ok(entity_sg) = sg_query.get(entity) else { return; };
 
-        let stack_iter = stack::iter(entity, &a_query, &d_query);
+        let stack_iter = stack::iter(&a_query, &d_query, entity);
 
         if ctrl_pressed(&modifiers) {
             // ctrl toggles
@@ -82,7 +82,7 @@ pub fn handle_piece_pressed(
             return;
         }
 
-        let stack_iter = stack::iter(entity, &a_query, &d_query);
+        let stack_iter = stack::iter(&a_query, &d_query, entity);
 
         // unmodified sets if not selected
         trace!("unmodified");

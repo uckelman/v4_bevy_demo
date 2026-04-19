@@ -120,9 +120,9 @@ where
 }
 
 pub fn iter<'w, 's, DR: QueryData, FR: QueryFilter, R: Relationship, DS: QueryData, FS: QueryFilter, S: RelationshipTarget> (
-    entity: Entity,
     parent_query: &'w Query<'w, 's, DR, FR>,
-    children_query: &'w Query<'w, 's, DS, FS>
+    children_query: &'w Query<'w, 's, DS, FS>,
+    entity: Entity,
 ) -> impl Iterator<Item = Entity>
 where
     DR::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w R>, &'w StackingGroup)>,

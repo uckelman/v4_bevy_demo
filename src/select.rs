@@ -211,7 +211,7 @@ pub fn selection_rect_drag_end(
         .filter(|(_, t)| selection.rect.contains(t.translation.xy()))
         .map(|(entity, _)| entity)
         .for_each(|e| if !sel.contains(&e) {
-            sel.extend(stack::iter(e, &a_query, &d_query))
+            sel.extend(stack::iter(&a_query, &d_query, e))
         });
 
     let sel = sel.into_iter();
