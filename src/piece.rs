@@ -6,7 +6,7 @@ use bevy::{
         event::EntityEvent,
         name::Name,
         observer::On,
-        prelude::{ChildOf, Commands, EntityCommands, Query, With}
+        prelude::{ChildOf, Children, Commands, EntityCommands, Query, With}
     },
     math::{Quat, Vec3},
     picking::{
@@ -27,6 +27,7 @@ use crate::{
     piece::r#move::on_move,
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
+    stack::{StackAboveQueryExt, StackBelowQueryExt},
     state::GameState,
     view::{handle_context_menu, handle_piece_pressed}
 };
@@ -180,8 +181,10 @@ fn recolor_on<E: EntityEvent>(
 #[instrument(skip_all)]
 pub fn on_piece_drop(
     mut drop: On<Pointer<DragDrop>>,
-    mut src_query: Query<(&ChildOf, &StackingGroup, &GlobalTransform, &mut Transform), With<Piece>>,
-    dst_query: Query<(&StackingGroup, &GlobalTransform), With<Piece>>,
+    mut base_query: Query<(&ChildOf, &StackingGroup, &GlobalTransform, &mut Transform), With<Piece>>,
+    top_query: Query<(&StackingGroup, &GlobalTransform), With<Piece>>,
+    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
+    d_query: Query<(Option<&Children>, &StackingGroup)>,
     mut commands: Commands
 ) -> Result
 {
@@ -194,33 +197,39 @@ pub fn on_piece_drop(
         return Ok(());
     }
 
-    let Ok((src_parent, src_sg, src_gt, mut src_t)) = src_query.get_mut(src)
+    let base = a_query.bottom(src);
+
+    if base == dst {
+        return Ok(());
+    }
+
+    let Ok((base_parent, base_sg, base_gt, mut base_t)) = base_query.get_mut(base)
     else {
         return Ok(());
     };
 
-    let Ok((dst_sg, dst_gt)) = dst_query.get(dst)
+    let top = d_query.top(dst);
+
+    let Ok((top_sg, top_gt)) = top_query.get(top)
     else {
         return Ok(());
     };
 
     drop.propagate(false);
 
-// TODO: handle dropping whole stack
-
-    if src_sg == dst_sg {
-        // stack src onto dst if they are in the same stacking group
-        // give src a stacking offset
-        src_t.translation = Vec3::new(2.0, 2.0, 1.0);
+    if base_sg == top_sg {
+        // stack base onto top if they are in the same stacking group
+        // give base a stacking offset
+        base_t.translation = Vec3::new(2.0, 2.0, 1.0);
     }
-    else if src_parent.0 != dst {
+    else if base_parent.0 != top {
         // otherwise keep the same global transform if reparenting
-        *src_t = src_gt.reparented_to(dst_gt);
+        *base_t = base_gt.reparented_to(top_gt);
     }
 
-    if src_parent.0 != dst {
-        // reparent src to dst
-        commands.entity(dst).add_child(src);
+    if base_parent.0 != top {
+        // reparent base to top
+        commands.entity(top).add_child(base);
     }
 
     Ok(())

@@ -12,7 +12,7 @@ use std::{
 
 use crate::piece::StackingGroup;
 
-pub struct StackBelowIter<'w, 's, D: QueryData, F: QueryFilter, R: Relationship>
+struct StackBelowIter<'w, 's, D: QueryData, F: QueryFilter, R: Relationship>
 where
     D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w R>, &'w StackingGroup)>
 {
@@ -63,7 +63,7 @@ where
     }
 }
 
-pub struct StackAboveIter<'w, 's, D: QueryData, F: QueryFilter, S: RelationshipTarget>
+struct StackAboveIter<'w, 's, D: QueryData, F: QueryFilter, S: RelationshipTarget>
 where
     D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w S>, &'w StackingGroup)>
 {
@@ -91,7 +91,7 @@ where
         Self {
             children_query,
             stacking_group,
-            next 
+            next
         }
     }
 }
@@ -134,4 +134,64 @@ where
         .rev()
         .chain(iter::once(entity))
         .chain(StackAboveIter::new(children_query, entity))
+}
+
+pub trait StackAboveQueryExt<'w> {
+    fn iter_above(
+        &'w self,
+        entity: Entity
+    ) -> impl Iterator<Item = Entity>;
+
+    fn top(&'w self, entity: Entity) -> Entity;
+}
+
+impl<'w, 's, D, F, S> StackAboveQueryExt<'w> for Query<'w, 's, D, F>
+where
+    D: QueryData,
+    D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w S>, &'w StackingGroup)>,
+    F: QueryFilter,
+    S: RelationshipTarget
+{
+    fn iter_above(
+        &'w self,
+        entity: Entity
+    ) -> impl Iterator<Item = Entity>
+    {
+        StackAboveIter::new(self, entity)
+    }
+
+    fn top(&'w self, entity: Entity) -> Entity
+    {
+        self.iter_above(entity).last().unwrap_or(entity)
+    }
+}
+
+pub trait StackBelowQueryExt<'w> {
+    fn iter_below(
+        &'w self,
+        entity: Entity
+    ) -> impl Iterator<Item = Entity>;
+
+    fn bottom(&'w self, entity: Entity) -> Entity;
+}
+
+impl<'w, 's, D, F, R> StackBelowQueryExt<'w> for Query<'w, 's, D, F>
+where
+    D: QueryData,
+    D::ReadOnly: QueryData<Item<'w, 's> = (Option<&'w R>, &'w StackingGroup)>,
+    F: QueryFilter,
+    R: Relationship
+{
+    fn iter_below(
+        &'w self,
+        entity: Entity
+    ) -> impl Iterator<Item = Entity>
+    {
+        StackBelowIter::new(self, entity)
+    }
+
+    fn bottom(&'w self, entity: Entity) -> Entity
+    {
+        self.iter_below(entity).last().unwrap_or(entity)
+    }
 }

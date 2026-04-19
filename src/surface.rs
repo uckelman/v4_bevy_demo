@@ -18,7 +18,8 @@ use crate::{
     GameState,
     maxz::MaxZ,
     object::ObjectId,
-    piece::Piece
+    piece::{Piece, StackingGroup},
+    stack::StackBelowQueryExt
 };
 
 pub mod create;
@@ -54,17 +55,19 @@ pub fn spawn_surface(
 #[instrument(skip_all)]
 pub fn on_piece_drop(
     mut drop: On<Pointer<DragDrop>>,
-    mut src_query: Query<(&ChildOf, &GlobalTransform, &mut Transform), (With<Piece>, Without<Surface>)>,
+    mut base_query: Query<(&ChildOf, &GlobalTransform, &mut Transform), (With<Piece>, Without<Surface>)>,
     surface_query: Query<&ForSurface>,
     dst_query: Query<&GlobalTransform>,
+    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
     mut commands: Commands
 ) -> Result
 {
     debug!("");
 
     let src = drop.event().dropped;
+    let base = a_query.bottom(src);
 
-    let Ok((src_parent, src_gt, mut t)) = src_query.get_mut(src) else {
+    let Ok((base_parent, base_gt, mut base_t)) = base_query.get_mut(base) else {
         return Ok(());
     };
 
@@ -72,12 +75,12 @@ pub fn on_piece_drop(
 
     let dst = surface_query.get(drop.event().event_target())?.0;
 
-    if src_parent.0 != dst {
+    if base_parent.0 != dst {
         let dst_gt = dst_query.get(dst)?;
 
-        // reparent to surface
-        *t = src_gt.reparented_to(dst_gt);
-        commands.entity(dst).add_child(src);
+        // reparent stack base to surface
+        *base_t = base_gt.reparented_to(dst_gt);
+        commands.entity(dst).add_child(base);
         eprintln!("surface {}", dst);
     }
 

@@ -16,7 +16,8 @@ use tracing::instrument;
 
 use crate::{
     maxz::MaxZ,
-    piece::Piece
+    piece::{Piece, StackingGroup},
+    stack::StackBelowQueryExt
 };
 
 #[derive(Default, Resource)]
@@ -57,6 +58,7 @@ pub fn on_piece_pressed(
     root_query: Query<&ChildOf>,
     mut maxz_query: Query<&mut MaxZ>,
     global_transform_query: Query<&GlobalTransform>,
+    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
     mut anchor: ResMut<RaiseAnchor>
 ) -> Result
 {
@@ -67,7 +69,9 @@ pub fn on_piece_pressed(
     }
 
     let entity = press.event().event_target();
-    let (parent, mut transform) = query.get_mut(entity)?;
+
+    let base = a_query.bottom(entity);
+    let (parent, mut transform) = query.get_mut(base)?;
 
     // update max z
     let root = root_query.root_ancestor(entity);
@@ -75,8 +79,8 @@ pub fn on_piece_pressed(
 
     max_z.0 += 1.0;
 
-    let parent_t = global_transform_query.get(parent.0)?;
-    let local_z = max_z.0 - parent_t.translation().z;
+    let parent_gt = global_transform_query.get(parent.0)?;
+    let local_z = max_z.0 - parent_gt.translation().z;
 
 // TODO: maybe we don't want this?
     raise_piece_anchored(&mut transform, local_z, &mut anchor);

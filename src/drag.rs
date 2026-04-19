@@ -14,7 +14,6 @@ use bevy::{
     },
     prelude::{Camera, GlobalTransform, Projection, State, trace, Transform}
 };
-use itertools::Itertools;
 use tracing::instrument;
 
 use crate::{
@@ -27,7 +26,7 @@ use crate::{
     },
     raise::raise_piece,
     select::Selected,
-    stack::StackBelowIter,
+    stack::StackBelowQueryExt,
     util::AsOrthographicProjection
 };
 
@@ -70,7 +69,7 @@ pub fn on_piece_drag_start(
     let mut sel_max_z = f32::NEG_INFINITY;
 
     for (e, p, gt, t) in query {
-        if StackBelowIter::new(&a_query, e).next().is_none() {
+        if a_query.iter_below(e).next().is_none() {
             bottoms.push((e, p, t));
         }
 
@@ -83,6 +82,9 @@ pub fn on_piece_drag_start(
         if z > sel_max_z {
             sel_max_z = z;
         }
+
+        // make sure drop events do not hit the selection
+        commands.entity(e).insert(Pickable::IGNORE);
     }
 
     // selection must be on one surface; get it from the first selected item
@@ -103,13 +105,10 @@ pub fn on_piece_drag_start(
 
         // set the drag anchor, prevent picking from hitting piece
         commands.entity(entity)
-            .insert((
-                DragAnchor {
-                    parent: parent.0,
-                    pos: transform.translation
-                },
-                Pickable::IGNORE
-            ));
+            .insert(DragAnchor {
+                parent: parent.0,
+                pos: transform.translation
+            });
     }
 
     Ok(())
@@ -159,6 +158,7 @@ pub fn on_piece_drag(
 pub fn on_piece_drag_end(
     mut drag: On<Pointer<DragEnd>>,
     query: Query<(Entity, &ChildOf, &Transform, &DragAnchor)>,
+    s_query: Query<Entity, (With<Draggable>, With<Selected>)>,
     context_menu_state: Res<State<ContextMenuState>>,
     mut commands: Commands
 )
@@ -172,6 +172,10 @@ pub fn on_piece_drag_end(
     drag.propagate(false);
 
     if drag.button == PointerButton::Primary {
+        for e in s_query {
+            commands.entity(e).insert(Pickable::default());
+        }
+
         // remove the drag anchor, make piece pickable again, move it
         let mut eptai = query.iter();
         match eptai.len() {

@@ -49,12 +49,6 @@ pub fn handle_piece_pressed(
         let Ok(entity_sg) = sg_query.get(entity) else { return; };
 
         let stack_iter = stack::iter(entity, &a_query, &d_query);
-        for e in stack_iter {
-            eprintln!("{e}");
-        }
-        eprintln!();
-
-        let stack_iter = stack::iter(entity, &a_query, &d_query);
 
         if ctrl_pressed(&modifiers) {
             // ctrl toggles
@@ -87,12 +81,6 @@ pub fn handle_piece_pressed(
         if selection_query.contains(entity) {
             return;
         }
-
-        let stack_iter = stack::iter(entity, &a_query, &d_query);
-        for e in stack_iter {
-            eprintln!("{e}");
-        }
-        eprintln!();
 
         let stack_iter = stack::iter(entity, &a_query, &d_query);
 
