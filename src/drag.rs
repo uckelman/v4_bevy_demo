@@ -39,9 +39,6 @@ pub struct DragAnchor {
     pos: Vec3
 }
 
-// TODO: surface needs a MaxZ covering all descendants, otherwise we
-// can't raise a drag properly
-
 #[instrument(skip_all)]
 pub fn on_piece_drag_start(
     mut drag: On<Pointer<DragStart>>,
