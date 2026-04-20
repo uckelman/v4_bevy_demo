@@ -47,7 +47,6 @@ pub fn handle_piece_pressed(
         PointerButton::Primary if ctrl_pressed(&modifiers) => {
             // ctrl toggles
             trace!("ctrl");
-            let stack_iter = stack::iter(&a_query, &d_query, entity);
             stack::iter(&a_query, &d_query, entity)
                 .for_each(|e| toggle(e, &selection_query, &mut commands));
         },
