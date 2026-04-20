@@ -210,6 +210,8 @@ fn on_item_selection(
     mut commands: Commands
 )
 {
+    press.propagate(false);
+
     let target = press.original_event_target();
 
     if let Ok(item) = menu_items.get(target)
@@ -228,8 +230,6 @@ fn on_item_selection(
             }
         }
     }
-
-    press.propagate(false);
 }
 
 #[instrument(skip_all)]
