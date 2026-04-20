@@ -30,7 +30,6 @@ pub fn handle_piece_pressed(
     mut press: On<Pointer<Press>>,
     modifiers: Res<ButtonInput<KeyCode>>,
     selection_query: Query<Entity, With<Selected>>,
-    sg_query: Query<&StackingGroup>,
     d_query: Query<(Option<&Children>, &StackingGroup)>,
     a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
     mut commands: Commands
@@ -38,56 +37,42 @@ pub fn handle_piece_pressed(
 {
     trace!("");
 
-    // prevent the event from bubbling up
+    // prevent the event from bubbling up to parent
     press.propagate(false);
 
+    let entity = press.event().event_target();
+
     // primary buttons selects
-    if press.button == PointerButton::Primary
-    {
-        let entity = press.event().event_target();
-
-        let Ok(entity_sg) = sg_query.get(entity) else { return; };
-
-        let stack_iter = stack::iter(&a_query, &d_query, entity);
-
-        if ctrl_pressed(&modifiers) {
+    match press.button {
+        PointerButton::Primary if ctrl_pressed(&modifiers) => {
             // ctrl toggles
             trace!("ctrl");
-            stack_iter.for_each(|e| toggle(e, &selection_query, &mut commands));
-        }
-        else if shift_pressed(&modifiers) {
+            let stack_iter = stack::iter(&a_query, &d_query, entity);
+            stack::iter(&a_query, &d_query, entity)
+                .for_each(|e| toggle(e, &selection_query, &mut commands));
+        },
+        PointerButton::Primary if shift_pressed(&modifiers) => {
             // shift adds
             trace!("shift");
-            stack_iter.for_each(|e| select(e, &mut commands));
-        }
-        else {
+            stack::iter(&a_query, &d_query, entity)
+                .for_each(|e| select(e, &mut commands));
+        },
+        PointerButton::Primary | PointerButton::Secondary => {
+            // if the target is selected, don't change the selection
+            // if the target is not selected, select only the target
+
+            if selection_query.contains(entity) {
+                return;
+            }
+
             // unmodified sets if not selected
             trace!("unmodified");
             deselect_all(&selection_query, &mut commands);
-            stack_iter.for_each(|e| select(e, &mut commands));
-        }
-    }
-    else if press.button == PointerButton::Secondary &&
-        !ctrl_pressed(&modifiers) &&
-        !shift_pressed(&modifiers)
-    {
-        // if the target is selected, don't change the selection
-        // if the target is not selected, select only the target
 
-        let entity = press.event().event_target();
-
-        let Ok(entity_sg) = sg_query.get(entity) else { return; };
-
-        if selection_query.contains(entity) {
-            return;
-        }
-
-        let stack_iter = stack::iter(&a_query, &d_query, entity);
-
-        // unmodified sets if not selected
-        trace!("unmodified");
-        deselect_all(&selection_query, &mut commands);
-        stack_iter.for_each(|e| select(e, &mut commands));
+            stack::iter(&a_query, &d_query, entity)
+                .for_each(|e| select(e, &mut commands));
+        },
+        _ => {}
     }
 }
 
@@ -100,7 +85,7 @@ pub fn handle_context_menu(
 {
     trace!("");
 
-    // prevent the event from bubbling up
+    // prevent the event from bubbling up to parent
     press.propagate(false);
 
     // all buttons close context menus
