@@ -13,7 +13,7 @@ use bevy::{
         Pickable,
         events::{DragDrop, Pointer}
     },
-    prelude::{Color, debug, DespawnOnExit, GlobalTransform, Sprite, trace, Transform, Visibility}
+    prelude::{Color, debug, GlobalTransform, Sprite, trace, Transform, Visibility}
 };
 use tracing::instrument;
 
@@ -28,7 +28,6 @@ use crate::{
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
     stack::{StackAboveQueryExt, StackBelowQueryExt},
-    state::GameState,
     view::{handle_context_menu, handle_piece_pressed}
 };
 
@@ -147,7 +146,6 @@ pub fn spawn_piece(
         ),
         Pickable::default(),
         Visibility::Inherited,
-        DespawnOnExit(GameState::Game)
     ));
 
     ec.observe(handle_context_menu);

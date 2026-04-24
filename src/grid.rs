@@ -19,7 +19,7 @@ use bevy::{
         Pickable,
         events::{DragDrop, Over, Out, Pointer, Move}
     },
-    prelude::{Color, ColorMaterial, debug, DespawnOnExit, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform, Visibility}
+    prelude::{Color, ColorMaterial, debug, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform, Visibility}
 };
 use tracing::{enabled, instrument, Level};
 
@@ -28,7 +28,6 @@ use crate::{
     object::ObjectId,
     piece::{Piece, StackingGroup},
     stack::StackBelowQueryExt,
-    state::GameState
 };
 
 pub mod create;
@@ -113,8 +112,7 @@ fn spawn_rect_grid(
         MeshMaterial2d(materials.add(Color::srgba(0.0, 1.0, 0.0, 0.2))),
         Pickable::default(),
         tg,
-        ChildOf(parent),
-        DespawnOnExit(GameState::Game)
+        ChildOf(parent)
     ));
 
     for r in 0..*rows {
@@ -128,8 +126,7 @@ fn spawn_rect_grid(
                     MeshMaterial2d(unhighlight_material.clone()),
                     Pickable::default(),
                     ct,
-                    ChildOf(parent),
-                    DespawnOnExit(GameState::Game)
+                    ChildOf(parent)
                 ))
                 .observe(recolor_cell_on::<Pointer<Over>>(highlight_color))
                 .observe(recolor_cell_on::<Pointer<Out>>(unhighlight_color));
@@ -140,8 +137,7 @@ fn spawn_rect_grid(
                     MeshMaterial2d(grid_material.clone()),
                     Pickable::default(),
                     ct,
-                    ChildOf(parent),
-                    DespawnOnExit(GameState::Game)
+                    ChildOf(parent)
                 ));
         }
     }
@@ -265,8 +261,7 @@ fn spawn_hex_grid(
             ChildOf(parent),
             gt,
             Pickable::IGNORE,
-            Visibility::Inherited,
-            DespawnOnExit(GameState::Game)
+            Visibility::Inherited
         ))
     }
     else {
@@ -276,8 +271,7 @@ fn spawn_hex_grid(
             ChildOf(parent),
             gt,
             Pickable::IGNORE,
-            Visibility::Inherited,
-            DespawnOnExit(GameState::Game)
+            Visibility::Inherited
         ))
     }.id();
 
@@ -306,8 +300,7 @@ fn spawn_hex_grid(
                     ChildOf(gid),
                     ct,
                     Pickable::default(),
-                    Visibility::Inherited,
-                    DespawnOnExit(GameState::Game)
+                    Visibility::Inherited
                 ))
                 .observe(recolor_cell_on::<Pointer<Over>>(highlight_color))
                 .observe(recolor_cell_on::<Pointer<Out>>(unhighlight_color))
@@ -320,8 +313,7 @@ fn spawn_hex_grid(
                 ChildOf(gid),
                 ct,
                 Pickable::IGNORE,
-                Visibility::Inherited,
-                DespawnOnExit(GameState::Game)
+                Visibility::Inherited
             ));
         }
     }
