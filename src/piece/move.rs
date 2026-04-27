@@ -83,7 +83,7 @@ fn apply_move<const DO: bool>(
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
     mut mov_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
-    mut parent_query: Query<&GlobalTransform>,
+    parent_query: Query<&GlobalTransform>,
     mut commands: Commands
 ) -> Result
 {
