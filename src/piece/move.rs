@@ -8,7 +8,7 @@ use bevy::{
         prelude::{Commands, Entity, Query}
     },
     math::Vec3,
-    prelude::{trace, Transform}
+    prelude::{GlobalTransform, trace, Transform}
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -107,7 +107,8 @@ pub fn on_move_redo(
     evt: On<RedoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<&mut Transform>,
+    mut src_query: Query<(&mut Transform, &GlobalTransform)>,
+    mut dst_query: Query<&GlobalTransform>,
     mut commands: Commands
 ) -> Result
 {
@@ -116,13 +117,19 @@ pub fn on_move_redo(
     // get the entity being edited
     let entity = *objmap.0.get(&mov.object_id).unwrap();
 
+    let (mut src_t, src_gt) = src_query.get_mut(entity)?;
+
     if mov.src_parent_id != mov.dst_parent_id {
         let dst_parent = *objmap.0.get(&mov.dst_parent_id).unwrap();
+
+        // maintain the child's rotation
+        let dst_gt = dst_query.get(dst_parent)?;
+        *src_t = src_gt.reparented_to(dst_gt);
+
         commands.entity(dst_parent).add_child(entity);
     }
 
-    let mut t = query.get_mut(entity)?;
-    t.translation = mov.dst;
+    src_t.translation = mov.dst;
 
     Ok(())
 }
