@@ -32,6 +32,9 @@ pub mod create;
 struct RectGrid;
 
 #[derive(Component, Default)]
+pub struct RectGridCell;
+
+#[derive(Component, Default)]
 struct HexGrid;
 
 #[derive(Component, Default)]

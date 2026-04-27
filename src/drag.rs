@@ -7,7 +7,7 @@ use bevy::{
         error::Result,
         name::Name,
         observer::On,
-        prelude::{ChildOf, Commands, Entity, Query, Resource, With, Without}
+        prelude::{ChildOf, Commands, Entity, Or, Query, Resource, With, Without}
     },
     image::Image,
     input::{
@@ -28,7 +28,7 @@ use tracing::instrument;
 
 use crate::{
     context_menu::ContextMenuState,
-    grid::HexGridCell,
+    grid::{HexGridCell, RectGridCell},
     keys::{ctrl_pressed, shift_pressed},
     log::{OpenGroupEvent, CloseGroupEvent},
     maxz::MaxZ,
@@ -201,7 +201,7 @@ pub fn handle_drop(
     sg_query: Query<&StackingGroup>,
     sprite_collision_query: Query<(Entity, &GlobalTransform, &Anchor, &Sprite, &Name)>,
     mut ray_cast: MeshRayCast,
-    hgc_query: Query<(), With<HexGridCell>>,
+    cell_query: Query<(), Or<(With<HexGridCell>, With<RectGridCell>)>>,
 //    mesh_collision_query: Query<(Entity, &GlobalTransform)>,
     assets: Res<Assets<Image>>,
     mut commands: Commands
@@ -283,10 +283,10 @@ where
         .collect::<Vec<_>>();
 
     // set up ray caster
-    let hex_filter = |entity| hgc_query.contains(entity);
+    let cell_filter = |entity| cell_query.contains(entity);
 
     let mrcs = MeshRayCastSettings::default()
-        .with_filter(&hex_filter)
+        .with_filter(&cell_filter)
         .always_early_exit();
 
     if bottoms.len() > 1 {
@@ -304,9 +304,9 @@ where
             .filter(|(_, _, base, bb)| esrc != base && bb.contains(b_drop_pos))
             .map(|(e, z, ..)| (*e, *z, DropTargetType::Piece));
 
-        // find hex hits
+        // find grid cell hits
         let ray = Ray3d::new(b_drop_pos.extend(max_z.0 + 1.0), Dir3::NEG_Z);
-        let hexes = ray_cast.cast_ray(ray, &mrcs)
+        let cells = ray_cast.cast_ray(ray, &mrcs)
             .iter()
             .map(|(e, h)| (*e, h.point.z, DropTargetType::Grid));
 
@@ -316,7 +316,7 @@ where
         // find top hit
         let (ehit, htype) = std::iter::once(surf)
             .chain(pieces)
-            .chain(hexes)
+            .chain(cells)
             .max_by(|(_, za, _), (_, zb, _)| za.partial_cmp(zb).expect("NaN"))
             .map(|(e, _, t)| (e, t))
             .expect("Surface will be hit if nothing else is");
