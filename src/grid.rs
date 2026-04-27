@@ -4,6 +4,7 @@ use bevy::{
         change_detection::ResMut,
         component::Component,
         entity::Entity,
+        name::Name,
         observer::On,
         prelude::{ChildOf, Commands, Query, With}
     },
@@ -49,8 +50,11 @@ struct RectGridParams {
     cw: f32,
     rh: f32
 }
+#[derive(Clone, Component, Copy, Debug)]
+pub struct GridTypeId(pub u32);
 
 fn spawn_rect_grid(
+    oid: u32,
     def: &RectGridDefinition,
     mut t: Transform,
     parent: Entity,
@@ -157,6 +161,7 @@ fn anchor_to_vec3(rect: Rectangle, anchor: Anchor) -> Vec3 {
 }
 
 fn spawn_hex_grid(
+    oid: u32,
     def: &HexGridDefinition,
     mut t: Transform,
     parent: Entity,
@@ -167,6 +172,7 @@ fn spawn_hex_grid(
 {
     let HexGridDefinition {
         id,
+        name,
         x,
         y,
         anchor,
@@ -319,6 +325,7 @@ fn spawn_hex_grid(
 }
 
 pub fn spawn_grid(
+    oid: u32,
     g: &GridDefinition,
     parent: Entity,
     t: Transform,
@@ -329,9 +336,9 @@ pub fn spawn_grid(
 {
     match g {
         GridDefinition::Rect(def) =>
-            spawn_rect_grid(def, t, parent, meshes, materials, commands),
+            spawn_rect_grid(oid, def, t, parent, meshes, materials, commands),
         GridDefinition::Hex(def) =>
-            spawn_hex_grid(def, t, parent, meshes, materials, commands)
+            spawn_hex_grid(oid, def, t, parent, meshes, materials, commands)
     }
 }
 

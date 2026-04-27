@@ -135,7 +135,7 @@ pub fn on_create_redo(
     };
 
     spawn_grid(
-//        cr.object_id,
+        cr.object_id,
         gdef,
         parent,
         t,
