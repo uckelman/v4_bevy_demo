@@ -54,7 +54,7 @@ use crate::{
     assets::{LoadingHandles, load_assets, mark_images_loaded},
     config::{Config, load_config},
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
-    debug::{cursor_events, dump_edits, pick_dbg},
+    drag::DragOrigin,
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
     log::{handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
     log_deserialize::{deserialize_edits, update_next_object_id},
@@ -293,8 +293,8 @@ fn game_plugin(app: &mut App) {
         .add_observer(on_group_close)
         .add_observer(on_group_undo)
         .add_observer(on_group_redo)
-        .add_observer(dump_edits)
-        .add_observer(pick_dbg);
+//        .add_observer(debug::dump_edits)
+        .add_observer(debug::pick_dbg);
 }
 
 fn display_game(
@@ -310,6 +310,7 @@ fn display_game(
         .observe(selection_rect_drag_end)
         .observe(trigger_close_context_menus_press);
 
+    commands.insert_resource(DragOrigin::default());
     commands.insert_resource(RaiseAnchor::default());
     commands.insert_resource(SelectionRect::default());
 

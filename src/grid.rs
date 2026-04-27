@@ -17,17 +17,16 @@ use bevy::{
     mesh::{Mesh, Mesh2d},
     picking::{
         Pickable,
-        events::{DragDrop, Over, Out, Pointer, Move}
+        events::{Over, Out, Pointer, Move}
     },
     prelude::{Color, ColorMaterial, debug, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform, Visibility}
 };
 use tracing::{enabled, instrument, Level};
 
 use crate::{
+    drag::handle_drop,
     gamebox::{Anchor, ColumnStagger, GridDefinition, HexGridDefinition, RectGridDefinition},
-    object::ObjectId,
-    piece::{Piece, StackingGroup},
-    stack::StackBelowQueryExt,
+    object::ObjectId
 };
 
 pub mod create;
@@ -39,7 +38,7 @@ struct RectGrid;
 struct HexGrid;
 
 #[derive(Component, Default)]
-struct HexGridCell;
+pub struct HexGridCell;
 
 #[derive(Component, Default)]
 struct RectGridParams {
@@ -304,7 +303,7 @@ fn spawn_hex_grid(
                 ))
                 .observe(recolor_cell_on::<Pointer<Over>>(highlight_color))
                 .observe(recolor_cell_on::<Pointer<Out>>(unhighlight_color))
-                .observe(on_piece_drop);
+                .observe(handle_drop);
 
             // the outline
             commands.spawn((
@@ -353,46 +352,6 @@ fn recolor_cell_on<E: EntityEvent>(
                 .insert(MeshMaterial2d(materials.add(color)));
         }
     }
-}
-
-// TODO: multiple selection drops
-
-#[instrument(skip_all)]
-pub fn on_piece_drop(
-    mut drop: On<Pointer<DragDrop>>,
-    mut base_query: Query<(&ChildOf, &GlobalTransform, &mut Transform), (With<Piece>, Without<HexGridCell>)>,
-    dst_query: Query<&GlobalTransform, With<HexGridCell>>,
-    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
-    mut commands: Commands
-) -> Result
-{
-    debug!("");
-
-    let src = drop.event().dropped;
-    let base = a_query.bottom(src);
-
-    let Ok((base_parent, base_gt, mut base_t)) = base_query.get_mut(base) else {
-        return Ok(());
-    };
-
-    drop.propagate(false);
-
-    let dst = drop.event().event_target();
-
-    if base_parent.0 != dst {
-        let dst_gt = dst_query.get(dst)?;
-
-        // reparent stack base to grid cell
-        *base_t = base_gt.reparented_to(dst_gt);
-        commands.entity(dst).add_child(base);
-        eprintln!("grid cell {dst}");
-    }
-
-    // snap piece to center of grid cell
-    base_t.translation.x = 0.0;
-    base_t.translation.y = 0.0;
-
-    Ok(())
 }
 
 /*

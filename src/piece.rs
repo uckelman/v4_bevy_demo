@@ -20,7 +20,7 @@ use tracing::instrument;
 use crate::{
     actionfunc::{ActionFunc, add_action_observers},
     assets::{ImageSource, SpriteHandles},
-    drag::{Draggable, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
+    drag::{Draggable, handle_drop, on_piece_drag_start, on_piece_drag, on_piece_drag_end},
     gamebox::{Anchor, PieceType},
     keys::KeyBinding,
     object::ObjectId,
@@ -70,7 +70,6 @@ pub fn add_draggable_observers(ec: &mut EntityCommands) {
         .observe(on_piece_drag_start)
         .observe(on_piece_drag)
         .observe(on_piece_drag_end)
-        .observe(on_piece_drop)
         .observe(on_move);
 }
 
@@ -148,7 +147,9 @@ pub fn spawn_piece(
         Visibility::Inherited,
     ));
 
-    ec.observe(handle_context_menu);
+    ec
+        .observe(handle_context_menu)
+        .observe(handle_drop);
 
     if p.selectable {
         ec.insert(Selectable);
@@ -174,61 +175,4 @@ fn recolor_on<E: EntityEvent>(
             sprite.color = color;
         }
     }
-}
-
-#[instrument(skip_all)]
-pub fn on_piece_drop(
-    mut drop: On<Pointer<DragDrop>>,
-    mut base_query: Query<(&ChildOf, &StackingGroup, &GlobalTransform, &mut Transform), With<Piece>>,
-    top_query: Query<(&StackingGroup, &GlobalTransform), With<Piece>>,
-    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
-    d_query: Query<(Option<&Children>, &StackingGroup)>,
-    mut commands: Commands
-) -> Result
-{
-    debug!("");
-
-    let src = drop.event().dropped;
-    let dst = drop.event().event_target();
-
-    if src == dst {
-        return Ok(());
-    }
-
-    let base = a_query.bottom(src);
-
-    if base == dst {
-        return Ok(());
-    }
-
-    let Ok((base_parent, base_sg, base_gt, mut base_t)) = base_query.get_mut(base)
-    else {
-        return Ok(());
-    };
-
-    let top = d_query.top(dst);
-
-    let Ok((top_sg, top_gt)) = top_query.get(top)
-    else {
-        return Ok(());
-    };
-
-    drop.propagate(false);
-
-    if base_sg == top_sg {
-        // stack base onto top if they are in the same stacking group
-        // give base a stacking offset
-        base_t.translation = Vec3::new(2.0, 2.0, 1.0);
-    }
-    else if base_parent.0 != top {
-        // otherwise keep the same global transform if reparenting
-        *base_t = base_gt.reparented_to(top_gt);
-    }
-
-    if base_parent.0 != top {
-        // reparent base to top
-        commands.entity(top).add_child(base);
-    }
-
-    Ok(())
 }

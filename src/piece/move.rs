@@ -19,7 +19,7 @@ use crate::{
     object::{ObjectId, ObjectIdMap}
 };
 
-#[derive(Clone, EntityEvent)]
+#[derive(Clone, Debug, EntityEvent)]
 pub struct DoMoveEvent {
     pub entity: Entity,
     pub src_parent: Entity,

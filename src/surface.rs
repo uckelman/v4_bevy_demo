@@ -3,23 +3,25 @@ use bevy::{
         component::Component,
         event::EntityEvent,
         error::Result,
+        name::Name,
         observer::On,
         prelude::{ChildOf, Commands, Entity, Query, With, Without}
     },
     picking::{
         Pickable,
-        events::{DragDrop, Pointer}
+        backend::HitData,
+        events::{DragDrop, Pointer},
+        pointer::Location
     },
-    prelude::{debug, DespawnOnExit, GlobalTransform, Transform, Visibility}
+    prelude::{Camera, debug, DespawnOnExit, GlobalTransform, Transform, Visibility}
 };
 use tracing::instrument;
 
 use crate::{
     GameState,
+    drag::{DragOrigin, Draggable, handle_drop},
     maxz::MaxZ,
-    object::ObjectId,
-    piece::{Piece, StackingGroup},
-    stack::StackBelowQueryExt
+    object::ObjectId
 };
 
 pub mod create;
@@ -39,50 +41,63 @@ pub fn spawn_surface(
     let id = commands.spawn((
         Surface,
         ObjectId(oid),
-//    Name::from(m.name.as_ref()),
+//        Name::from(m.name.as_ref()),
+        Name::from("surface"),
         Transform::IDENTITY,
+//        Transform::from_xyz(0.0, 0.0, f32::NEG_INFINITY),
         MaxZ(0.0),
         Pickable::IGNORE,
         Visibility::Inherited,
         DespawnOnExit(GameState::Game)
-    )).id();
+    ))
+    .observe(handle_drop)
+    .id();
 
     commands.entity(window)
         .insert(ForSurface(id))
-        .observe(on_piece_drop);
+        .observe(forward_drop);
 }
 
-#[instrument(skip_all)]
-pub fn on_piece_drop(
+pub fn forward_drop(
     mut drop: On<Pointer<DragDrop>>,
-    mut base_query: Query<(&ChildOf, &GlobalTransform, &mut Transform), (With<Piece>, Without<Surface>)>,
     surface_query: Query<&ForSurface>,
-    dst_query: Query<&GlobalTransform>,
-    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
+    c_query: Query<(&Camera, &GlobalTransform)>,
     mut commands: Commands
 ) -> Result
 {
-    debug!("");
-
-    let src = drop.event().dropped;
-    let base = a_query.bottom(src);
-
-    let Ok((base_parent, base_gt, mut base_t)) = base_query.get_mut(base) else {
-        return Ok(());
-    };
-
     drop.propagate(false);
 
-    let dst = surface_query.get(drop.event().event_target())?.0;
+    let dst = drop.event().event_target();
+    let src = drop.event().dropped;
 
-    if base_parent.0 != dst {
-        let dst_gt = dst_query.get(dst)?;
-
-        // reparent stack base to surface
-        *base_t = base_gt.reparented_to(dst_gt);
-        commands.entity(dst).add_child(base);
-        eprintln!("surface {}", dst);
+    if src == dst {
+        return Ok(());
     }
+
+    let dst = surface_query.get(dst)?.0;
+
+    let drop_pos = drop.hit.position.unwrap().truncate();
+    eprintln!("{drop_pos}");
+
+    let (camera, c_gt) = c_query.single()?;
+    let drop_pos = camera.viewport_to_world_2d(c_gt, drop_pos)?;
+
+    eprintln!("{drop_pos}");
+
+    let position = Some(drop_pos.extend(0.0));
+
+    commands.trigger(Pointer::new(
+        drop.pointer_id,
+        drop.pointer_location.clone(),
+        DragDrop {
+            hit: HitData {
+                position,
+                ..drop.event.hit
+            },
+            ..drop.event
+        },
+        dst
+    ));
 
     Ok(())
 }
