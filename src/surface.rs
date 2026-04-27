@@ -55,10 +55,10 @@ pub fn spawn_surface(
 
     commands.entity(window)
         .insert(ForSurface(id))
-        .observe(forward_drop);
+        .observe(forward_dragdrop_to_surface);
 }
 
-pub fn forward_drop(
+fn forward_dragdrop_to_surface(
     mut drop: On<Pointer<DragDrop>>,
     surface_query: Query<&ForSurface>,
     c_query: Query<(&Camera, &GlobalTransform)>,
@@ -77,12 +77,9 @@ pub fn forward_drop(
     let dst = surface_query.get(dst)?.0;
 
     let drop_pos = drop.hit.position.unwrap().truncate();
-    eprintln!("{drop_pos}");
 
     let (camera, c_gt) = c_query.single()?;
     let drop_pos = camera.viewport_to_world_2d(c_gt, drop_pos)?;
-
-    eprintln!("{drop_pos}");
 
     let position = Some(drop_pos.extend(0.0));
 
