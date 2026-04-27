@@ -16,7 +16,8 @@ use tracing::instrument;
 use crate::{
     edittype::EditType,
     log::{EditIndex, Edits, handle_do},
-    object::{ObjectId, ObjectIdMap}
+    object::{ObjectId, ObjectIdMap},
+    piece::{Location, Parent}
 };
 
 #[derive(Clone, Debug, EntityEvent)]
@@ -82,7 +83,8 @@ pub fn on_move_undo(
     evt: On<UndoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<&mut Transform>,
+    mut dst_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
+    mut src_query: Query<&GlobalTransform>,
     mut commands: Commands
 ) -> Result
 {
@@ -91,13 +93,23 @@ pub fn on_move_undo(
     // get the entity being edited
     let entity = *objmap.0.get(&mov.object_id).unwrap();
 
+    let (mut dst_parent, mut dst_loc, mut dst_t, dst_gt) = dst_query.get_mut(entity)?;
+
     if mov.src_parent_id != mov.dst_parent_id {
         let src_parent = *objmap.0.get(&mov.src_parent_id).unwrap();
+
+        // maintain the child's rotation
+        let src_gt = src_query.get(src_parent)?;
+        *dst_t = dst_gt.reparented_to(src_gt);
+
+        // reparent the child
+        dst_parent.0 = src_parent;
         commands.entity(src_parent).add_child(entity);
     }
 
-    let mut t = query.get_mut(entity)?;
-    t.translation = mov.src;
+    // update the location
+    dst_loc.0 = mov.src;
+    dst_t.translation = mov.src;
 
     Ok(())
 }
@@ -107,7 +119,7 @@ pub fn on_move_redo(
     evt: On<RedoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut src_query: Query<(&mut Transform, &GlobalTransform)>,
+    mut src_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
     mut dst_query: Query<&GlobalTransform>,
     mut commands: Commands
 ) -> Result
@@ -117,7 +129,7 @@ pub fn on_move_redo(
     // get the entity being edited
     let entity = *objmap.0.get(&mov.object_id).unwrap();
 
-    let (mut src_t, src_gt) = src_query.get_mut(entity)?;
+    let (mut src_parent, mut src_loc, mut src_t, src_gt) = src_query.get_mut(entity)?;
 
     if mov.src_parent_id != mov.dst_parent_id {
         let dst_parent = *objmap.0.get(&mov.dst_parent_id).unwrap();
@@ -126,9 +138,13 @@ pub fn on_move_redo(
         let dst_gt = dst_query.get(dst_parent)?;
         *src_t = src_gt.reparented_to(dst_gt);
 
+        // reparent the child
+        src_parent.0 =  dst_parent;
         commands.entity(dst_parent).add_child(entity);
     }
 
+    // update the location
+    src_loc.0 = mov.dst;
     src_t.translation = mov.dst;
 
     Ok(())

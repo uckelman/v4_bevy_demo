@@ -60,6 +60,15 @@ pub struct Action {
 #[derive(Clone, Component, Debug, Default)]
 pub struct Actions(pub Vec<Action>);
 
+#[derive(Clone, Component, Copy, Debug)]
+pub struct Parent(pub Entity);
+
+#[derive(Clone, Component, Copy, Debug)]
+pub struct Location(pub Vec3);
+
+#[derive(Clone, Component, Copy, Debug)]
+pub struct Angle(pub f32);
+
 pub fn add_draggable_observers(ec: &mut EntityCommands) {
     ec
         .observe(on_piece_drag_start)
@@ -119,27 +128,34 @@ pub fn spawn_piece(
     trace!("piece {}", t.translation.z);
 
     let mut ec = commands.spawn((
-        Piece,
-        ObjectId(oid),
-        PieceTypeId(pid),
-        Name::from(p.name.as_ref()),
-        StackingGroup(p.stacking_group),
-        sprite,
-        ChildOf(parent),
-        t,
-        anchor,
-        Faces(faces),
-        FaceUp(faceup),
-        Actions(p.actions.iter()
-            .map(|a| Action {
-                label: a.label.clone(),
-                action: a.action,
-                key: a.key.clone()
-            })
-            .collect::<Vec<_>>()
+        (
+            Piece,
+            ObjectId(oid),
+            PieceTypeId(pid),
+            Name::from(p.name.as_ref()),
+            StackingGroup(p.stacking_group),
+            Parent(parent),
+            Location(t.translation),
+            Angle(angle),
+            sprite,
+            ChildOf(parent),
+            t,
+            anchor
         ),
-        Pickable::default(),
-        Visibility::Inherited,
+        (
+            Faces(faces),
+            FaceUp(faceup),
+            Actions(p.actions.iter()
+                .map(|a| Action {
+                    label: a.label.clone(),
+                    action: a.action,
+                    key: a.key.clone()
+                })
+                .collect::<Vec<_>>()
+            ),
+            Pickable::default(),
+            Visibility::Inherited
+        )
     ));
 
     ec
