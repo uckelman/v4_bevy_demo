@@ -95,12 +95,11 @@ pub fn on_flip(
     )
 }
 
-fn apply_flip(
+fn apply_flip<const DO: bool>(
     event_target: Entity,
     edit: Query<&FlipEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>,
-    dir: i32
+    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
     // get the edit
@@ -110,7 +109,8 @@ fn apply_flip(
     // get the components of the entity being edited
     let (faces, mut up, mut sprite) = query.get_mut(entity)?;
     // apply the change to the entity
-    do_flip(faces, &mut up, &mut sprite, dir * flip.delta);
+    let delta = if DO { flip.delta } else { -flip.delta };
+    do_flip(faces, &mut up, &mut sprite, delta);
     Ok(())
 }
 
@@ -122,7 +122,7 @@ pub fn on_flip_undo(
     query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
-    apply_flip(evt.entity, edit, objmap, query, -1)
+    apply_flip::<false>(evt.entity, edit, objmap, query)
 }
 
 #[instrument(skip_all)]
@@ -133,5 +133,5 @@ pub fn on_flip_redo(
     query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
 ) -> Result
 {
-    apply_flip(evt.entity, edit, objmap, query, 1)
+    apply_flip::<true>(evt.entity, edit, objmap, query)
 }
