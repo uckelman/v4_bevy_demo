@@ -29,27 +29,18 @@ use crate::{
 
 pub mod create;
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Copy, Debug, Default)]
 struct RectGrid;
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Copy, Debug, Default)]
 pub struct RectGridCell;
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Copy, Debug, Default)]
 struct HexGrid;
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Copy, Debug, Default)]
 pub struct HexGridCell;
 
-#[derive(Component, Default)]
-struct RectGridParams {
-    x: f32,
-    y: f32,
-    cols: u32,
-    rows: u32,
-    cw: f32,
-    rh: f32
-}
 #[derive(Clone, Component, Copy, Debug)]
 pub struct GridTypeId(pub u32);
 
