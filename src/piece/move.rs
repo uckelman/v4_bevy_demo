@@ -122,9 +122,9 @@ pub fn on_move_undo(
     evt: On<UndoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut dst_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
-    mut src_query: Query<&GlobalTransform>,
-    mut commands: Commands
+    dst_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
+    src_query: Query<&GlobalTransform>,
+    commands: Commands
 ) -> Result
 {
     apply_move::<false>(
@@ -142,9 +142,9 @@ pub fn on_move_redo(
     evt: On<RedoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut src_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
-    mut dst_query: Query<&GlobalTransform>,
-    mut commands: Commands
+    src_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
+    dst_query: Query<&GlobalTransform>,
+    commands: Commands
 ) -> Result
 {
     apply_move::<true>(
