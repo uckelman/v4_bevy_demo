@@ -63,12 +63,11 @@ pub fn on_rotate(
     )
 }
 
-fn apply_rotate(
+fn apply_rotate<const DO: bool>(
     event_target: Entity,
     edit: Query<&RotateEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<(&mut Angle, &mut Transform)>,
-    dir: f32
+    mut query: Query<(&mut Angle, &mut Transform)>
 ) -> Result
 {
     // get the edit
@@ -82,7 +81,7 @@ fn apply_rotate(
     use std::f32::consts::PI;
     const DEG_TO_RAD: f32 = PI / 180.0;
 
-    a.0 = dir * rot.dtheta;
+    a.0 = if DO { rot.dtheta } else { -rot.dtheta };
     t.rotate_local_z(a.0 * DEG_TO_RAD);
 
     Ok(())
@@ -96,7 +95,7 @@ pub fn on_rotate_undo(
     query: Query<(&mut Angle, &mut Transform)>,
 ) -> Result
 {
-    apply_rotate(evt.entity, edit, objmap, query, -1.0)
+    apply_rotate::<false>(evt.entity, edit, objmap, query)
 }
 
 #[instrument(skip_all)]
@@ -107,5 +106,5 @@ pub fn on_rotate_redo(
     query: Query<(&mut Angle, &mut Transform)>,
 ) -> Result
 {
-    apply_rotate(evt.entity, edit, objmap, query, 1.0)
+    apply_rotate::<true>(evt.entity, edit, objmap, query)
 }
