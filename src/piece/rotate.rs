@@ -15,7 +15,8 @@ use tracing::instrument;
 use crate::{
     edittype::EditType,
     log::{EditIndex, Edits, handle_do},
-    object::{ObjectId, ObjectIdMap}
+    object::{ObjectId, ObjectIdMap},
+    piece::Angle
 };
 
 #[derive(Clone, EntityEvent)]
@@ -32,14 +33,6 @@ pub struct UndoRotateEvent {
 #[derive(EntityEvent)]
 pub struct RedoRotateEvent {
     pub entity: Entity
-}
-
-fn do_rotate(t: &mut Transform, dtheta: f32)
-{
-    use std::f32::consts::PI;
-    const DEG_TO_RAD: f32 = PI / 180.0;
-
-    t.rotate_local_z(dtheta * DEG_TO_RAD);
 }
 
 #[derive(Component, Debug, Deserialize, Serialize)]
@@ -74,7 +67,7 @@ fn apply_rotate(
     event_target: Entity,
     edit: Query<&RotateEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<&mut Transform>,
+    mut query: Query<(&mut Angle, &mut Transform)>,
     dir: f32
 ) -> Result
 {
@@ -83,9 +76,15 @@ fn apply_rotate(
     // get the entity being edited
     let entity = *objmap.0.get(&rot.object_id).unwrap();
     // get the components of the entity being edited
-    let mut t = query.get_mut(entity)?;
+    let (mut a, mut t) = query.get_mut(entity)?;
+
     // apply the change to the entity
-    do_rotate(&mut t, dir * rot.dtheta);
+    use std::f32::consts::PI;
+    const DEG_TO_RAD: f32 = PI / 180.0;
+
+    a.0 = dir * rot.dtheta;
+    t.rotate_local_z(a.0 * DEG_TO_RAD);
+
     Ok(())
 }
 
@@ -94,7 +93,7 @@ pub fn on_rotate_undo(
     evt: On<UndoRotateEvent>,
     edit: Query<&RotateEdit>,
     objmap: Res<ObjectIdMap>,
-    query: Query<&mut Transform>
+    query: Query<(&mut Angle, &mut Transform)>,
 ) -> Result
 {
     apply_rotate(evt.entity, edit, objmap, query, -1.0)
@@ -105,7 +104,7 @@ pub fn on_rotate_redo(
     evt: On<RedoRotateEvent>,
     edit: Query<&RotateEdit>,
     objmap: Res<ObjectIdMap>,
-    query: Query<&mut Transform>
+    query: Query<(&mut Angle, &mut Transform)>,
 ) -> Result
 {
     apply_rotate(evt.entity, edit, objmap, query, 1.0)
