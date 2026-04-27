@@ -293,8 +293,6 @@ where
         commands.trigger(OpenGroupEvent);
     }
 
-// TODO: maintain rotation on piece drop
-
     for (esrc, parent, src_gt, src_t) in &bottoms {
 
         let b_drop_pos = (src_gt.translation() + drag_dist).truncate();
