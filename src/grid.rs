@@ -1,14 +1,11 @@
 use bevy::{
     asset::Assets,
-    camera::Camera,
     ecs::{
         change_detection::ResMut,
         component::Component,
         entity::Entity,
-        error::Result,
-        name::Name,
         observer::On,
-        prelude::{ChildOf, Commands, Query, Single, With, Without}
+        prelude::{ChildOf, Commands, Query, With}
     },
     math::{
         Vec2, Vec3,
@@ -17,9 +14,9 @@ use bevy::{
     mesh::{Mesh, Mesh2d},
     picking::{
         Pickable,
-        events::{Over, Out, Pointer, Move}
+        events::{Over, Out, Pointer}
     },
-    prelude::{Color, ColorMaterial, debug, EntityEvent, GlobalTransform, MeshMaterial2d, trace, Transform, Visibility}
+    prelude::{Color, ColorMaterial, debug, EntityEvent, MeshMaterial2d, trace, Transform, Visibility}
 };
 use tracing::{enabled, instrument, Level};
 

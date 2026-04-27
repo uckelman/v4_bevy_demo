@@ -19,7 +19,7 @@ use tracing::instrument;
 
 use crate::{
     GameState,
-    drag::{DragOrigin, Draggable, handle_drop},
+    drag::handle_drop,
     maxz::MaxZ,
     object::ObjectId
 };

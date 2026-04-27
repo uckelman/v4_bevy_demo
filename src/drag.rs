@@ -5,7 +5,6 @@ use bevy::{
         change_detection::{Res, ResMut},
         component::Component,
         error::Result,
-        event::EntityEvent,
         name::Name,
         observer::On,
         prelude::{ChildOf, Commands, Entity, Query, Resource, With, Without}
@@ -39,7 +38,7 @@ use crate::{
     },
     raise::raise_piece,
     select::{deselect_all, select, Selected},
-    stack::{self, StackBelowQueryExt},
+    stack::StackBelowQueryExt,
     util::AsOrthographicProjection
 };
 

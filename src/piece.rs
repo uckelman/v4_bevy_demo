@@ -2,18 +2,14 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        error::Result,
         event::EntityEvent,
         name::Name,
         observer::On,
-        prelude::{ChildOf, Children, Commands, EntityCommands, Query, With}
+        prelude::{ChildOf, Commands, EntityCommands, Query}
     },
     math::{Quat, Vec3},
-    picking::{
-        Pickable,
-        events::{DragDrop, Pointer}
-    },
-    prelude::{Color, debug, GlobalTransform, Sprite, trace, Transform, Visibility}
+    picking::Pickable,
+    prelude::{Color, debug, Sprite, trace, Transform, Visibility}
 };
 use tracing::instrument;
 
@@ -27,7 +23,6 @@ use crate::{
     piece::r#move::on_move,
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
-    stack::{StackAboveQueryExt, StackBelowQueryExt},
     view::{handle_context_menu, handle_piece_pressed}
 };
 
