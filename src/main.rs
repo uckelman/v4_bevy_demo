@@ -54,7 +54,9 @@ use crate::{
     assets::{LoadingHandles, load_assets, mark_images_loaded},
     config::{Config, load_config},
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
+    debug::DebugState,
     drag::DragOrigin,
+    grid::{show_grid_bounding_boxes, hide_grid_bounding_boxes},
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
     log::{handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
     log_deserialize::{deserialize_edits, update_next_object_id},
@@ -261,9 +263,19 @@ fn game_plugin(app: &mut App) {
                 handle_undo.run_if(cfg_input_just_pressed::<UndoKey>),
                 handle_redo_over.run_if(cfg_input_just_pressed::<RedoKey>),
 
-                serialize_edits.run_if(input_just_pressed(KeyCode::KeyL))
+                serialize_edits.run_if(input_just_pressed(KeyCode::KeyL)),
+                debug::toggle_debug_state.run_if(input_just_pressed(KeyCode::Escape))
             )
             .run_if(in_state(GameState::Game))
+        )
+        .init_state::<DebugState>()
+        .add_systems(
+            OnEnter(DebugState::On),
+            show_grid_bounding_boxes
+        )
+        .add_systems(
+            OnEnter(DebugState::Off),
+            hide_grid_bounding_boxes
         )
         .add_observer(open_context_menu)
         .add_observer(close_context_menus)

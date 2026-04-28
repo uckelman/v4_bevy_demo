@@ -1,7 +1,7 @@
 use bevy::{
     asset::Assets,
     ecs::{
-        change_detection::ResMut,
+        change_detection::{Res, ResMut},
         component::Component,
         entity::Entity,
         name::Name,
@@ -36,7 +36,7 @@ struct RectGrid;
 pub struct RectGridCell;
 
 #[derive(Clone, Component, Copy, Debug, Default)]
-struct HexGrid;
+pub struct HexGrid;
 
 #[derive(Clone, Component, Copy, Debug, Default)]
 pub struct HexGridCell;
@@ -247,29 +247,17 @@ fn spawn_hex_grid(
     let highlight_material = materials.add(highlight_color);
     let unhighlight_material = materials.add(unhighlight_color);
 
-    let gid = if enabled!(Level::DEBUG) {
-        // render the bounding box
-        let gmesh = meshes.add(grect);
-        commands.spawn((
-            ObjectId(*id),
-            Mesh2d(gmesh),
-            MeshMaterial2d(materials.add(Color::srgba(0.0, 1.0, 0.0, 0.2))),
-            ChildOf(parent),
-            gt,
-            Pickable::IGNORE,
-            Visibility::Inherited
-        ))
-    }
-    else {
-        // don't render the bounding box
-        commands.spawn((
-            ObjectId(*id),
-            ChildOf(parent),
-            gt,
-            Pickable::IGNORE,
-            Visibility::Inherited
-        ))
-    }.id();
+    // the grid container
+    let gid = commands.spawn((
+        HexGrid,
+        ObjectId(oid),
+        GridTypeId(*id),
+        Name::from(name.as_ref()),
+        ChildOf(parent),
+        gt,
+        Pickable::IGNORE,
+        Visibility::Inherited
+    )).id();
 
     let stagger = match first {
         ColumnStagger::Low => 1,
@@ -349,6 +337,50 @@ fn recolor_cell_on<E: EntityEvent>(
                 .entity(entity)
                 .insert(MeshMaterial2d(materials.add(color)));
         }
+    }
+}
+
+#[derive(Clone, Component, Copy, Debug, Default)]
+pub struct GridDebugBox;
+
+pub fn show_grid_bounding_boxes(
+    query: Query<(Entity, &GridTypeId), With<HexGrid>>,
+    gamebox: Res<GameBox>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut commands: Commands
+)
+{
+    for (e, tid) in query {
+        let GridDefinition::Hex(HexGridDefinition {
+            cols,
+            rows,
+            hw,
+            hh,
+            ..
+        }) = &gamebox.grid[&tid.0] else { continue; };
+
+        let grect = Rectangle::new(
+            *cols as f32 * hw * 0.75 + (hw * 0.25),
+            *rows as f32 * (hh + 0.5) + (hh * 0.5)
+        );
+
+        commands.spawn((
+            GridDebugBox,
+            ChildOf(e),
+            Mesh2d(meshes.add(grect)),
+            MeshMaterial2d(materials.add(Color::srgba(0.0, 1.0, 0.0, 0.2)))
+        ));
+    }
+}
+
+pub fn hide_grid_bounding_boxes(
+    query: Query<Entity, With<GridDebugBox>>,
+    mut commands: Commands
+)
+{
+    for e in query {
+        commands.entity(e).despawn();
     }
 }
 

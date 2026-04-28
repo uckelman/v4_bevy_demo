@@ -1,6 +1,7 @@
 use bevy::{
     camera::Camera,
     ecs::{
+        change_detection::{Res, ResMut},
         event::EntityEvent,
         message::MessageReader,
         name::Name,
@@ -11,14 +12,33 @@ use bevy::{
     picking::{
         events::{Click, Pointer}
     },
-    prelude::{CursorMoved, GlobalTransform, Result, trace},
+    prelude::{CursorMoved, GlobalTransform, NextState, Result, State, States, trace, Transform},
     window::{PrimaryWindow, Window}
 };
+use std::hash::Hash;
 
 use crate::{
     edittype::EditType,
     log::{EditOf, EditIndex, Edits, EditsComplete}
 };
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, States)]
+pub enum DebugState {
+    #[default]
+    Off,
+    On
+}
+
+pub fn toggle_debug_state(
+    cur: Res<State<DebugState>>,
+    mut next: ResMut<NextState<DebugState>>
+)
+{
+    next.set(match cur.get() {
+        DebugState::Off => DebugState::On,
+        DebugState::On => DebugState::Off
+    });
+}
 
 pub fn pick_dbg(ev: On<Pointer<Click>>, names: Query<&Name>) {
     let name = names
