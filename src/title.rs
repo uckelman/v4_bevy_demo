@@ -33,7 +33,7 @@ pub fn display_title(mut commands: Commands) {
                 },
             ),
             (
-                Text::new("April 2026"),
+                Text::new("May 2026"),
                 TextFont {
                     font_size: 100.0,
                     ..Default::default()
