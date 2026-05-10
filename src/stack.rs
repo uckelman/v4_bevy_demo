@@ -1,16 +1,28 @@
 use bevy::{
     ecs::{
-        prelude::{ChildOf, Children, Entity, Query},
+        change_detection::{Res, ResMut},
+        entity::Entity,
+        event::EntityEvent,
+        error::Result,
+        observer::On,
+        prelude::{ChildOf, Children, Query},
         query::{QueryData, QueryFilter},
         relationship::{Relationship, RelationshipTarget}
-    }
+    },
+    math::Vec3,
+    picking::events::{Click, Pointer},
+    prelude::{Resource, Transform}
 };
 use std::{
     collections::VecDeque,
-    iter
+    iter,
+    time::Duration
 };
 
-use crate::piece::StackingGroup;
+use crate::{
+    double_click::DoubleClickTimer,
+    piece::StackingGroup
+};
 
 struct StackBelowIter<'w, 's, D: QueryData, F: QueryFilter, R: Relationship>
 where
@@ -194,4 +206,67 @@ where
     {
         self.iter_below(entity).last().unwrap_or(entity)
     }
+}
+
+#[derive(Default, Resource)]
+pub struct ExpandedStack(pub Option<Entity>);
+
+pub fn expand_stack(
+    mut evt: On<Pointer<Click>>,
+    d_query: Query<(Option<&Children>, &StackingGroup)>,
+    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
+    mut t_query: Query<&mut Transform>,
+    mut dct: ResMut<DoubleClickTimer>,
+    mut exp_stack: ResMut<ExpandedStack>
+) -> Result
+{
+// TODO: should we store the stack base as the target?
+
+    let target = evt.event().event_target();
+
+    evt.propagate(false);
+
+// TODO: read from settings
+    let dc_threshold = Duration::from_millis(500);
+
+    let stack_offset = Vec3::new(30.0, 30.0, 0.0);
+
+    if target == dct.target && dct.timer.elapsed() <= dc_threshold {
+        let mut si = self::iter(&a_query, &d_query, dct.target);
+
+        exp_stack.0 = si.next();
+
+        // expand the stack
+        for e in si {
+            let mut t = t_query.get_mut(e)?;
+            t.translation += stack_offset;
+        }
+    }
+
+    dct.target = target;
+    dct.timer.reset();
+    Ok(())
+}
+
+// TODO: Send expand, collapse events?
+
+pub fn collapse_stack(
+    evt: On<Pointer<Click>>,
+    d_query: Query<(Option<&Children>, &StackingGroup)>,
+    mut t_query: Query<&mut Transform>,
+    mut exp_stack: ResMut<ExpandedStack>
+) -> Result
+{
+    if let Some(base) = exp_stack.0 {
+        let stack_offset = Vec3::new(30.0, 30.0, 0.0);
+
+        for e in d_query.iter_above(base) {
+            let mut t = t_query.get_mut(e)?;
+            t.translation -= stack_offset;
+        }
+
+        exp_stack.0 = None;
+    }
+
+    Ok(())
 }

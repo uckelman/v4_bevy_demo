@@ -23,6 +23,7 @@ use crate::{
     piece::r#move::on_move,
     raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
+    stack::expand_stack,
     view::{handle_context_menu, handle_piece_pressed}
 };
 
@@ -160,7 +161,8 @@ pub fn spawn_piece(
 
     ec
         .observe(handle_context_menu)
-        .observe(handle_drop);
+        .observe(handle_drop)
+        .observe(expand_stack);
 
     if p.selectable {
         ec.insert(Selectable);
