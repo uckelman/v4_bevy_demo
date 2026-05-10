@@ -15,12 +15,11 @@ use bevy::{
 };
 use std::{
     collections::VecDeque,
-    iter,
-    time::Duration
+    iter
 };
 
 use crate::{
-    double_click::DoubleClickTimer,
+    double_click::{DoubleClickThreshold, DoubleClickTimer},
     piece::StackingGroup
 };
 
@@ -217,6 +216,7 @@ pub fn expand_stack(
     a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
     mut t_query: Query<&mut Transform>,
     mut dct: ResMut<DoubleClickTimer>,
+    dc_threshold: Res<DoubleClickThreshold>,
     mut exp_stack: ResMut<ExpandedStack>
 ) -> Result
 {
@@ -226,12 +226,9 @@ pub fn expand_stack(
 
     evt.propagate(false);
 
-// TODO: read from settings
-    let dc_threshold = Duration::from_millis(500);
-
     let stack_offset = Vec3::new(30.0, 30.0, 0.0);
 
-    if target == dct.target && dct.timer.elapsed() <= dc_threshold {
+    if target == dct.target && dct.timer.elapsed() <= dc_threshold.0 {
         let mut si = self::iter(&a_query, &d_query, dct.target);
 
         exp_stack.0 = si.next();
