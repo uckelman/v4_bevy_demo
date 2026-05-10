@@ -32,10 +32,16 @@ pub struct Keys {
     pub redo: KeyBinding
 }
 
+#[derive(Debug, Deserialize)]
+pub struct Mouse {
+    pub double_click_threshold: u32
+}
+
 #[derive(Debug, Deserialize, Resource)]
 pub struct Config {
     pub steps: Steps,
-    pub keys: Keys
+    pub keys: Keys,
+    pub mouse: Mouse
 }
 
 pub fn load_config(mut commands: Commands) -> Result {
