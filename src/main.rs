@@ -62,7 +62,7 @@ use crate::{
     double_click::{DoubleClickThreshold, DoubleClickTimer, tick_double_click_timer},
     drag::DragOrigin,
     grid::{show_grid_bounding_boxes, hide_grid_bounding_boxes},
-    keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
+    keys::{cfg_input_pressed, cfg_input_just_pressed},
     log::{handle_redo_over, handle_undo, init_log, on_group_close, on_group_open, on_group_redo, on_group_undo, on_redo, on_redo_all, on_undo, RedoAllEvent, RedoKey, UndoKey},
     log_deserialize::{deserialize_edits, update_next_object_id},
     log_serialize::serialize_edits,
