@@ -21,7 +21,10 @@ use bevy::{
     picking::mesh_picking::MeshPickingPlugin,
     prelude::{AppExtStates, IntoScheduleConfigs, in_state, NextState, OnEnter, Resource, Time, trace, Window, WindowPlugin}
 };
-use std::path::PathBuf;
+use std::{
+    path::PathBuf,
+    time::Duration
+};
 
 mod actionfunc;
 mod angle;
@@ -56,7 +59,7 @@ use crate::{
     config::{Config, load_config},
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     debug::DebugState,
-    double_click::{DoubleClickTimer, tick_double_click_timer},
+    double_click::{DoubleClickThreshold, DoubleClickTimer, tick_double_click_timer},
     drag::DragOrigin,
     grid::{show_grid_bounding_boxes, hide_grid_bounding_boxes},
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
@@ -185,6 +188,11 @@ fn load_input_settings(
 {
     let steps = &config.steps;
     let keys = config.keys.clone();
+    let mouse = &config.mouse;
+
+    commands.insert_resource(DoubleClickThreshold(
+        Duration::from_millis(mouse.double_click_threshold as u64)
+    ));
 
     commands.insert_resource(KeyPanStep(steps.pan_step));
     commands.insert_resource(KeyRotateStep(steps.rotate_step.to_radians()));

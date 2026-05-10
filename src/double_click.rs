@@ -6,6 +6,10 @@ use bevy::{
     prelude::{Real, Resource, Time},
     time::Stopwatch
 };
+use std::time::Duration;
+
+#[derive(Resource)]
+pub struct DoubleClickThreshold(pub Duration);
 
 #[derive(Resource)]
 pub struct DoubleClickTimer {
