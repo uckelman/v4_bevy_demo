@@ -7,7 +7,7 @@ use bevy::{
 };
 use serde::Deserialize;
 
-use crate::KeyBinding;
+use crate::keys::KeyBinding;
 
 #[derive(Debug, Deserialize)]
 pub struct Steps {
