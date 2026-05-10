@@ -29,6 +29,7 @@ mod assets;
 mod config;
 mod context_menu;
 mod debug;
+mod double_click;
 mod drag;
 mod edittype;
 mod gamebox;
@@ -55,6 +56,7 @@ use crate::{
     config::{Config, load_config},
     context_menu::{ContextMenuState, open_context_menu, close_context_menus, trigger_close_context_menus_key, trigger_close_context_menus_press, trigger_close_context_menus_wheel},
     debug::DebugState,
+    double_click::{DoubleClickTimer, tick_double_click_timer},
     drag::DragOrigin,
     grid::{show_grid_bounding_boxes, hide_grid_bounding_boxes},
     keys::{cfg_input_pressed, cfg_input_just_pressed, KeyBinding},
@@ -208,6 +210,7 @@ fn load_input_settings(
 fn setup_game_resources(mut commands: Commands) {
     commands.insert_resource(ObjectIdMap::default());
     commands.insert_resource(NextObjectId::default());
+    commands.insert_resource(DoubleClickTimer::default());
 }
 
 // TODO: check that there is no selection for view keys
@@ -264,7 +267,8 @@ fn game_plugin(app: &mut App) {
                 handle_redo_over.run_if(cfg_input_just_pressed::<RedoKey>),
 
                 serialize_edits.run_if(input_just_pressed(KeyCode::KeyL)),
-                debug::toggle_debug_state.run_if(input_just_pressed(KeyCode::Escape))
+                debug::toggle_debug_state.run_if(input_just_pressed(KeyCode::Escape)),
+                tick_double_click_timer
             )
             .run_if(in_state(GameState::Game))
         )
