@@ -80,7 +80,6 @@ use crate::{
     raise::RaiseAnchor,
     select::{clear_selection, draw_selection_rect, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selected, SelectionRect, setup_selection_box, handle_key_selection},
     state::GameState,
-    stack::{collapse_stack, ExpandedStack},
     title::{SplashScreenTimer, display_title}
 };
 
@@ -220,7 +219,6 @@ fn setup_game_resources(mut commands: Commands) {
     commands.insert_resource(ObjectIdMap::default());
     commands.insert_resource(NextObjectId::default());
     commands.insert_resource(DoubleClickTimer::default());
-    commands.insert_resource(ExpandedStack::default());
 }
 
 // TODO: check that there is no selection for view keys
@@ -330,7 +328,6 @@ fn display_game(
 {
     commands.entity(*window)
         .observe(handle_pan_drag)
-        .observe(collapse_stack)
         .observe(clear_selection)
         .observe(selection_rect_drag_start)
         .observe(selection_rect_drag)
