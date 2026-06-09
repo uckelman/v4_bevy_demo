@@ -1,27 +1,24 @@
 use bevy::{
     ecs::{
-        change_detection::{Res, ResMut},
+        component::Component,
         entity::Entity,
         event::EntityEvent,
         error::Result,
         observer::On,
-        prelude::{ChildOf, Children, Query},
+        prelude::{Commands, Query},
         query::{QueryData, QueryFilter},
         relationship::{Relationship, RelationshipTarget}
     },
     math::Vec3,
-    picking::events::{Click, Pointer},
-    prelude::{Resource, Transform}
+    prelude::{trace, Transform}
 };
 use std::{
     collections::VecDeque,
     iter
 };
+use tracing::instrument;
 
-use crate::{
-    double_click::{DoubleClickThreshold, DoubleClickTimer},
-    piece::StackingGroup
-};
+use crate::piece::{Above, Below, Location, StackingGroup};
 
 struct StackBelowIter<'w, 's, D: QueryData, F: QueryFilter, R: Relationship>
 where
@@ -207,63 +204,182 @@ where
     }
 }
 
-#[derive(Default, Resource)]
-pub struct ExpandedStack(pub Option<Entity>);
+// FIXME: this messes with cloning because Expanded gets cloned
+//#[derive(Clone, Component, Copy, Debug, Default)]
+#[derive(Component, Debug, Default)]
+pub struct Expanded;
 
-pub fn expand_stack(
-    mut evt: On<Pointer<Click>>,
-    d_query: Query<(Option<&Children>, &StackingGroup)>,
-    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
-    mut t_query: Query<&mut Transform>,
-    mut dct: ResMut<DoubleClickTimer>,
-    dc_threshold: Res<DoubleClickThreshold>,
-    mut exp_stack: ResMut<ExpandedStack>
+#[derive(EntityEvent)]
+pub struct ExpandEvent {
+    entity: Entity
+}
+
+#[derive(EntityEvent)]
+pub struct CollapseEvent {
+    entity: Entity
+}
+
+
+#[derive(EntityEvent)]
+pub struct RestackEvent {
+    entity: Entity
+}
+
+/*
+#[instrument(skip_all)]
+pub fn on_expand_stack(
+    expand: On<ExpandEvent>,
+    a_query: Query<(Option<&Above>, &StackingGroup)>,
+    d_query: Query<(Option<&Below>, &StackingGroup)>,
+    parent_query: Query<&ChildOf>,
+    gt_query: Query<&GlobalTransform>,
+    mut t_query: Query<(&Above, &mut Transform, &GlobalTransform)>,
+    mut commands: Commands
 ) -> Result
 {
-// TODO: should we store the stack base as the target?
+    trace!("");
 
-    let target = evt.event().event_target();
+    let entity = expand.event().event_target();
 
-    evt.propagate(false);
+    let mut si = self::iter(&a_query, &d_query, entity);
 
-    let stack_offset = Vec3::new(30.0, 30.0, 0.0);
+    if let Some(base) = si.next() {
+        commands.entity(base).insert(Expanded);
 
-    if target == dct.target && dct.timer.elapsed() <= dc_threshold.0 {
-        let mut si = self::iter(&a_query, &d_query, dct.target);
+// TODO: make stack offset a gamebox setting
+        let stack_offset = Vec3::new(30.0, 30.0, 0.0);
 
-        exp_stack.0 = si.next();
+        let root = parent_query.root_ancestor(base);
+        let root_gt = gt_query.get(root)?;
 
         // expand the stack
-        for e in si {
-            let mut t = t_query.get_mut(e)?;
-            t.translation += stack_offset;
+        for (i, e) in si.enumerate() {
+            let (p, mut t, gt) = t_query.get_mut(e)?;
+
+            *t = gt.reparented_to(root_gt);
+            t.translation += ((i + 1) as f32) * stack_offset;
+
+            commands.entity(e).insert(Expanded);
+            commands.entity(root).add_child(e);
         }
     }
 
-    dct.target = target;
-    dct.timer.reset();
+    Ok(())
+}
+*/
+
+#[instrument(skip_all)]
+pub fn on_expand_stack(
+    expand: On<ExpandEvent>,
+    a_query: Query<(Option<&Above>, &StackingGroup)>,
+    d_query: Query<(Option<&Below>, &StackingGroup)>,
+    base_query: Query<(&Above, &Location)>,
+    mut t_query: Query<&mut Transform>,
+    mut commands: Commands
+) -> Result
+{
+    trace!("");
+
+    let entity = expand.event().event_target();
+
+    let mut si = self::iter(&a_query, &d_query, entity);
+
+    if let Some(base) = si.next() && let Some(second) = si.next() {
+        let stack_offset = Vec3::new(30.0, 30.0, 1.0);
+
+        // reparent pieces in stack to the parent of the stack base
+        // spread pieces in stack by stack offset
+
+        let (base_par, base_loc) = base_query.get(base)?;
+
+        for (i, e) in [base, second].into_iter().chain(si).enumerate() {
+            let mut t = t_query.get_mut(e)?;
+            t.translation = base_loc.0 + (i as f32) * stack_offset;
+            commands.entity(base_par.0).add_child(e);
+            commands.entity(e).insert(Expanded);
+        }
+    }
+
     Ok(())
 }
 
-// TODO: Send expand, collapse events?
-
-pub fn collapse_stack(
-    evt: On<Pointer<Click>>,
-    d_query: Query<(Option<&Children>, &StackingGroup)>,
-    mut t_query: Query<&mut Transform>,
-    mut exp_stack: ResMut<ExpandedStack>
+#[instrument(skip_all)]
+pub fn on_collapse_stack(
+    collapse: On<CollapseEvent>,
+    a_query: Query<(Option<&Above>, &StackingGroup)>,
+    d_query: Query<(Option<&Below>, &StackingGroup)>,
+    mut t_query: Query<(&mut Transform, &Above, &Location)>,
+    mut commands: Commands
 ) -> Result
 {
-    if let Some(base) = exp_stack.0 {
-        let stack_offset = Vec3::new(30.0, 30.0, 0.0);
+    trace!("");
 
-        for e in d_query.iter_above(base) {
-            let mut t = t_query.get_mut(e)?;
-            t.translation -= stack_offset;
-        }
+    let entity = collapse.event().event_target();
 
-        exp_stack.0 = None;
+    for e in self::iter(&a_query, &d_query, entity) {
+        let (mut t, p, loc) = t_query.get_mut(e)?;
+
+        commands.entity(e).remove::<Expanded>();
+        commands.entity(p.0).add_child(e);
+        t.translation = loc.0;
     }
 
     Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn on_restack(
+    restack: On<RestackEvent>,
+    a_query: Query<(Option<&Above>, &StackingGroup)>,
+    d_query: Query<(Option<&Below>, &StackingGroup)>,
+    base_query: Query<(&Above, &Location)>,
+    mut t_query: Query<&mut Transform>,
+    mut commands: Commands
+) -> Result
+{
+    trace!("");
+
+    let entity = restack.event().event_target();
+
+    let mut si = self::iter(&a_query, &d_query, entity);
+
+    if let Some(base) = si.next() {
+        if let Some(second) = si.next() {
+            // reparent pieces in stack to the parent of the stack base
+            // spread pieces in stack by stack offset
+
+            let stack_offset = Vec3::new(30.0, 30.0, 1.0);
+
+            let (base_par, base_loc) = base_query.get(base)?;
+
+            for (i, e) in [base, second].into_iter().chain(si).enumerate() {
+                let mut t = t_query.get_mut(e)?;
+                t.translation = base_loc.0 + (i as f32) * stack_offset;
+                commands.entity(base_par.0).add_child(e);
+                commands.entity(e).insert(Expanded);
+            }
+        }
+        else {
+            // base is the last piece in the stack, so collapse it
+            let (base_par, base_loc) = base_query.get(base)?;
+            let mut t = t_query.get_mut(base)?;
+            t.translation = base_loc.0;
+            commands.entity(base_par.0).add_child(base);
+            commands.entity(base).remove::<Expanded>();
+        }
+    }
+
+    Ok(())
+}
+
+pub fn expand_stack(entity: Entity, commands: &mut Commands) {
+    commands.trigger(ExpandEvent { entity });
+}
+
+pub fn collapse_stack(entity: Entity, commands: &mut Commands) {
+    commands.trigger(CollapseEvent { entity });
+}
+
+pub fn restack_stack(entity: Entity, commands: &mut Commands) {
+    commands.trigger(RestackEvent { entity });
 }

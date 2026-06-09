@@ -1,29 +1,60 @@
 use bevy::{
     ecs::{
-        change_detection::Res,
+        change_detection::{Res, ResMut},
+        component::Component,
         event::EntityEvent,
+        error::Result,
         observer::On,
-        prelude::{ChildOf, Children, Commands, Entity, Query, With}
+        prelude::{ChildOf, Children, Commands, Entity, Has, Query, With}
     },
     input::{
         ButtonInput,
         keyboard::KeyCode
     },
     picking::{
-        events::{Pointer, Press},
+        events::{Click, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{State, trace}
+    prelude::{GlobalTransform, State, trace, Transform}
 };
 use tracing::instrument;
 
 use crate::{
     context_menu::{CloseContextMenus, ContextMenuState, OpenContextMenu},
+    double_click::{DoubleClickThreshold, DoubleClickTimer},
     keys::{ctrl_pressed, shift_pressed},
+    maxz::MaxZ,
     piece::StackingGroup,
-    stack,
+    stack::{self, collapse_stack, Expanded, expand_stack, StackAboveQueryExt},
     select::{deselect_all, Selected, toggle, select}
 };
+
+#[derive(Component)]
+pub struct RaiseAnchor {
+    z: f32
+}
+
+#[instrument(skip_all)]
+pub fn handle_pressed(
+    mut press: On<Pointer<Press>>,
+    mut drop_query: Query<(Entity, &mut Transform, &RaiseAnchor)>,
+    mut commands: Commands
+)
+{
+    trace!("");
+
+    // prevent the event from bubbling up to parent
+    press.propagate(false);
+
+    let entity = press.event().event_target();
+
+    drop_query.iter_mut()
+        .filter(|(e, ..)| *e != entity)
+        .for_each(|(e, mut t, a)| {
+            t.translation.z = a.z;
+            commands.entity(e).remove::<RaiseAnchor>();
+        });
+}
 
 #[instrument(skip_all)]
 pub fn handle_piece_pressed(
@@ -32,8 +63,12 @@ pub fn handle_piece_pressed(
     selection_query: Query<Entity, With<Selected>>,
     d_query: Query<(Option<&Children>, &StackingGroup)>,
     a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
+    expanded_query: Query<(), With<Expanded>>,
+    root_query: Query<&ChildOf>,
+    mut maxz_query: Query<&mut MaxZ>,
+    mut t_query: Query<(&mut Transform, &GlobalTransform, Has<RaiseAnchor>)>,
     mut commands: Commands
-)
+) -> Result
 {
     trace!("");
 
@@ -57,12 +92,31 @@ pub fn handle_piece_pressed(
                 .for_each(|e| select(e, &mut commands));
         },
         PointerButton::Primary | PointerButton::Secondary => {
-            // if the target is selected, don't change the selection
-            // if the target is not selected, select only the target
+            if expanded_query.contains(entity) {
+                // pressed piece is in an expanded stack
 
-            if selection_query.contains(entity) {
-                return;
+                let (mut t, gt, ra) = t_query.get_mut(entity)?;
+
+                if !ra {
+                    // pressed piece is not already raised
+                    let root = root_query.root_ancestor(entity);
+                    let mut max_z = maxz_query.get_mut(root)?;
+                    max_z.0 += 1.0;
+
+                    commands.entity(entity)
+                        .insert(RaiseAnchor { z: t.translation.z });
+
+                    t.translation.z += max_z.0 - gt.translation().z;
+                }
             }
+            else if selection_query.contains(entity) {
+                // pressed piece is not in an expanded stack
+
+                // if the target is selected, don't change the selection
+                return Ok(());
+            }
+
+            // if the target is not selected, select only the target
 
             // unmodified sets if not selected
             trace!("unmodified");
@@ -73,6 +127,42 @@ pub fn handle_piece_pressed(
         },
         _ => {}
     }
+
+    Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn handle_piece_clicked(
+    mut click: On<Pointer<Click>>,
+    mut dct: ResMut<DoubleClickTimer>,
+    dc_threshold: Res<DoubleClickThreshold>,
+    expanded_query: Query<(), With<Expanded>>,
+    selection_query: Query<Entity, With<Selected>>,
+    d_query: Query<(Option<&Children>, &StackingGroup)>,
+    mut commands: Commands
+)
+{
+    let entity = click.event().event_target();
+
+    click.propagate(false);
+
+    if entity == dct.target &&
+        click.button == PointerButton::Primary &&
+        dct.timer.elapsed() <= dc_threshold.0
+    {
+        deselect_all(&selection_query, &mut commands);
+        select(d_query.top(entity), &mut commands);
+
+        if expanded_query.contains(entity) {
+            collapse_stack(entity, &mut commands);
+        }
+        else {
+            expand_stack(entity, &mut commands);
+        }
+    }
+
+    dct.target = entity;
+    dct.timer.reset();
 }
 
 #[instrument(skip_all)]

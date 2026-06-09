@@ -25,8 +25,8 @@ use crate::{
         splice::on_splice,
     },
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
-    stack::expand_stack,
-    view::{handle_context_menu, handle_piece_pressed}
+    stack::{on_collapse_stack, on_expand_stack, on_restack},
+    view::{handle_context_menu, handle_piece_clicked, handle_piece_pressed}
 };
 
 pub mod clone;
@@ -64,8 +64,13 @@ pub struct Action {
 #[derive(Clone, Component, Debug, Default)]
 pub struct Actions(pub Vec<Action>);
 
-#[derive(Clone, Component, Copy, Debug)]
-pub struct Parent(pub Entity);
+#[derive(Component)]
+#[relationship(relationship_target = Below)]
+pub struct Above(pub Entity);
+
+#[derive(Component, Default)]
+#[relationship_target(relationship = Above, linked_spawn)]
+pub struct Below(Vec<Entity>);
 
 #[derive(Clone, Component, Copy, Debug)]
 pub struct Location(pub Vec3);
@@ -135,7 +140,7 @@ pub fn spawn_piece(
             PieceTypeId(pid),
             Name::from(p.name.as_ref()),
             StackingGroup(p.stacking_group),
-            Parent(parent),
+            Above(parent),
             Location(t.translation),
             Angle(angle),
             sprite,
@@ -162,7 +167,10 @@ pub fn spawn_piece(
     ec
         .observe(handle_context_menu)
         .observe(handle_drop)
-        .observe(expand_stack);
+        .observe(handle_piece_clicked)
+        .observe(on_collapse_stack)
+        .observe(on_expand_stack)
+        .observe(on_restack);
 
     if p.selectable {
         ec.insert(Selectable);

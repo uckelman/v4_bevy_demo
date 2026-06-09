@@ -5,11 +5,12 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{Commands, Entity, Query}
+        prelude::{Changed, ChildOf, Commands, Entity, Or, Query, With, Without}
     },
     math::Vec3,
     prelude::{GlobalTransform, trace, Transform}
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -17,7 +18,8 @@ use crate::{
     edittype::EditType,
     log::{EditIndex, Edits, handle_do},
     object::{ObjectId, ObjectIdMap},
-    piece::{Location, Parent}
+    piece::{Above, Below, Location, StackingGroup},
+    stack::{self, Expanded, StackBelowQueryExt}
 };
 
 #[derive(Clone, Debug, EntityEvent)]
@@ -82,8 +84,7 @@ fn apply_move<const DO: bool>(
     entity: Entity,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    mut mov_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
-    parent_query: Query<&GlobalTransform>,
+    mut mov_query: Query<&mut Location>,
     mut commands: Commands
 ) -> Result
 {
@@ -93,26 +94,20 @@ fn apply_move<const DO: bool>(
     // get the entity being edited
     let entity = *objmap.0.get(&mov.object_id).unwrap();
 
-    let (mut mov_parent, mut mov_loc, mut mov_t, mov_gt) = mov_query.get_mut(entity)?;
+    let mut mov_loc = mov_query.get_mut(entity)?;
 
     if mov.src_parent_id != mov.dst_parent_id {
         let new_parent_id = if DO { mov.dst_parent_id } else { mov.src_parent_id };
 
         let new_parent = *objmap.0.get(&new_parent_id).unwrap();
 
-        // maintain the child's rotation
-        let new_parent_gt = parent_query.get(new_parent)?;
-        *mov_t = mov_gt.reparented_to(new_parent_gt);
-
         // reparent the child
-        mov_parent.0 = new_parent;
-        commands.entity(new_parent).add_child(entity);
+        commands.entity(new_parent)
+            .add_one_related::<Above>(entity);
     }
 
     // update the location
-    let new_loc = if DO { mov.dst } else { mov.src };
-    mov_loc.0 = new_loc;
-    mov_t.translation = new_loc;
+    mov_loc.0 = if DO { mov.dst } else { mov.src };
 
     Ok(())
 }
@@ -122,8 +117,7 @@ pub fn on_move_undo(
     evt: On<UndoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    dst_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
-    src_query: Query<&GlobalTransform>,
+    dst_query: Query<&mut Location>,
     commands: Commands
 ) -> Result
 {
@@ -132,7 +126,6 @@ pub fn on_move_undo(
         edit,
         objmap,
         dst_query,
-        src_query,
         commands
     )
 }
@@ -142,8 +135,7 @@ pub fn on_move_redo(
     evt: On<RedoMoveEvent>,
     edit: Query<&MoveEdit>,
     objmap: Res<ObjectIdMap>,
-    src_query: Query<(&mut Parent, &mut Location, &mut Transform, &GlobalTransform)>,
-    dst_query: Query<&GlobalTransform>,
+    src_query: Query<&mut Location>,
     commands: Commands
 ) -> Result
 {
@@ -152,7 +144,50 @@ pub fn on_move_redo(
         edit,
         objmap,
         src_query,
-        dst_query,
         commands
     )
+}
+
+#[instrument(skip_all)]
+pub fn on_location_change(
+    mut query: Query<(Entity, &ChildOf, &mut Transform, &GlobalTransform, &Above, &Location), (Without<Expanded>, Or<(Changed<Above>, Changed<Location>)>)>,
+    gt_query: Query<&GlobalTransform>,
+    mut commands: Commands
+) -> Result
+{
+    trace!("");
+
+    for (e, par_ui, mut t, gt, par_g, loc) in query.iter_mut() {
+        // destination is not an expanded stack
+
+        // update the parent
+        if par_g.0 != par_ui.0 {
+            // maintain the child's rotation
+            let par_g_gt = gt_query.get(par_g.0)?;
+            *t = gt.reparented_to(par_g_gt);
+
+            // reparent the child
+            commands.entity(par_g.0).add_child(e);
+        }
+
+        // update the location
+        t.translation = loc.0;
+    }
+
+    Ok(())
+}
+
+#[instrument(skip_all)]
+pub fn on_stack_change(
+    query: Query<Entity, (With<Expanded>, Or<(Changed<Below>, Changed<Above>)>)>,
+    a_query: Query<(Option<&Above>, &StackingGroup)>,
+    mut commands: Commands
+)
+{
+    trace!("");
+
+    query.iter()
+        .map(|e| a_query.bottom(e))
+        .unique()
+        .for_each(|e| stack::restack_stack(e, &mut commands));
 }

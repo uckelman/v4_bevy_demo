@@ -33,11 +33,12 @@ use crate::{
     log::{OpenGroupEvent, CloseGroupEvent},
     maxz::MaxZ,
     piece::{
-        StackingGroup,
-        r#move::DoMoveEvent
+        Above, Below, Location, StackingGroup,
+        r#move::DoMoveEvent,
+        splice::DoSpliceEvent
     },
-    select::{deselect_all, select, Selected},
-    stack::StackBelowQueryExt,
+    select::Selected,
+    stack::{Expanded, StackAboveQueryExt, StackBelowQueryExt},
     util::AsOrthographicProjection
 };
 
@@ -187,13 +188,87 @@ enum DropTargetType {
     Grid
 }
 
+fn find_hit(
+    esrc: Entity,
+    parent: Entity,
+    src_gt: &GlobalTransform,
+    src_t: &Transform,
+    drag_dist: Vec3,
+    max_z: f32,
+    dz: f32,
+    bboxes: &[(Entity, f32, Entity, Rect)],
+    ray_cast: &mut MeshRayCast,
+    mrcs: &MeshRayCastSettings,
+    root: Entity,
+    gt_query: Query<&GlobalTransform>,
+    sg_query: Query<&StackingGroup>,
+) -> Result<(Entity, Vec3)>
+{
+    let b_drop_pos = (src_gt.translation() + drag_dist).truncate();
+
+    // find piece hits
+    let pieces = bboxes.iter()
+        .filter(|(_, _, base, bb)| esrc != *base && bb.contains(b_drop_pos))
+        .map(|(e, z, ..)| (*e, *z, DropTargetType::Piece));
+
+    // find grid cell hits
+    let ray = Ray3d::new(b_drop_pos.extend(max_z + 1.0), Dir3::NEG_Z);
+    let cells = ray_cast.cast_ray(ray, mrcs)
+        .iter()
+        .map(|(e, h)| (*e, h.point.z, DropTargetType::Grid));
+
+    // surface is always a hit
+    let surf = (root, f32::NEG_INFINITY, DropTargetType::Surface);
+
+    // find top hit
+    let (ehit, htype) = std::iter::once(surf)
+        .chain(pieces)
+        .chain(cells)
+        .max_by(|(_, za, _), (_, zb, _)| za.partial_cmp(zb).expect("NaN"))
+        .map(|(e, _, t)| (e, t))
+        .expect("Surface will be hit if nothing else is");
+
+    let dst_t = match htype {
+        DropTargetType::Surface => {
+            if parent == ehit {
+                *src_t
+            }
+            else {
+                let dst_gt = gt_query.get(ehit)?;
+                src_gt.reparented_to(dst_gt)
+            }.translation + drag_dist
+        },
+        DropTargetType::Piece => {
+            let src_sg = sg_query.get(esrc)?;
+            let dst_sg = sg_query.get(ehit)?;
+
+            if src_sg == dst_sg {
+                // stack src onto dst if they are in the same stacking group
+                // give src a stacking offset
+                Vec3::new(2.0, 2.0, 1.0)
+            }
+            else {
+                // otherwise keep the same global transform if reparenting
+                let dst_gt = gt_query.get(ehit)?;
+                src_gt.reparented_to(dst_gt).translation + drag_dist
+            }
+        },
+        DropTargetType::Grid => {
+            // snap piece to center of grid cell
+            Vec3::new(0.0, 0.0, dz)
+        }
+    };
+
+    Ok((ehit, dst_t))
+}
+
 #[instrument(skip_all)]
 pub fn handle_drop(
     mut drop: On<Pointer<DragDrop>>,
-    selection_query: Query<(Entity, &ChildOf, &GlobalTransform, &Transform), (With<Draggable>, With<Selected>)>,
-    a_query: Query<(Option<&ChildOf>, &StackingGroup)>,
+    selection_query: Query<(Entity, &Above, &GlobalTransform, &Transform, &Location, Option<&Expanded>), (With<Draggable>, With<Selected>)>,
+    a_query: Query<(Option<&Above>, &StackingGroup)>,
+    d_query: Query<(Option<&Below>, &StackingGroup)>,
     parent_query: Query<&ChildOf>,
-    root_query: Query<&Name>,
     mut maxz_query: Query<&mut MaxZ>,
     drag_origin: Res<DragOrigin>,
     gt_query: Query<&GlobalTransform>,
@@ -211,14 +286,22 @@ where
 
     drop.propagate(false);
 
-    // find all the stack bottoms, highest point for the selection
+    // pieces from one stack may be dropped onto and stack with another stack
+    // pieces from multiple stacks do not restack on drop
+
+    // separate stack bottoms, expanded pieces;
+    // compute lowest and highest points for the selection
     let mut bottoms = vec![];
+    let mut expandeds = vec![];
     let mut sel_min_z = f32::INFINITY;
     let mut sel_max_z = f32::NEG_INFINITY;
 
-    for (e, p, gt, t) in selection_query {
-        if a_query.iter_below(e).next().is_none() {
-            bottoms.push((e, p.0, gt, t));
+    for (e, p, gt, t, l, exp) in selection_query {
+        if exp.is_some() {
+            expandeds.push((e, p.0, gt, t, l));
+        }
+        else if a_query.iter_below(e).next().is_none() {
+            bottoms.push((e, p.0, gt, t, l));
         }
 
         let z = gt.translation().z;
@@ -232,13 +315,13 @@ where
         }
     }
 
-    if bottoms.is_empty() {
+    let root = if let Some(p) = bottoms.first().or(expandeds.first()) {
+        parent_query.root_ancestor(p.0)
+    }
+    else {
         // TODO: impossible?
         return Ok(());
-    }
-
-    let root = parent_query.root_ancestor(bottoms[0].0);
-    let root_name = root_query.get(root)?;
+    };
 
     // raise entire selection by amount the lowest member is below max z
     let mut max_z = maxz_query.get_mut(root)?;
@@ -251,6 +334,8 @@ where
     // find the drag vector
     let drag_dist = (drop_pos - drag_origin.0).extend(dz);
 
+// TODO: check against sprite picking backend
+// TODO: kdtree or quadtree?
     // collect bounding boxes for sprites
     let bboxes = sprite_collision_query.iter()
         .map(|(e, gt, a, s, n)| {
@@ -288,77 +373,75 @@ where
         .with_filter(&cell_filter)
         .always_early_exit();
 
-    if bottoms.len() > 1 {
+    if bottoms.len() + expandeds.len() > 1 {
         commands.trigger(OpenGroupEvent);
     }
 
-    for (esrc, parent, src_gt, src_t) in &bottoms {
-
-        let b_drop_pos = (src_gt.translation() + drag_dist).truncate();
-
-        // find piece hits
-        let pieces = bboxes.iter()
-            .filter(|(_, _, base, bb)| esrc != base && bb.contains(b_drop_pos))
-            .map(|(e, z, ..)| (*e, *z, DropTargetType::Piece));
-
-        // find grid cell hits
-        let ray = Ray3d::new(b_drop_pos.extend(max_z.0 + 1.0), Dir3::NEG_Z);
-        let cells = ray_cast.cast_ray(ray, &mrcs)
-            .iter()
-            .map(|(e, h)| (*e, h.point.z, DropTargetType::Grid));
-
-        // surface is always a hit
-        let surf = (root, f32::NEG_INFINITY, DropTargetType::Surface);
-
-        // find top hit
-        let (ehit, htype) = std::iter::once(surf)
-            .chain(pieces)
-            .chain(cells)
-            .max_by(|(_, za, _), (_, zb, _)| za.partial_cmp(zb).expect("NaN"))
-            .map(|(e, _, t)| (e, t))
-            .expect("Surface will be hit if nothing else is");
-
-        let dst_t = match htype {
-            DropTargetType::Surface => {
-                if *parent == ehit {
-                    **src_t
-                }
-                else {
-                    let dst_gt = gt_query.get(ehit)?;
-                    src_gt.reparented_to(dst_gt)
-                }.translation + drag_dist
-            },
-            DropTargetType::Piece => {
-                let src_sg = sg_query.get(*esrc)?;
-                let dst_sg = sg_query.get(ehit)?;
-
-                if src_sg == dst_sg {
-                    // stack src onto dst if they are in the same stacking group
-                    // give src a stacking offset
-                    Vec3::new(2.0, 2.0, 1.0)
-                }
-                else {
-                    // otherwise keep the same global transform if reparenting
-                    let dst_gt = gt_query.get(ehit)?;
-                    src_gt.reparented_to(dst_gt).translation + drag_dist
-                }
-            },
-            DropTargetType::Grid => {
-                // snap piece to center of grid cell
-                Vec3::new(0.0, 0.0, dz)
-            }
-        };
+    for (esrc, parent, src_gt, src_t, src_l) in &bottoms {
+        let (ehit, dst_t) = find_hit(
+            *esrc,
+            *parent,
+            src_gt,
+            src_t,
+            drag_dist,
+            max_z.0,
+            dz,
+            &bboxes,
+            &mut ray_cast,
+            &mrcs,
+            root,
+            gt_query,
+            sg_query
+        )?;
 
         commands.trigger(DoMoveEvent {
             entity: *esrc,
             src_parent: *parent,
-            src: src_t.translation,
+            src: src_l.0,
             dst_parent: ehit,
             dst: dst_t
         });
     }
 
-    if bottoms.len() > 1 {
+    for (esrc, parent, src_gt, src_t, src_l) in &expandeds {
+        let (ehit, dst_t) = find_hit(
+            *esrc,
+            *parent,
+            src_gt,
+            src_t,
+            drag_dist,
+            max_z.0,
+            dz,
+            &bboxes,
+            &mut ray_cast,
+            &mrcs,
+            root,
+            gt_query,
+            sg_query
+        )?;
+
+        // no move if hit is self or parent in same stack
+        if *esrc == ehit || (*parent == ehit && a_query.iter_below(ehit).next() == Some(*parent)){
+            continue;
+        }
+
+        commands.entity(*esrc).remove::<Expanded>();
+
+        let src_child = d_query.iter_above(*esrc).next();
+        let dst_child = d_query.iter_above(ehit).next();
+
+        commands.trigger(DoSpliceEvent {
+            entity: *esrc,
+            src_parent: *parent,
+            src_child,
+            src: src_l.0,
+            dst_parent: ehit,
+            dst_child,
+            dst: dst_t
+        });
+    }
+
+    if bottoms.len() + expandeds.len() > 1 {
         commands.trigger(CloseGroupEvent);
     }
 

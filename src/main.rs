@@ -278,6 +278,16 @@ fn game_plugin(app: &mut App) {
             )
             .run_if(in_state(GameState::Game))
         )
+        .add_systems(
+            Update,
+            (
+                piece::flip::on_face_change,
+                piece::r#move::on_location_change,
+                piece::r#move::on_stack_change,
+                piece::rotate::on_rotate_change,
+            )
+            .run_if(in_state(GameState::Game))
+        )
         .init_state::<DebugState>()
         .add_systems(
             OnEnter(DebugState::On),
@@ -317,6 +327,7 @@ fn game_plugin(app: &mut App) {
         .add_observer(on_group_close)
         .add_observer(on_group_undo)
         .add_observer(on_group_redo)
+        .add_observer(view::handle_pressed)
 //        .add_observer(debug::dump_edits)
         .add_observer(debug::pick_dbg);
 }
