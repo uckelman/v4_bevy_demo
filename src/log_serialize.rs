@@ -22,7 +22,8 @@ use crate::{
         delete::DeleteEdit,
         flip::FlipEdit,
         r#move::MoveEdit,
-        rotate::RotateEdit
+        rotate::RotateEdit,
+        splice::SpliceEdit
     },
     surface
 };
@@ -101,7 +102,8 @@ impl Serialize for GroupProxy<'_, '_, '_> {
                     )
                 )?,
                 EditType::Move => seq.serialize_edit::<MoveEdit>(eref)?,
-                EditType::Rotate => seq.serialize_edit::<RotateEdit>(eref)?
+                EditType::Rotate => seq.serialize_edit::<RotateEdit>(eref)?,
+                EditType::Splice => seq.serialize_edit::<SpliceEdit>(eref)?
             }
         };
 

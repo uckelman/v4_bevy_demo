@@ -20,7 +20,10 @@ use crate::{
     gamebox::{Anchor, PieceType},
     keys::KeyBinding,
     object::ObjectId,
-    piece::r#move::on_move,
+    piece::{
+        r#move::on_move,
+        splice::on_splice,
+    },
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
     stack::expand_stack,
     view::{handle_context_menu, handle_piece_pressed}
@@ -32,6 +35,7 @@ pub mod delete;
 pub mod flip;
 pub mod r#move;
 pub mod rotate;
+pub mod splice;
 
 #[derive(Clone, Component, Copy, Debug, Default)]
 pub struct Piece;
@@ -74,7 +78,8 @@ pub fn add_draggable_observers(ec: &mut EntityCommands) {
         .observe(on_piece_drag_start)
         .observe(on_piece_drag)
         .observe(on_piece_drag_end)
-        .observe(on_move);
+        .observe(on_move)
+        .observe(on_splice);
 }
 
 pub fn add_selectable_observers(ec: &mut EntityCommands) {

@@ -12,7 +12,8 @@ use crate::{
         delete::{RedoDeleteEvent, UndoDeleteEvent},
         flip::{RedoFlipEvent, UndoFlipEvent},
         r#move::{RedoMoveEvent, UndoMoveEvent},
-        rotate::{RedoRotateEvent, UndoRotateEvent}
+        rotate::{RedoRotateEvent, UndoRotateEvent},
+        splice::{RedoSpliceEvent, UndoSpliceEvent}
     },
     surface
 };
@@ -27,7 +28,8 @@ pub enum EditType {
     Flip,
     Group,
     Move,
-    Rotate
+    Rotate,
+    Splice
 }
 
 impl EditType {
@@ -41,7 +43,8 @@ impl EditType {
             EditType::Flip => commands.trigger(UndoFlipEvent { entity }),
             EditType::Group => commands.trigger(UndoGroupEvent { entity }),
             EditType::Move => commands.trigger(UndoMoveEvent { entity }),
-            EditType::Rotate => commands.trigger(UndoRotateEvent { entity })
+            EditType::Rotate => commands.trigger(UndoRotateEvent { entity }),
+            EditType::Splice => commands.trigger(UndoSpliceEvent { entity })
         }
     }
 
@@ -55,7 +58,8 @@ impl EditType {
             EditType::Flip => commands.trigger(RedoFlipEvent { entity }),
             EditType::Group => commands.trigger(RedoGroupEvent { entity }),
             EditType::Move => commands.trigger(RedoMoveEvent { entity }),
-            EditType::Rotate => commands.trigger(RedoRotateEvent { entity })
+            EditType::Rotate => commands.trigger(RedoRotateEvent { entity }),
+            EditType::Splice => commands.trigger(RedoSpliceEvent { entity })
         }
     }
 }

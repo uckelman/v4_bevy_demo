@@ -33,7 +33,8 @@ use crate::{
         delete::DeleteEdit,
         flip::FlipEdit,
         r#move::MoveEdit,
-        rotate::RotateEdit
+        rotate::RotateEdit,
+        splice::SpliceEdit
     },
     surface
 };
@@ -52,6 +53,7 @@ enum Item {
     Flip(FlipEdit),
     Move(MoveEdit),
     Rotate(RotateEdit),
+    Splice(SpliceEdit),
     #[serde(untagged)]
     Group
 }
@@ -140,6 +142,9 @@ impl<'de> Visitor<'de> for ItemVisitor<'_, '_, '_> {
                 },
                 Item::Rotate(ed) => {
                     ec.insert((EditType::Rotate, edof, ed));
+                },
+                Item::Splice(ed) => {
+                    ec.insert((EditType::Splice, edof, ed));
                 }
             }
         }

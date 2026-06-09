@@ -311,6 +311,8 @@ fn game_plugin(app: &mut App) {
         .add_observer(piece::r#move::on_move_redo)
         .add_observer(piece::rotate::on_rotate_undo)
         .add_observer(piece::rotate::on_rotate_redo)
+        .add_observer(piece::splice::on_splice_undo)
+        .add_observer(piece::splice::on_splice_redo)
         .add_observer(on_group_open)
         .add_observer(on_group_close)
         .add_observer(on_group_undo)
