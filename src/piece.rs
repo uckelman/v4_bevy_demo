@@ -126,8 +126,6 @@ pub fn spawn_piece(
 
     let anchor: bevy::sprite::Anchor = anchor.into();
 
-    trace!("piece {}", t.translation.z);
-
     let mut ec = commands.spawn((
         (
             Piece,
@@ -175,8 +173,6 @@ pub fn spawn_piece(
     }
 
     add_action_observers(p.actions.iter().map(|a| a.action), &mut ec);
-
-    debug!("piece {}", ec.id());
 }
 
 fn recolor_on<E: EntityEvent>(

@@ -205,7 +205,7 @@ pub struct Action {
     pub key: Option<KeyBinding>
 }
 
-// TODO: should faces have ids in additon to names?
+// TODO: should faces have ids in addition to names?
 
 const fn default_true() -> bool {
     true

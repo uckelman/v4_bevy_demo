@@ -120,7 +120,6 @@ impl<'de> Visitor<'de> for ItemVisitor<'_, '_, '_> {
                 Item::CreateGrid(ed) => {
                     ec.insert((EditType::CreateGrid, edof, ed));
                 },
-
                 Item::Clone(ed) => {
                     ec.insert((EditType::Clone, edof, ed));
                 },
