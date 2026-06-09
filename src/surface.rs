@@ -5,13 +5,12 @@ use bevy::{
         error::Result,
         name::Name,
         observer::On,
-        prelude::{ChildOf, Commands, Entity, Query, With, Without}
+        prelude::{Commands, Entity, Query}
     },
     picking::{
         Pickable,
         backend::HitData,
-        events::{DragDrop, Pointer},
-        pointer::Location
+        events::{DragDrop, Pointer}
     },
     prelude::{Camera, debug, DespawnOnExit, GlobalTransform, Transform, Visibility}
 };
