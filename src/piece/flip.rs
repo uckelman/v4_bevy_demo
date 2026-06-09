@@ -5,7 +5,7 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{Commands, Query}
+        prelude::{Changed, Commands, Query}
     },
     prelude::{Entity, Sprite, trace}
 };
@@ -54,19 +54,6 @@ fn set_face(
     }
 }
 
-fn do_flip(
-    faces: &Faces,
-    up: &mut FaceUp,
-    sprite: &mut Sprite,
-    delta: i32
-)
-{
-    let len = faces.0.len() as i32;
-    up.0 = (((up.0 as i32 + delta) % len + len) % len) as usize;
-
-    set_face(sprite, faces, up);
-}
-
 #[derive(Component, Debug, Deserialize, Serialize)]
 #[serde(rename = "flip", tag = "type")]
 pub struct FlipEdit {
@@ -99,7 +86,7 @@ fn apply_flip<const DO: bool>(
     event_target: Entity,
     edit: Query<&FlipEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
+    mut query: Query<(&mut FaceUp, &Faces)>
 ) -> Result
 {
     // get the edit
@@ -107,10 +94,11 @@ fn apply_flip<const DO: bool>(
     // get the entity being edited
     let entity = *objmap.0.get(&flip.object_id).unwrap();
     // get the components of the entity being edited
-    let (faces, mut up, mut sprite) = query.get_mut(entity)?;
+    let (mut up, faces) = query.get_mut(entity)?;
     // apply the change to the entity
     let delta = if DO { flip.delta } else { -flip.delta };
-    do_flip(faces, &mut up, &mut sprite, delta);
+    let len = faces.0.len() as i32;
+    up.0 = (((up.0 as i32 + delta) % len + len) % len) as usize;
     Ok(())
 }
 
@@ -119,7 +107,7 @@ pub fn on_flip_undo(
     evt: On<UndoFlipEvent>,
     edit: Query<&FlipEdit>,
     objmap: Res<ObjectIdMap>,
-    query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
+    query: Query<(&mut FaceUp, &Faces)>
 ) -> Result
 {
     apply_flip::<false>(evt.entity, edit, objmap, query)
@@ -130,8 +118,18 @@ pub fn on_flip_redo(
     evt: On<RedoFlipEvent>,
     edit: Query<&FlipEdit>,
     objmap: Res<ObjectIdMap>,
-    query: Query<(&Faces, &mut FaceUp, &mut Sprite)>
+    query: Query<(&mut FaceUp, &Faces)>
 ) -> Result
 {
     apply_flip::<true>(evt.entity, edit, objmap, query)
+}
+
+#[instrument(skip_all)]
+pub fn on_face_change(
+    mut query: Query<(&mut Sprite, &Faces, &FaceUp), Changed<FaceUp>>
+)
+{
+    for (mut sprite, faces, up) in query.iter_mut() {
+        set_face(&mut sprite, faces, up);
+    }
 }
