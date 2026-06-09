@@ -5,7 +5,7 @@ use bevy::{
         error::Result,
         event::EntityEvent,
         observer::On,
-        prelude::{Commands, Query}
+        prelude::{Changed, Commands, Query}
     },
     prelude::{Entity, trace, Transform}
 };
@@ -67,7 +67,7 @@ fn apply_rotate<const DO: bool>(
     event_target: Entity,
     edit: Query<&RotateEdit>,
     objmap: Res<ObjectIdMap>,
-    mut query: Query<(&mut Angle, &mut Transform)>
+    mut query: Query<&mut Angle>
 ) -> Result
 {
     // get the edit
@@ -75,14 +75,10 @@ fn apply_rotate<const DO: bool>(
     // get the entity being edited
     let entity = *objmap.0.get(&rot.object_id).unwrap();
     // get the components of the entity being edited
-    let (mut a, mut t) = query.get_mut(entity)?;
+    let mut a = query.get_mut(entity)?;
 
     // apply the change to the entity
-    use std::f32::consts::PI;
-    const DEG_TO_RAD: f32 = PI / 180.0;
-
     a.0 = if DO { rot.dtheta } else { -rot.dtheta };
-    t.rotate_local_z(a.0 * DEG_TO_RAD);
 
     Ok(())
 }
@@ -92,7 +88,7 @@ pub fn on_rotate_undo(
     evt: On<UndoRotateEvent>,
     edit: Query<&RotateEdit>,
     objmap: Res<ObjectIdMap>,
-    query: Query<(&mut Angle, &mut Transform)>,
+    query: Query<&mut Angle>,
 ) -> Result
 {
     apply_rotate::<false>(evt.entity, edit, objmap, query)
@@ -103,8 +99,21 @@ pub fn on_rotate_redo(
     evt: On<RedoRotateEvent>,
     edit: Query<&RotateEdit>,
     objmap: Res<ObjectIdMap>,
-    query: Query<(&mut Angle, &mut Transform)>,
+    query: Query<&mut Angle>,
 ) -> Result
 {
     apply_rotate::<true>(evt.entity, edit, objmap, query)
+}
+
+#[instrument(skip_all)]
+pub fn on_rotate_change(
+    mut query: Query<(&mut Transform, &Angle), Changed<Angle>>
+)
+{
+    use std::f32::consts::PI;
+    const DEG_TO_RAD: f32 = PI / 180.0;
+
+    for (mut t, a) in query.iter_mut() {
+        t.rotate_local_z(a.0 * DEG_TO_RAD);
+    }
 }
