@@ -21,7 +21,6 @@ use crate::{
     keys::KeyBinding,
     object::ObjectId,
     piece::r#move::on_move,
-    raise,
     select::{on_selection, on_deselection, Selectable, SelectEvent, DeselectEvent},
     stack::expand_stack,
     view::{handle_context_menu, handle_piece_pressed}
@@ -84,8 +83,6 @@ pub fn add_selectable_observers(ec: &mut EntityCommands) {
         .observe(recolor_on::<DeselectEvent>(Color::WHITE))
         .observe(on_selection)
         .observe(on_deselection)
-        .observe(raise::on_piece_pressed)
-        .observe(raise::on_piece_released)
         .observe(handle_piece_pressed);
 }
 

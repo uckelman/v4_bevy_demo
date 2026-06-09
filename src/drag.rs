@@ -36,7 +36,6 @@ use crate::{
         StackingGroup,
         r#move::DoMoveEvent
     },
-    raise::raise_piece,
     select::{deselect_all, select, Selected},
     stack::StackBelowQueryExt,
     util::AsOrthographicProjection

@@ -44,7 +44,6 @@ mod log_serialize;
 mod maxz;
 mod object;
 mod piece;
-mod raise;
 mod select;
 mod stack;
 mod state;
@@ -77,7 +76,6 @@ use crate::{
         ZoomInKey, ZoomOutKey, ZoomResetKey,
         WheelScaleStep
     },
-    raise::RaiseAnchor,
     select::{clear_selection, draw_selection_rect, selection_rect_drag_start, selection_rect_drag, selection_rect_drag_end, Selected, SelectionRect, setup_selection_box, handle_key_selection},
     state::GameState,
     title::{SplashScreenTimer, display_title}
@@ -335,7 +333,6 @@ fn display_game(
         .observe(trigger_close_context_menus_press);
 
     commands.insert_resource(DragOrigin::default());
-    commands.insert_resource(RaiseAnchor::default());
     commands.insert_resource(SelectionRect::default());
 
     commands.trigger(RedoAllEvent);
