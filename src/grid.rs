@@ -97,7 +97,6 @@ fn spawn_rect_grid(
     let unhighlight_color = Color::NONE;
 
     let grid_material = materials.add(grid_color);
-    let highlight_material = materials.add(highlight_color);
     let unhighlight_material = materials.add(unhighlight_color);
 
     let gmesh = meshes.add(grect);
