@@ -1,7 +1,7 @@
 use bevy::{
     camera::Camera2d,
     ecs::children,
-    prelude::{AlignItems, Commands, DespawnOnExit, FlexDirection, JustifyContent, Node, OrthographicProjection, Projection, Resource, Text, TextFont, Timer, TimerMode, Val}
+    prelude::{AlignItems, Commands, DespawnOnExit, FlexDirection, FontSize, JustifyContent, Node, OrthographicProjection, Projection, Resource, Text, TextFont, Timer, TimerMode, Val}
 };
 
 use crate::state::GameState;
@@ -28,14 +28,14 @@ pub fn display_title(mut commands: Commands) {
             (
                 Text::new("V4 Bevy Demo"),
                 TextFont {
-                    font_size: 130.0,
+                    font_size: FontSize::Px(130.0),
                     ..Default::default()
                 },
             ),
             (
                 Text::new("June 2026"),
                 TextFont {
-                    font_size: 100.0,
+                    font_size: FontSize::Px(100.0),
                     ..Default::default()
                 },
             )

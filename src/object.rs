@@ -12,9 +12,8 @@ use std::collections::HashMap;
 #[component(
     immutable,
     on_insert = insert_object_id,
-    on_replace = discard_object_id
+    on_discard = discard_object_id
 )]
-//    on_discard = on_discard_piece_id
 pub struct ObjectId(pub u32);
 
 #[derive(Default, Resource)]

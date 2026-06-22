@@ -22,7 +22,7 @@ use bevy::{
         events::{Out, Over, Pointer, Press},
         pointer::PointerButton
     },
-    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, ChildOf, Display, Entity, FlexDirection, JustifySelf, NextState, Node, PositionType, px, Reflect, States, Text, TextColor, TextFont, trace, UiRect, Val}
+    prelude::{BackgroundColor, BorderColor, BorderRadius, Button, children, ChildOf, Display, Entity, FlexDirection, FontSize, JustifySelf, NextState, Node, PositionType, px, Reflect, States, Text, TextColor, TextFont, trace, UiRect, Val}
 };
 use itertools::Itertools;
 use std::fmt::Debug;
@@ -88,7 +88,7 @@ pub fn open_context_menu(
     let highlight_color = GRAY_200.into();
 
     let font = TextFont {
-        font_size: 14.0,
+        font_size: FontSize::Px(14.0),
         ..Default::default()
     };
 
@@ -145,7 +145,7 @@ fn make_context_item(
         Node {
             padding: UiRect::all(px(5)),
             flex_direction: FlexDirection::Row,
-            column_gap: Val::Px(font.font_size),
+            column_gap: Val::Px(14.0),
             border_radius: BorderRadius::all(px(4)),
             ..Default::default()
         },

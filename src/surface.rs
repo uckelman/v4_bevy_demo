@@ -88,6 +88,7 @@ fn forward_dragdrop_to_surface(
         DragDrop {
             hit: HitData {
                 position,
+                extra: drop.event.hit.extra.clone(),
                 ..drop.event.hit
             },
             ..drop.event
